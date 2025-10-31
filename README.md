@@ -1,17 +1,17 @@
 # Sequential Deep Learning for Credit Risk Modeling in Data-Constrained Environments
 
-This repository contains the code and resources for a research project investigating the use of sequential deep learning for credit risk modeling, particularly in environments where data is limited.
+This repository contains Jupyter notebooks and resources for a research project investigating the use of sequential deep learning for credit risk modeling, particularly in environments where data is limited.
 
 ## Project Overview
 
-The primary goal of this project is to develop and evaluate a sequential deep learning model for credit risk prediction. The model is designed to be effective even in data-constrained scenarios, making it suitable for applications where large datasets are not available. The project includes data preprocessing, model training, and evaluation scripts, as well as a comparison with traditional machine learning models like Logistic Regression and XGBoost.
+The primary goal of this project is to develop and evaluate sequential deep learning models for credit risk prediction. The models are designed to be effective even in data-constrained scenarios, making them suitable for applications where large datasets are not available. The project includes data preprocessing, model training, and evaluation workflows, as well as comparisons with traditional machine learning models like Logistic Regression and XGBoost.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- `pip` for package management
+- Python 3.8 or higher with Jupyter Notebook support
+- Or access to [Google Colab](https://colab.research.google.com/) (recommended for easy setup)
 
 ### Setup
 
@@ -21,43 +21,91 @@ The primary goal of this project is to develop and evaluate a sequential deep le
    cd sequential-crm-for-dce
    ```
 
-2. **Install the required packages:**
+2. **Install required packages:**
+   
+   The notebooks will prompt you to install necessary packages when you run them. Common dependencies include:
+   - pandas
+   - numpy
+   - scikit-learn
+   - tensorflow/keras
+   - xgboost
+   - matplotlib
+   - seaborn
+
+   You can install them manually using:
    ```bash
-   pip install -r requirements.txt
+   pip install pandas numpy scikit-learn tensorflow xgboost matplotlib seaborn
    ```
 
 ## Usage
 
-The repository includes two main scripts, `main_v1.py` and `main_v1_1.py`, which represent two versions of the credit risk prediction workflow.
+This repository contains Jupyter notebooks that can be run locally or directly in Google Colab.
 
-### Running the Scripts
+### Notebooks
 
-To run either version of the model, execute the corresponding Python script from the command line:
+1. **credit_risk_prediction_v1.ipynb** - First version of the credit risk prediction workflow
+   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/credit_risk_prediction_v1.ipynb)
+   
+2. **credit_risk_prediction_v1_1.ipynb** - Enhanced second version with additional metrics
+   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/credit_risk_prediction_v1_1.ipynb)
+   
+3. **credit_risk_prediction_v2.ipynb** - Latest version of the credit risk prediction workflow
+   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/credit_risk_prediction_v2.ipynb)
+   
+4. **syn-data-gen.ipynb** - Synthetic data generator for mobile money (MoMo) transaction data
+   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/syn-data-gen.ipynb)
 
-```bash
-# To run the first version of the model
-python main_v1.py
+### Running the Notebooks
 
-# To run the second version of the model
-python main_v1_1.py
-```
+**Option 1: Google Colab (Recommended)**
+- Click on any of the "Open in Colab" badges above
+- The notebook will open in Google Colab with all dependencies ready to install
+- Follow the instructions within each notebook
+
+**Option 2: Local Jupyter**
+- Ensure you have Jupyter installed: `pip install jupyter`
+- Launch Jupyter: `jupyter notebook`
+- Navigate to and open any of the `.ipynb` files
+- Run the cells sequentially
 
 ### What to Expect
 
-When you run either script, it will perform the following steps:
+When you run the credit risk prediction notebooks, they will perform the following steps:
 
-1. **Load the dataset:** The script will load the `lending_club_loan_two.csv` dataset.
-2. **Preprocess the data:** This includes cleaning, feature engineering, and splitting the data into training and testing sets.
-3. **Train the models:** The script will train three models: an Artificial Neural Network (ANN), a Logistic Regression model, and an XGBoost model.
-4. **Evaluate the models:** The performance of each model will be evaluated using metrics such as accuracy and Mean Squared Error (MSE).
-5. **Generate a classification report:** A detailed classification report will be printed for each model.
+1. **Load the dataset:** The notebooks load credit risk datasets (e.g., Lending Club loan data)
+2. **Preprocess the data:** Includes cleaning, feature engineering, and splitting data into training/testing sets
+3. **Train the models:** Three models are trained and compared:
+   - Artificial Neural Network (ANN)
+   - Logistic Regression
+   - XGBoost
+4. **Evaluate the models:** Performance metrics include:
+   - Accuracy
+   - Mean Squared Error (MSE)
+   - Macro-F1 Score
+   - Sensitivity/Precision
+   - ROC AUC
+5. **Generate visualizations:** ROC curves and other plots to visualize model performance
+6. **Classification reports:** Detailed reports for each model
 
-The script will also generate and display a Receiver Operating Characteristic (ROC) curve to visualize the performance of the models.
+The synthetic data generator notebook creates realistic mobile money transaction data for testing and development purposes.
 
 ## Repository Structure
 
-- **main_v1.py:** The main script for the first version of the credit risk prediction workflow.
-- **main_v1_1.py:** The main script for the second version of the credit risk prediction workflow.
-- **requirements.txt:** A list of all the Python packages required to run the code.
-- **LICENSE:** The license for this project.
-- **README.md:** This file, providing an overview of the project and instructions on how to use it.
+- **credit_risk_prediction_v1.ipynb** - Initial credit risk prediction notebook
+- **credit_risk_prediction_v1_1.ipynb** - Enhanced version with additional evaluation metrics
+- **credit_risk_prediction_v2.ipynb** - Latest version of the credit risk prediction workflow
+- **syn-data-gen.ipynb** - Synthetic mobile money transaction data generator
+- **LICENSE** - MIT License for this project
+- **README.md** - This file, providing an overview and usage instructions
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Author
+
+Benjamin Attabra
