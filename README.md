@@ -43,14 +43,14 @@ This repository contains Jupyter notebooks that can be run locally or directly i
 
 ### Notebooks
 
-1. **credit_risk_prediction_v1.ipynb** - First version of the credit risk prediction workflow
-   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/credit_risk_prediction_v1.ipynb)
+1. **credit_risk_prediction_v1a.ipynb** - First version of the credit risk prediction workflow
+   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/credit_risk_prediction_v1a.ipynb)
    
-2. **credit_risk_prediction_v1_1.ipynb** - Enhanced second version with additional metrics
-   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/credit_risk_prediction_v1_1.ipynb)
+2. **credit_risk_prediction_v1b.ipynb** - Enhanced second version with additional metrics
+   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/credit_risk_prediction_v1b.ipynb)
    
-3. **credit_risk_prediction_v2.ipynb** - Latest version of the credit risk prediction workflow
-   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/credit_risk_prediction_v2.ipynb)
+3. **credit_risk_prediction_v1c.ipynb** - Latest version of the credit risk prediction workflow
+   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/credit_risk_prediction_v1c.ipynb)
    
 4. **syn-data-gen.ipynb** - Synthetic data generator for mobile money (MoMo) transaction data
    - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/syn-data-gen.ipynb)
@@ -91,9 +91,9 @@ The synthetic data generator notebook creates realistic mobile money transaction
 
 ## Repository Structure
 
-- **credit_risk_prediction_v1.ipynb** - Initial credit risk prediction notebook
-- **credit_risk_prediction_v1_1.ipynb** - Enhanced version with additional evaluation metrics
-- **credit_risk_prediction_v2.ipynb** - Latest version of the credit risk prediction workflow
+- **credit_risk_prediction_v1a.ipynb** - Initial credit risk prediction notebook
+- **credit_risk_prediction_v1b.ipynb** - Enhanced version with additional evaluation metrics
+- **credit_risk_prediction_v1c.ipynb** - Latest version of the credit risk prediction workflow
 - **syn-data-gen.ipynb** - Synthetic mobile money transaction data generator
 - **LICENSE** - MIT License for this project
 - **README.md** - This file, providing an overview and usage instructions
