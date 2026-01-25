@@ -150,11 +150,11 @@ Post-fraud: Elevated risk scores, unusual patterns
 import pandas as pd
 
 # Load main dataset
-df = pd.read_csv('synthetic_momo_calibrated.csv')
+df = pd.read_csv('data/synthetic/synthetic_momo_calibrated.csv')
 df['TRANSACTION DATE'] = pd.to_datetime(df['TRANSACTION DATE'])
 
 # Load user profiles
-users = pd.read_csv('synthetic_user_profiles.csv')
+users = pd.read_csv('data/synthetic/synthetic_user_profiles.csv')
 
 print(f"Total transactions: {len(df):,}")
 print(f"Total users: {df['FROM ACCT'].nunique()}")
@@ -163,7 +163,10 @@ print(f"Fraud rate: {df['is_fraud'].mean():.2%}")
 
 ### 2. Apply Feature Engineering
 ```python
-from real_temporal_feature_engineering import TemporalTransactionFeatureEngineer
+import sys
+sys.path.append('src')
+
+from feature_engineering.real_temporal_feature_engineering import TemporalTransactionFeatureEngineer
 
 # Initialize feature engineer
 engineer = TemporalTransactionFeatureEngineer()
@@ -174,10 +177,10 @@ user_features_list = []
 for user_id in df['FROM ACCT'].unique():
     # Get user's transactions
     user_df = df[df['FROM ACCT'] == user_id].copy()
-    
+
     # Extract features
     user_features = engineer.extract_all_features(user_df)
-    
+
     # Store
     user_features_list.append(user_features)
 

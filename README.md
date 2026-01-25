@@ -44,16 +44,19 @@ This repository contains Jupyter notebooks that can be run locally or directly i
 ### Notebooks
 
 1. **credit_risk_prediction_v1a.ipynb** - First version of the credit risk prediction workflow
-   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/credit_risk_prediction_v1a.ipynb)
-   
+   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/notebooks/credit_risk_prediction_v1a.ipynb)
+
 2. **credit_risk_prediction_v1b.ipynb** - Enhanced second version with additional metrics
-   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/credit_risk_prediction_v1b.ipynb)
-   
+   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/notebooks/credit_risk_prediction_v1b.ipynb)
+
 3. **credit_risk_prediction_v1c.ipynb** - Latest version of the credit risk prediction workflow
-   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/credit_risk_prediction_v1c.ipynb)
-   
-4. **syn-data-gen.ipynb** - Synthetic data generator for mobile money (MoMo) transaction data
-   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/syn-data-gen.ipynb)
+   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/notebooks/credit_risk_prediction_v1c.ipynb)
+
+4. **syn_data_gen.ipynb** - Synthetic data generator for mobile money (MoMo) transaction data
+   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/notebooks/syn_data_gen.ipynb)
+
+5. **ctgan_syn_data_gen.ipynb** - CTGAN-based synthetic data generation
+   - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Attabeezy/sequential-crm-for-dce/blob/main/notebooks/ctgan_syn_data_gen.ipynb)
 
 ### Running the Notebooks
 
@@ -91,12 +94,38 @@ The synthetic data generator notebook creates realistic mobile money transaction
 
 ## Repository Structure
 
-- **credit_risk_prediction_v1a.ipynb** - Initial credit risk prediction notebook
-- **credit_risk_prediction_v1b.ipynb** - Enhanced version with additional evaluation metrics
-- **credit_risk_prediction_v1c.ipynb** - Latest version of the credit risk prediction workflow
-- **syn-data-gen.ipynb** - Synthetic mobile money transaction data generator
-- **LICENSE** - MIT License for this project
-- **README.md** - This file, providing an overview and usage instructions
+```
+sequential-crm-for-dce/
+├── data/
+│   ├── real/                    # Real transaction data from Ghana
+│   │   ├── transactions.xlsx - Table 1.csv
+│   │   ├── transactions.xlsx - Table 5.csv
+│   │   ├── engineered_features_real_data.csv
+│   │   └── user_level_summary.csv
+│   └── synthetic/               # Calibrated synthetic datasets
+│       ├── synthetic_momo_calibrated.csv
+│       ├── synthetic_user_profiles.csv
+│       ├── synthetic-momo-data.csv
+│       └── real_data_calibration.json
+├── docs/
+│   ├── COMPLETE_ANALYSIS.md     # Feature engineering framework documentation
+│   └── SYNTHETIC_DATA_GUIDE.md  # Synthetic dataset documentation
+├── notebooks/
+│   ├── credit_risk_prediction_v1a.ipynb
+│   ├── credit_risk_prediction_v1b.ipynb
+│   ├── credit_risk_prediction_v1c.ipynb
+│   ├── ctgan_syn_data_gen.ipynb
+│   └── syn_data_gen.ipynb
+├── src/
+│   ├── data_generation/
+│   │   └── calibrated_synthetic_generator.py
+│   └── feature_engineering/
+│       └── real_temporal_feature_engineering.py
+├── .gitignore
+├── LICENSE                      # MIT License
+├── README.md                    # This file
+└── SESSION_LOG.md               # Research session documentation
+```
 
 ## Contributing
 

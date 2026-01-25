@@ -1,6 +1,16 @@
 """
 Temporal Feature Engineering for Real Mobile Money Transaction Data
 
+Location: src/feature_engineering/real_temporal_feature_engineering.py
+
+Import path:
+    from src.feature_engineering.real_temporal_feature_engineering import TemporalTransactionFeatureEngineer
+
+Or from project root:
+    import sys
+    sys.path.append('src')
+    from feature_engineering.real_temporal_feature_engineering import TemporalTransactionFeatureEngineer
+
 This demonstrates the COMPLETE feature engineering pipeline on actual transaction data
 with timestamps, balance tracking, and counterparty information.
 
@@ -306,7 +316,7 @@ def demonstrate_temporal_features():
     
     # Load data
     print("\n1. Loading real transaction data...")
-    df = pd.read_csv('/mnt/user-data/uploads/transactions_xlsx_-_Table_5.csv')
+    df = pd.read_csv('data/real/transactions.xlsx - Table 5.csv')
     print(f"   ✓ Loaded {len(df)} transactions")
     print(f"   ✓ Date range: {pd.to_datetime(df['TRANSACTION DATE']).min()} to {pd.to_datetime(df['TRANSACTION DATE']).max()}")
     
@@ -368,12 +378,12 @@ def demonstrate_temporal_features():
     print(f"   - Unique recipients: {int(user_summary['unique_recipients'])}")
     
     # Save engineered dataset
-    output_path = '/mnt/user-data/outputs/engineered_features_real_data.csv'
+    output_path = 'data/real/engineered_features_real_data.csv'
     df_features.to_csv(output_path, index=False)
     print(f"\n✓ Saved engineered features to: {output_path}")
-    
+
     # Save user summary
-    summary_path = '/mnt/user-data/outputs/user_level_summary.csv'
+    summary_path = 'data/real/user_level_summary.csv'
     user_summary.to_csv(summary_path, header=['value'])
     print(f"✓ Saved user-level summary to: {summary_path}")
     

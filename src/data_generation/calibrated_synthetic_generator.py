@@ -1,6 +1,16 @@
 """
 Calibrated Synthetic Mobile Money Data Generator
 
+Location: src/data_generation/calibrated_synthetic_generator.py
+
+Import path:
+    from src.data_generation.calibrated_synthetic_generator import CalibratedMoMoDataGenerator
+
+Or from project root:
+    import sys
+    sys.path.append('src')
+    from data_generation.calibrated_synthetic_generator import CalibratedMoMoDataGenerator
+
 This generator creates realistic multi-user transaction data calibrated against
 actual mobile money patterns from Ghana (482 real transactions analyzed).
 
@@ -29,7 +39,7 @@ class CalibratedMoMoDataGenerator:
                  fraud_rate=0.05,
                  start_date='2024-01-01',
                  duration_days=180,
-                 calibration_file='/home/claude/real_data_calibration.json'):
+                 calibration_file='data/synthetic/real_data_calibration.json'):
         """
         Initialize generator with calibration parameters from real data.
         
@@ -468,13 +478,13 @@ def main():
     df, users = generator.generate_dataset()
     
     # Save dataset
-    output_path = '/mnt/user-data/outputs/synthetic_momo_calibrated.csv'
+    output_path = 'data/synthetic/synthetic_momo_calibrated.csv'
     df.to_csv(output_path, index=False)
     print(f"\n✓ Saved synthetic dataset to: {output_path}")
-    
+
     # Save user profiles for reference
     user_df = pd.DataFrame(users)
-    user_path = '/mnt/user-data/outputs/synthetic_user_profiles.csv'
+    user_path = 'data/synthetic/synthetic_user_profiles.csv'
     user_df.to_csv(user_path, index=False)
     print(f"✓ Saved user profiles to: {user_path}")
     

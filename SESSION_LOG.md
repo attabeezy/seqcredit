@@ -693,37 +693,39 @@ shap==0.42.0           # Model interpretability
 ### File Structure
 
 ```
-project/
+sequential-crm-for-dce/
 ├── data/
 │   ├── real/
-│   │   ├── transactions_xlsx_-_Table_5.csv
+│   │   ├── transactions.xlsx - Table 1.csv
+│   │   ├── transactions.xlsx - Table 5.csv
 │   │   ├── engineered_features_real_data.csv
 │   │   └── user_level_summary.csv
 │   └── synthetic/
 │       ├── synthetic_momo_calibrated.csv
 │       ├── synthetic_user_profiles.csv
+│       ├── synthetic-momo-data.csv
 │       └── real_data_calibration.json
-├── code/
-│   ├── real_temporal_feature_engineering.py
-│   ├── calibrated_synthetic_generator.py
-│   ├── feature_engineering_demo.py
-│   └── temporal_data_generator.py
 ├── docs/
-│   ├── SESSION_LOG.md (this file)
 │   ├── COMPLETE_ANALYSIS.md
-│   ├── SYNTHETIC_DATA_GUIDE.md
-│   ├── feature_engineering_framework.md
-│   └── EXECUTIVE_SUMMARY.md
-├── papers/
-│   ├── paper_a_feature_engineering/
-│   │   ├── outline.md
-│   │   └── Two-Paper_Structure
-│   └── paper_b_model_comparison/
-│       └── outline.md
-└── results/
-    ├── feature_evaluation/
-    ├── baseline_comparison/
-    └── model_performance/
+│   └── SYNTHETIC_DATA_GUIDE.md
+├── notebooks/
+│   ├── credit_risk_prediction_v1a.ipynb
+│   ├── credit_risk_prediction_v1b.ipynb
+│   ├── credit_risk_prediction_v1c.ipynb
+│   ├── ctgan_syn_data_gen.ipynb
+│   └── syn_data_gen.ipynb
+├── src/
+│   ├── __init__.py
+│   ├── data_generation/
+│   │   ├── __init__.py
+│   │   └── calibrated_synthetic_generator.py
+│   └── feature_engineering/
+│       ├── __init__.py
+│       └── real_temporal_feature_engineering.py
+├── .gitignore
+├── LICENSE
+├── README.md
+└── SESSION_LOG.md (this file)
 ```
 
 ---
@@ -1160,13 +1162,17 @@ If available, compare against:
 
 ### Quick Start Commands
 
-```bash
+```python
+import pandas as pd
+import sys
+sys.path.append('src')
+
 # Load dataset
-df = pd.read_csv('synthetic_momo_calibrated.csv')
+df = pd.read_csv('data/synthetic/synthetic_momo_calibrated.csv')
 df['TRANSACTION DATE'] = pd.to_datetime(df['TRANSACTION DATE'])
 
 # Apply feature engineering
-from real_temporal_feature_engineering import TemporalTransactionFeatureEngineer
+from feature_engineering.real_temporal_feature_engineering import TemporalTransactionFeatureEngineer
 engineer = TemporalTransactionFeatureEngineer()
 
 # Process one user (example)
