@@ -6,7 +6,11 @@ for Credit Risk Modeling in Data-Constrained Environments project.
 
 Modules:
     - feature_engineering: Temporal feature extraction from transaction data
-    - data_generation: Calibrated synthetic data generation
+    - synthetic_data: Calibrated synthetic data generation
 """
 
+from .feature_engineering import TemporalTransactionFeatureEngineer
+from .synthetic_data import CalibratedMoMoDataGenerator
+
 __version__ = "0.1.0"
+__all__ = ['TemporalTransactionFeatureEngineer', 'CalibratedMoMoDataGenerator']
