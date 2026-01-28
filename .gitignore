@@ -214,3 +214,7 @@ __marimo__/
 # VS Code AI Assistant folders
 .virtual_documents/
 .claude/
+
+# Generated synthetic data (can be regenerated with src/synthetic_data.py)
+data/user_transactions/
+data/test_user_transactions/

@@ -362,4 +362,162 @@ print(df['fraud_type'].value_counts())
 
 ---
 
-*Session End Time: January 25, 2026*
+## 12. Session Update: January 28, 2026
+
+### Critical Gap Identified
+
+During review, we identified a **critical gap** in the dataset: **No CREDIT transaction type** existed for loan disbursements. This is essential for credit risk modeling since the research focuses on predicting loan repayment behavior.
+
+### Research: Ghana Mobile Money Loan System
+
+Researched MTN QwikLoan and other mobile money loan services in Ghana:
+
+| Parameter | Value |
+|-----------|-------|
+| Loan Amount Range | GHS 25 - GHS 1,000 |
+| Interest Rate | 6.9% (standard), 12.5% (penalty) |
+| Repayment Period | 30 days |
+| Disbursement | Instant to MoMo wallet |
+| Eligibility | 3+ months active MoMo usage |
+| Providers | QWIKLOAN, XPRESSLOAN, XTRACASH, FIDO, CEDISPAY |
+
+### Major Generator Rewrite (v2.0)
+
+Completely rewrote `src/synthetic_data.py` with the following changes:
+
+#### 1. Per-User Dataset Architecture
+- **Before**: Single combined CSV with all 2,000 users
+- **After**: 10,000 individual CSV files (one per user) in `data/user_transactions/`
+- User summaries saved to `data/user_summaries.csv`
+
+#### 2. New Transaction Types
+
+| Type | Direction | Description |
+|------|-----------|-------------|
+| `CREDIT` | Inflow | Loan disbursement from provider |
+| `LOAN_REPAYMENT` | Outflow | Repayment to loan provider |
+
+#### 3. Credit Behavior Archetypes
+
+| Archetype | % Users | Behavior |
+|-----------|---------|----------|
+| non_borrower | 40% | Never takes loans |
+| responsible_borrower | 35% | Repays on time, credit limit grows |
+| occasional_borrower | 15% | Infrequent loans, variable timing |
+| risky_borrower | 8% | Often late, no credit growth |
+| defaulter | 2% | Fails to repay |
+
+#### 4. Credit Risk Labels (Target Variable)
+
+| Label | Meaning | Expected % |
+|-------|---------|------------|
+| -1 | No loans taken | ~40% |
+| 0 | Good (repaid on time) | ~35% |
+| 1 | Late (repaid after term) | ~20% |
+| 2 | Default (failed to repay) | ~5% |
+
+### Generation Results
+
+```
+Total Users: 10,000
+Total Transactions: 175,324
+Average per User: 17.5 transactions
+
+Credit Behavior Distribution:
+├── non_borrower: 4,053 (40.5%)
+├── responsible_borrower: 3,485 (34.8%)
+├── occasional_borrower: 1,448 (14.5%)
+├── risky_borrower: 825 (8.2%)
+└── defaulter: 189 (1.9%)
+
+Credit Risk Labels:
+├── -1 (No loans): 4,053 (40.5%)
+├── 0 (Good): 3,395 (34.0%)
+├── 1 (Late): 2,009 (20.1%)
+└── 2 (Default): 543 (5.4%)
+
+Default Rate (among borrowers): 9.13%
+
+Transaction Type Distribution:
+├── TRANSFER: 41.5%
+├── DEBIT: 22.2%
+├── CREDIT: 7.4%
+├── CASH_IN: 6.7%
+├── LOAN_REPAYMENT: 6.6%
+├── PAYMENT_SEND: 5.8%
+├── PAYMENT: 5.6%
+└── CASH_OUT: 4.3%
+```
+
+### Updated Usage
+
+```python
+from src.synthetic_data import CalibratedMoMoDataGenerator
+
+# Generate 10,000 individual user datasets
+generator = CalibratedMoMoDataGenerator(
+    n_users=10000,
+    avg_transactions_per_user=15,
+    start_date='2024-01-01',
+    duration_days=180,
+    output_dir='data/user_transactions'
+)
+
+summary_df = generator.generate_dataset()
+
+# Each user file contains columns:
+# TRANSACTION DATE, FROM ACCT, FROM NAME, FROM NO., TRANS. TYPE, AMOUNT,
+# FEES, E-LEVY, BAL BEFORE, BAL AFTER, TO NO., TO NAME, TO ACCT,
+# LOAN_PROVIDER, LOAN_PRINCIPAL, LOAN_INTEREST_RATE, LOAN_DUE_DATE,
+# LOAN_PRINCIPAL_PAID, LOAN_INTEREST_PAID
+```
+
+### Updated Project Structure
+
+```
+data/
+├── user_transactions/           # 10,000 individual user CSV files (NEW)
+│   ├── USER_000000.csv
+│   ├── USER_000001.csv
+│   └── ... (10,000 files)
+├── user_summaries.csv           # Credit risk labels & archetypes (NEW)
+├── transactions.xlsx - Table 5.csv
+├── real_data_calibration.json
+└── ... (other files)
+```
+
+### Sample User Transaction File
+
+```csv
+TRANSACTION DATE,FROM ACCT,FROM NAME,FROM NO.,TRANS. TYPE,AMOUNT,...
+2024-01-05 06:28:41,96320147,User 000000,233289596939,TRANSFER,27.73,...
+2024-01-11 13:28:50,XTRACASH_LENDING,XTRACASH Loan Service,0,CREDIT,30.47,...
+2024-01-13 07:28:25,96320147,User 000000,233289596939,LOAN_REPAYMENT,32.57,...
+```
+
+### Key Decisions Made
+
+1. **Per-user files**: Better for individual sequence modeling and feature engineering
+2. **Transaction-based loan timing**: Loans scheduled by transaction count, not dates
+3. **5 archetypes**: Captures realistic spectrum of borrowing behavior
+4. **~9% default rate**: Realistic for mobile money microloans in emerging markets
+
+### Updated Current Status
+
+#### Completed
+- Research planning (two-paper strategy)
+- Real data analysis (482 transactions)
+- Feature engineering framework (113 features)
+- **Synthetic data generator v2.0** with credit/loan functionality
+- **10,000 individual user datasets generated**
+- **Credit risk labels assigned**
+
+#### Next Steps
+1. Update feature engineering to include loan-specific features
+2. Apply feature engineering to all 10,000 user files
+3. Train credit risk prediction models
+4. Compare static vs sequential approaches
+
+---
+
+*Session Update: January 28, 2026*
