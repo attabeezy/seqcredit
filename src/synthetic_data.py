@@ -1,222 +1,288 @@
 """
-Calibrated Synthetic Mobile Money Data Generator
+Calibrated Synthetic Mobile Money Data Generator v2.0
 
 Location: src/synthetic_data.py
 
-Import path:
-    from src.synthetic_data import CalibratedMoMoDataGenerator
-
-Or from project root:
-    import sys
-    sys.path.append('src')
-    from synthetic_data import CalibratedMoMoDataGenerator
-
-This generator creates realistic multi-user transaction data calibrated against
+This generator creates realistic per-user transaction datasets calibrated against
 actual mobile money patterns from Ghana (482 real transactions analyzed).
 
-Calibration Parameters (from real data):
-- Transaction frequency: 2.41 per day (every 10 hours)
-- Amount distribution: Lognormal(mu=2.84, sigma=1.00)
-- Balance: mean=GHS 305.88, std=GHS 302.55
-- Transaction types: 52.9% transfers, 27.2% debits, 10.8% payments
-- Temporal: 32.2% weekend, 8.1% night, 36.1% afternoon
+Key Features:
+- Generates 10,000 individual user transaction files
+- Includes CREDIT (loan disbursement) and LOAN_REPAYMENT transactions
+- Models credit risk behavior with multiple user archetypes
+- Calibrated to real Ghanaian mobile money patterns
+
+Loan System (based on MTN QwikLoan Ghana):
+- Loan amounts: GHS 25 - GHS 1,000
+- Interest rate: 6.9% (30-day term)
+- Penalty rate: 12.5% (on default)
+- Providers: QWIKLOAN, XPRESSLOAN, XTRACASH, FIDO, CEDISPAY
+
+Credit Risk Labels:
+- 0: Good (repaid in full within term)
+- 1: Late (repaid but after 30 days)
+- 2: Default (failed to repay within 60 days)
 """
 
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import json
+import os
+from pathlib import Path
 
 
 class CalibratedMoMoDataGenerator:
     """
-    Generate realistic mobile money transaction data calibrated to real patterns.
+    Generate realistic mobile money transaction data with credit/loan functionality.
+    Outputs individual CSV files per user.
     """
 
+    # Loan providers in Ghana
+    LOAN_PROVIDERS = ['QWIKLOAN', 'XPRESSLOAN', 'XTRACASH', 'FIDO', 'CEDISPAY']
+
+    # Service providers for debits/payments
+    SERVICE_PROVIDERS = [
+        'one4all.sp', 'MTN', 'Vodafone', 'AirtelTigo', 'hubtel.sp',
+        'jumia.sp', 'uber.sp', 'bolt.sp', 'glovo.sp', 'ECG', 'GWCL'
+    ]
+
+    # Credit behavior archetypes
+    CREDIT_ARCHETYPES = {
+        'non_borrower': {
+            'weight': 0.40,
+            'takes_loans': False,
+            'description': 'Never takes loans'
+        },
+        'responsible_borrower': {
+            'weight': 0.35,
+            'takes_loans': True,
+            'loan_frequency': 'regular',
+            'repayment_behavior': 'on_time',
+            'credit_limit_growth': True,
+            'default_probability': 0.0,
+            'description': 'Takes loans, always repays on time'
+        },
+        'occasional_borrower': {
+            'weight': 0.15,
+            'takes_loans': True,
+            'loan_frequency': 'occasional',
+            'repayment_behavior': 'variable',
+            'credit_limit_growth': True,
+            'default_probability': 0.02,
+            'description': 'Infrequent loans, variable repayment timing'
+        },
+        'risky_borrower': {
+            'weight': 0.08,
+            'takes_loans': True,
+            'loan_frequency': 'frequent',
+            'repayment_behavior': 'often_late',
+            'credit_limit_growth': False,
+            'default_probability': 0.15,
+            'description': 'Takes loans near limit, sometimes late'
+        },
+        'defaulter': {
+            'weight': 0.02,
+            'takes_loans': True,
+            'loan_frequency': 'aggressive',
+            'repayment_behavior': 'default',
+            'credit_limit_growth': False,
+            'default_probability': 1.0,
+            'description': 'Takes loans, fails to repay'
+        }
+    }
+
     def __init__(self,
-                 n_users=2000,
+                 n_users=10000,
                  avg_transactions_per_user=15,
-                 fraud_rate=0.05,
                  start_date='2024-01-01',
                  duration_days=180,
+                 output_dir='data/user_transactions',
                  calibration_file='data/real_data_calibration.json'):
         """
-        Initialize generator with calibration parameters from real data.
+        Initialize generator with calibration parameters.
 
         Args:
-            n_users: Number of users to generate
+            n_users: Number of unique users to generate
             avg_transactions_per_user: Average transactions per user
-            fraud_rate: Proportion of fraudulent users
             start_date: Start date of observation period
             duration_days: Length of observation period in days
+            output_dir: Directory to save individual user CSV files
             calibration_file: Path to JSON file with real data parameters
         """
         self.n_users = n_users
         self.avg_transactions_per_user = avg_transactions_per_user
-        self.fraud_rate = fraud_rate
         self.start_date = pd.to_datetime(start_date)
         self.duration_days = duration_days
         self.end_date = self.start_date + timedelta(days=duration_days)
+        self.output_dir = Path(output_dir)
+
+        # Create output directory
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # Load calibration parameters
         with open(calibration_file, 'r') as f:
             self.calibration = json.load(f)
 
-        print(f"Loaded calibration from real data:")
-        print(f"  - Amount: mu={self.calibration['amount_lognormal_mu']:.2f}, sigma={self.calibration['amount_lognormal_sigma']:.2f}")
-        print(f"  - Frequency: {self.calibration['transaction_frequency_hours']:.2f} hours between transactions")
-        print(f"  - Balance: mu={self.calibration['balance_mean']:.2f}, sigma={self.calibration['balance_std']:.2f}")
+        # Loan parameters (calibrated to Ghana mobile money loans)
+        self.loan_params = {
+            'min_amount': 25,
+            'max_amount': 1000,
+            'interest_rate': 0.069,
+            'penalty_rate': 0.125,
+            'term_days': 30,
+            'min_active_days': 90,
+            'min_transactions': 15,
+            'initial_limit': 50,
+            'max_limit': 1000,
+            'limit_growth_rate': 1.25
+        }
 
-    def generate_users(self):
-        """Generate user profiles with variation around real data patterns"""
+        # Create recipient pool
+        self._create_recipient_pool()
 
-        n_fraud_users = int(self.n_users * self.fraud_rate)
-        n_legit_users = self.n_users - n_fraud_users
+        print(f"Initialized generator for {n_users:,} users")
+        print(f"Output directory: {self.output_dir}")
+        print(f"Calibration loaded:")
+        print(f"  - Amount: mu={self.calibration['amount_lognormal_mu']:.2f}, "
+              f"sigma={self.calibration['amount_lognormal_sigma']:.2f}")
+        print(f"  - Balance: mean={self.calibration['balance_mean']:.2f}")
 
-        users = []
-
-        # Generate legitimate users
-        for i in range(n_legit_users):
-            # Vary parameters around real data with +/-30% deviation
-            profile = {
-                'user_id': f'USER_{i:06d}',
-                'phone_number': f'233{np.random.randint(200000000, 600000000)}',
-                'is_fraudster': False,
-                'fraud_type': 'legitimate',
-
-                # Initial balance: centered on real mean with variation
-                'initial_balance': max(50, np.random.normal(
-                    self.calibration['balance_mean'],
-                    self.calibration['balance_std'] * 0.5
-                )),
-
-                # Transaction amount: use real lognormal parameters with slight variation
-                'amount_mu': np.random.normal(
-                    self.calibration['amount_lognormal_mu'],
-                    0.2  # Small variation between users
-                ),
-                'amount_sigma': np.random.normal(
-                    self.calibration['amount_lognormal_sigma'],
-                    0.1
-                ),
-
-                # Transaction frequency: vary around real average (10 hours)
-                # Use absolute value since real data was sorted reverse
-                'hours_between_txns': np.random.gamma(
-                    shape=2,
-                    scale=abs(self.calibration['transaction_frequency_hours']) / 2
-                ),
-
-                # Transaction type preferences (vary around real distribution)
-                'pref_transfer': max(0.3, min(0.8, np.random.normal(0.529, 0.1))),
-                'pref_debit': max(0.1, min(0.4, np.random.normal(0.272, 0.05))),
-                'pref_payment': max(0.05, min(0.25, np.random.normal(0.149, 0.05))),
-
-                # Temporal preferences
-                'pref_weekend': np.random.beta(2, 5),  # Slight weekend preference
-                'pref_night': np.random.beta(1, 10),   # Low night activity
-                'pref_hour': np.random.choice([10, 12, 14, 16, 18, 20]),  # Preferred hour
-
-                # Balance management
-                'min_balance_threshold': np.random.uniform(10, 100),
-                'max_balance_target': np.random.uniform(500, 2000),
-
-                # Fee tolerance
-                'accepts_fees': np.random.random() < self.calibration['fee_rate'],
-
-                # Social network size
-                'typical_recipients': int(np.random.gamma(shape=3, scale=10))  # avg ~30 recipients
+    def _create_recipient_pool(self):
+        """Create pool of potential transaction recipients."""
+        self.recipient_pool = [
+            {
+                'phone': f'233{np.random.randint(200000000, 600000000)}',
+                'name': f'Recipient_{i:05d}',
+                'account': f'ACCT_{np.random.randint(10000000, 99999999)}'
             }
+            for i in range(1000)
+        ]
 
-            users.append(profile)
+    def _assign_credit_archetype(self):
+        """Randomly assign a credit behavior archetype to a user."""
+        archetypes = list(self.CREDIT_ARCHETYPES.keys())
+        weights = [self.CREDIT_ARCHETYPES[a]['weight'] for a in archetypes]
+        return np.random.choice(archetypes, p=weights)
 
-        # Generate fraudulent users (different patterns)
-        fraud_types = ['account_takeover', 'social_engineering', 'sim_swap']
+    def generate_user_profile(self, user_id):
+        """Generate a single user profile with credit behavior."""
 
-        for i in range(n_fraud_users):
-            fraud_type = np.random.choice(fraud_types)
+        credit_archetype = self._assign_credit_archetype()
+        archetype_config = self.CREDIT_ARCHETYPES[credit_archetype]
 
-            profile = {
-                'user_id': f'USER_{n_legit_users + i:06d}',
-                'phone_number': f'233{np.random.randint(200000000, 600000000)}',
-                'is_fraudster': True,
-                'fraud_type': fraud_type,
+        profile = {
+            'user_id': f'USER_{user_id:06d}',
+            'phone_number': f'233{np.random.randint(200000000, 600000000)}',
+            'account_number': f'{np.random.randint(10000000, 99999999)}',
 
-                # Start with similar balance to legitimate
-                'initial_balance': max(100, np.random.normal(
-                    self.calibration['balance_mean'] * 0.8,
-                    self.calibration['balance_std'] * 0.4
-                )),
+            # Credit behavior
+            'credit_archetype': credit_archetype,
+            'takes_loans': archetype_config['takes_loans'],
 
-                # Fraudsters make larger transactions
-                'amount_mu': self.calibration['amount_lognormal_mu'] + 0.5,
-                'amount_sigma': self.calibration['amount_lognormal_sigma'] + 0.3,
+            # Initial balance
+            'initial_balance': max(50, np.random.normal(
+                self.calibration['balance_mean'],
+                self.calibration['balance_std'] * 0.5
+            )),
 
-                # More frequent transactions
-                'hours_between_txns': abs(self.calibration['transaction_frequency_hours']) * 0.3,
+            # Transaction amount parameters
+            'amount_mu': np.random.normal(
+                self.calibration['amount_lognormal_mu'], 0.2
+            ),
+            'amount_sigma': max(0.5, np.random.normal(
+                self.calibration['amount_lognormal_sigma'], 0.1
+            )),
 
-                # Prefer cash-outs and transfers
-                'pref_transfer': 0.4,
-                'pref_debit': 0.1,
-                'pref_payment': 0.1,
-                'pref_cashout': 0.4,  # High cash-out rate
+            # Transaction frequency (hours between transactions)
+            'hours_between_txns': max(2, np.random.gamma(
+                shape=2,
+                scale=abs(self.calibration['transaction_frequency_hours']) / 2
+            )),
 
-                # Unusual timing
-                'pref_weekend': 0.4,
-                'pref_night': 0.3,  # Higher night activity
-                'pref_hour': np.random.choice([1, 3, 22, 23]),
+            # Transaction type preferences
+            'pref_transfer': max(0.3, min(0.8, np.random.normal(0.529, 0.1))),
+            'pref_debit': max(0.1, min(0.4, np.random.normal(0.272, 0.05))),
+            'pref_payment': max(0.05, min(0.25, np.random.normal(0.149, 0.05))),
+            'pref_cashout': max(0.02, min(0.15, np.random.normal(0.05, 0.02))),
 
-                # Drain account
-                'min_balance_threshold': 0,
-                'max_balance_target': 500,
+            # Temporal preferences
+            'pref_weekend': np.random.beta(2, 5),
+            'pref_night': np.random.beta(1, 10),
+            'pref_hour': np.random.choice([9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20]),
 
-                # Avoid fees if possible
-                'accepts_fees': False,
+            # Balance management
+            'min_balance_threshold': np.random.uniform(10, 100),
 
-                # Fewer repeated recipients
-                'typical_recipients': int(np.random.gamma(shape=2, scale=5)),
+            # Fee tolerance
+            'accepts_fees': np.random.random() < self.calibration['fee_rate'],
 
-                # When fraud starts (earlier in observation period)
-                'fraud_start_day': np.random.randint(10, min(60, self.duration_days - 30))
-            }
+            # Social network
+            'typical_recipients': int(np.random.gamma(shape=3, scale=10)),
 
-            users.append(profile)
+            # Account start date (staggered)
+            'account_start_day': np.random.randint(0, 14)
+        }
 
-        return users
+        # Add loan-specific parameters if user takes loans
+        if profile['takes_loans']:
+            profile.update(self._generate_loan_profile(archetype_config))
 
-    def generate_transaction_amount(self, user_profile, txn_type, is_fraud=False):
-        """Generate transaction amount based on type and user profile"""
+        return profile
 
-        # Sample from lognormal distribution
+    def _generate_loan_profile(self, archetype_config):
+        """Generate loan-specific parameters based on archetype."""
+
+        loan_frequency_map = {
+            'regular': np.random.randint(2, 5),      # 2-4 loans in period
+            'occasional': np.random.randint(1, 3),   # 1-2 loans
+            'frequent': np.random.randint(4, 7),     # 4-6 loans
+            'aggressive': np.random.randint(3, 6)    # 3-5 loans (before default)
+        }
+
+        repayment_timing_map = {
+            'on_time': (0.9, 0.05, 0.05),      # (on_time, late, very_late) probabilities
+            'variable': (0.6, 0.3, 0.1),
+            'often_late': (0.3, 0.4, 0.3),
+            'default': (0.1, 0.2, 0.7)
+        }
+
+        freq = archetype_config.get('loan_frequency', 'occasional')
+        repay_behavior = archetype_config.get('repayment_behavior', 'variable')
+
+        return {
+            'loan_count_target': loan_frequency_map.get(freq, 2),
+            'repayment_timing': repayment_timing_map.get(repay_behavior, (0.6, 0.3, 0.1)),
+            'default_probability': archetype_config.get('default_probability', 0.05),
+            'credit_limit': self.loan_params['initial_limit'],
+            'credit_limit_growth': archetype_config.get('credit_limit_growth', True),
+            'preferred_loan_provider': np.random.choice(self.LOAN_PROVIDERS),
+            'loan_amount_preference': np.random.uniform(0.5, 0.9)  # % of limit typically borrowed
+        }
+
+    def generate_transaction_amount(self, user_profile, txn_type):
+        """Generate transaction amount based on type and user profile."""
+
         base_amount = np.random.lognormal(
             user_profile['amount_mu'],
             user_profile['amount_sigma']
         )
 
-        # Adjust by transaction type (from real data patterns)
+        # Type multipliers (from real data analysis)
         type_multipliers = {
-            'TRANSFER': 1.0,      # baseline (mean: 38.26)
-            'DEBIT': 0.55,        # smaller (mean: 21.31)
-            'PAYMENT': 0.44,      # smaller (mean: 16.90)
-            'PAYMENT_SEND': 0.63, # smaller (mean: 24.22)
-            'CASH_OUT': 1.81,     # larger (mean: 69.38)
+            'TRANSFER': 1.0,
+            'DEBIT': 0.55,
+            'PAYMENT': 0.44,
+            'PAYMENT_SEND': 0.63,
+            'CASH_OUT': 1.81,
             'CASH_IN': 1.2
         }
 
         amount = base_amount * type_multipliers.get(txn_type, 1.0)
-
-        # Fraud modifier
-        if is_fraud:
-            amount *= np.random.uniform(1.5, 3.0)  # Larger amounts
-
-        # Minimum viable transaction
-        amount = max(0.5, amount)
-
-        # Round to 2 decimals
-        return round(amount, 2)
+        return round(max(0.5, amount), 2)
 
     def calculate_fees(self, amount, txn_type, user_accepts_fees):
-        """Calculate transaction fees based on real patterns"""
+        """Calculate transaction fees based on real patterns."""
 
         fees = 0.0
         elevy = 0.0
@@ -224,119 +290,296 @@ class CalibratedMoMoDataGenerator:
         if not user_accepts_fees:
             return fees, elevy
 
-        # Fee rates from real data: 24.3% have fees, 12.7% have e-levy
         if txn_type in ['CASH_OUT', 'PAYMENT_SEND'] and np.random.random() < 0.5:
-            # Fee is typically 1% with min/max
-            fees = max(0.25, min(amount * 0.01, 5.0))
-            fees = round(fees, 2)
+            fees = round(max(0.25, min(amount * 0.01, 5.0)), 2)
 
         if txn_type in ['TRANSFER', 'PAYMENT_SEND', 'CASH_OUT'] and amount > 100:
-            # E-levy on large transactions
             if np.random.random() < 0.3:
-                elevy = round(amount * 0.015, 2)  # 1.5% e-levy
+                elevy = round(amount * 0.015, 2)
 
         return fees, elevy
 
-    def generate_transactions_for_user(self, user_profile, recipient_pool):
-        """Generate transaction sequence for a single user"""
+    def _select_transaction_type(self, user_profile, current_balance):
+        """Select transaction type based on user preferences and balance."""
+
+        # If balance is low, might need cash in
+        if current_balance < user_profile['min_balance_threshold']:
+            if np.random.random() < 0.7:
+                return 'CASH_IN'
+
+        types = ['TRANSFER', 'DEBIT', 'PAYMENT', 'PAYMENT_SEND', 'CASH_OUT']
+        probs = [
+            user_profile['pref_transfer'],
+            user_profile['pref_debit'],
+            user_profile['pref_payment'] * 0.5,
+            user_profile['pref_payment'] * 0.5,
+            user_profile['pref_cashout']
+        ]
+        probs = np.array(probs) / sum(probs)
+        return np.random.choice(types, p=probs)
+
+    def _generate_timestamp(self, current_date, user_profile):
+        """Generate transaction timestamp based on user preferences."""
+
+        if np.random.random() < user_profile['pref_night']:
+            hour = np.random.choice([22, 23, 0, 1, 2, 3])
+        else:
+            hour = int(np.clip(
+                np.random.normal(user_profile['pref_hour'], 3),
+                6, 22
+            ))
+
+        return current_date.replace(
+            hour=hour,
+            minute=np.random.randint(0, 60),
+            second=np.random.randint(0, 60)
+        )
+
+    def _select_recipient(self, txn_type, user_recipients):
+        """Select transaction recipient based on type."""
+
+        if txn_type in ['TRANSFER', 'PAYMENT_SEND', 'CASH_OUT']:
+            if len(user_recipients) > 0 and np.random.random() < 0.6:
+                return np.random.choice(user_recipients)
+            else:
+                recipient = np.random.choice(self.recipient_pool)
+                user_recipients.append(recipient)
+                return recipient
+        else:
+            provider = np.random.choice(self.SERVICE_PROVIDERS)
+            return {
+                'phone': '0',
+                'name': provider,
+                'account': f'{provider}_ACCT'
+            }
+
+    def generate_loan_transaction(self, user_profile, current_date, current_balance,
+                                   is_disbursement=True, loan_amount=None):
+        """Generate a CREDIT or LOAN_REPAYMENT transaction."""
+
+        provider = user_profile.get('preferred_loan_provider', 'QWIKLOAN')
+
+        if is_disbursement:
+            # CREDIT: Loan disbursement
+            credit_limit = user_profile.get('credit_limit', self.loan_params['initial_limit'])
+            pref = user_profile.get('loan_amount_preference', 0.7)
+
+            # Calculate loan amount (percentage of available limit)
+            max_loan = min(credit_limit, self.loan_params['max_amount'])
+            min_loan = self.loan_params['min_amount']
+
+            amount = round(np.random.uniform(
+                min_loan,
+                max_loan * pref
+            ), 2)
+            amount = max(min_loan, min(amount, max_loan))
+
+            transaction = {
+                'TRANSACTION DATE': self._generate_timestamp(current_date, user_profile),
+                'FROM ACCT': f'{provider}_LENDING',
+                'FROM NAME': f'{provider} Loan Service',
+                'FROM NO.': '0',
+                'TRANS. TYPE': 'CREDIT',
+                'AMOUNT': amount,
+                'FEES': 0.0,
+                'E-LEVY': 0.0,
+                'BAL BEFORE': round(current_balance, 2),
+                'BAL AFTER': round(current_balance + amount, 2),
+                'TO NO.': user_profile['phone_number'],
+                'TO NAME': f"User {user_profile['user_id'][-6:]}",
+                'TO ACCT': user_profile['account_number'],
+                'LOAN_PROVIDER': provider,
+                'LOAN_PRINCIPAL': amount,
+                'LOAN_INTEREST_RATE': self.loan_params['interest_rate'],
+                'LOAN_DUE_DATE': (current_date + timedelta(days=self.loan_params['term_days'])).strftime('%Y-%m-%d')
+            }
+
+            return transaction, amount
+
+        else:
+            # LOAN_REPAYMENT: Repaying the loan
+            if loan_amount is None:
+                return None, 0
+
+            # Calculate repayment amount with interest
+            interest = loan_amount * self.loan_params['interest_rate']
+            total_due = loan_amount + interest
+
+            # Check if user can afford repayment
+            repay_amount = min(total_due, current_balance - 5)  # Keep minimum balance
+            repay_amount = max(0, round(repay_amount, 2))
+
+            if repay_amount <= 0:
+                return None, 0
+
+            transaction = {
+                'TRANSACTION DATE': self._generate_timestamp(current_date, user_profile),
+                'FROM ACCT': user_profile['account_number'],
+                'FROM NAME': f"User {user_profile['user_id'][-6:]}",
+                'FROM NO.': user_profile['phone_number'],
+                'TRANS. TYPE': 'LOAN_REPAYMENT',
+                'AMOUNT': repay_amount,
+                'FEES': 0.0,
+                'E-LEVY': 0.0,
+                'BAL BEFORE': round(current_balance, 2),
+                'BAL AFTER': round(current_balance - repay_amount, 2),
+                'TO NO.': '0',
+                'TO NAME': f'{provider} Loan Service',
+                'TO ACCT': f'{provider}_LENDING',
+                'LOAN_PROVIDER': provider,
+                'LOAN_PRINCIPAL_PAID': round(repay_amount - (repay_amount * self.loan_params['interest_rate'] / (1 + self.loan_params['interest_rate'])), 2),
+                'LOAN_INTEREST_PAID': round(repay_amount * self.loan_params['interest_rate'] / (1 + self.loan_params['interest_rate']), 2)
+            }
+
+            return transaction, repay_amount
+
+    def _determine_repayment_timing(self, user_profile, loan_date):
+        """Determine when the user will repay based on their archetype."""
+
+        timing_probs = user_profile.get('repayment_timing', (0.6, 0.3, 0.1))
+        default_prob = user_profile.get('default_probability', 0.05)
+
+        # Check for default
+        if np.random.random() < default_prob:
+            return None, 2  # Default - no repayment, risk label 2
+
+        timing_choice = np.random.choice(['on_time', 'late', 'very_late'], p=timing_probs)
+
+        if timing_choice == 'on_time':
+            days = np.random.randint(7, 30)
+            risk_label = 0
+        elif timing_choice == 'late':
+            days = np.random.randint(31, 45)
+            risk_label = 1
+        else:  # very_late
+            days = np.random.randint(45, 60)
+            risk_label = 1
+
+        repay_date = loan_date + timedelta(days=days)
+        return repay_date, risk_label
+
+    def generate_transactions_for_user(self, user_profile):
+        """Generate complete transaction sequence for a single user."""
 
         transactions = []
-        current_date = self.start_date + timedelta(
-            days=np.random.randint(0, 7)  # Stagger user starts
-        )
+        current_date = self.start_date + timedelta(days=user_profile['account_start_day'])
         current_balance = user_profile['initial_balance']
 
-        # Determine number of transactions
-        n_transactions = int(np.random.poisson(self.avg_transactions_per_user))
-        n_transactions = max(5, min(50, n_transactions))  # Constrain to 5-50
-
-        # Track recipients for realism
+        # Tracking
         user_recipients = []
+        n_transactions = max(5, min(50, int(np.random.poisson(self.avg_transactions_per_user))))
 
-        for txn_idx in range(n_transactions):
-            # Stop if beyond observation period
-            if current_date > self.end_date:
-                break
+        # Loan tracking
+        active_loan = None
+        loans_taken = 0
+        loan_target = user_profile.get('loan_count_target', 0) if user_profile['takes_loans'] else 0
+        credit_risk_labels = []
 
-            # Check if this transaction is fraudulent
-            is_fraud = False
-            if user_profile['is_fraudster']:
-                days_active = (current_date - self.start_date).days
-                if days_active >= user_profile.get('fraud_start_day', 0):
-                    is_fraud = True
+        # Calculate loan timing based on transaction index (not dates)
+        # This ensures loans happen within the user's transaction history
+        loan_at_txn_indices = []
+        if loan_target > 0:
+            # Schedule loans at regular intervals within the transaction sequence
+            # First loan after ~20% of transactions, then spread evenly
+            total_expected = n_transactions
+            first_loan_idx = max(3, int(total_expected * 0.15))  # After first 15% of txns
+            loan_interval = max(3, (total_expected - first_loan_idx) // (loan_target + 1))
 
-            # Determine transaction type
-            if is_fraud and user_profile.get('pref_cashout', 0) > 0:
-                # Fraudsters prefer cash-outs
-                txn_type = np.random.choice(
-                    ['TRANSFER', 'CASH_OUT', 'DEBIT'],
-                    p=[0.3, 0.6, 0.1]
+            for i in range(loan_target):
+                loan_idx = first_loan_idx + (i * loan_interval) + np.random.randint(-1, 2)
+                loan_idx = max(3, min(loan_idx, total_expected - 5))
+                loan_at_txn_indices.append(loan_idx)
+
+            loan_at_txn_indices.sort()
+
+        txn_idx = 0
+        regular_txn_count = 0
+        while current_date < self.end_date and regular_txn_count < n_transactions:
+            txn_idx += 1
+
+            # Check if it's time for a loan (based on transaction count)
+            if loan_at_txn_indices and regular_txn_count >= loan_at_txn_indices[0] and active_loan is None:
+                loan_at_txn_indices.pop(0)
+
+                # Generate loan disbursement (CREDIT)
+                loan_txn, loan_amount = self.generate_loan_transaction(
+                    user_profile, current_date, current_balance, is_disbursement=True
                 )
-            else:
-                # Normal users follow calibrated distribution
-                types = ['TRANSFER', 'DEBIT', 'PAYMENT', 'PAYMENT_SEND', 'CASH_OUT']
-                probs = [
-                    user_profile['pref_transfer'],
-                    user_profile['pref_debit'],
-                    user_profile['pref_payment'] * 0.5,
-                    user_profile['pref_payment'] * 0.5,
-                    0.05
-                ]
-                probs = np.array(probs) / sum(probs)  # Normalize
-                txn_type = np.random.choice(types, p=probs)
 
-            # Generate amount
-            amount = self.generate_transaction_amount(user_profile, txn_type, is_fraud)
+                if loan_txn and loan_amount > 0:
+                    transactions.append(loan_txn)
+                    current_balance += loan_amount
+                    loans_taken += 1
 
-            # For outgoing transactions, ensure sufficient balance
-            if txn_type in ['TRANSFER', 'DEBIT', 'PAYMENT', 'PAYMENT_SEND', 'CASH_OUT']:
+                    # Determine repayment timing (in transactions, not days)
+                    # Repayment happens after 3-8 more transactions
+                    repay_timing, risk_label = self._determine_repayment_timing(
+                        user_profile, current_date
+                    )
+
+                    # Calculate repay transaction index
+                    if repay_timing is None:
+                        repay_at_txn = None  # Default - no repayment
+                    else:
+                        # Repayment happens after 2-6 more transactions
+                        # This ensures repayment occurs within user's transaction history
+                        remaining_txns = n_transactions - regular_txn_count
+                        if remaining_txns > 3:
+                            txns_to_repay = np.random.randint(2, min(7, remaining_txns))
+                            repay_at_txn = regular_txn_count + txns_to_repay
+                        else:
+                            # Not enough transactions left, repay at end
+                            repay_at_txn = regular_txn_count + max(1, remaining_txns - 1)
+
+                    active_loan = {
+                        'amount': loan_amount,
+                        'disbursement_date': current_date,
+                        'repay_at_txn': repay_at_txn,
+                        'risk_label': risk_label
+                    }
+                    credit_risk_labels.append(risk_label)
+
+                    # Grow credit limit if successful borrower
+                    if user_profile.get('credit_limit_growth', False) and risk_label == 0:
+                        current_limit = user_profile.get('credit_limit', self.loan_params['initial_limit'])
+                        new_limit = min(
+                            current_limit * self.loan_params['limit_growth_rate'],
+                            self.loan_params['max_limit']
+                        )
+                        user_profile['credit_limit'] = new_limit
+
+            # Check if it's time to repay loan (based on transaction count)
+            if active_loan and active_loan.get('repay_at_txn') is not None:
+                if regular_txn_count >= active_loan['repay_at_txn']:
+                    repay_txn, repay_amount = self.generate_loan_transaction(
+                        user_profile, current_date, current_balance,
+                        is_disbursement=False, loan_amount=active_loan['amount']
+                    )
+
+                    if repay_txn and repay_amount > 0:
+                        transactions.append(repay_txn)
+                        current_balance -= repay_amount
+
+                    active_loan = None
+
+            # Generate regular transaction
+            txn_type = self._select_transaction_type(user_profile, current_balance)
+            amount = self.generate_transaction_amount(user_profile, txn_type)
+
+            # Ensure sufficient balance for outgoing transactions
+            if txn_type not in ['CASH_IN', 'CREDIT']:
                 available = current_balance - user_profile['min_balance_threshold']
                 if available <= 0:
-                    # Skip this transaction or make it a CASH_IN
                     txn_type = 'CASH_IN'
                     amount = np.random.uniform(50, 200)
                 else:
                     amount = min(amount, available)
 
-            # Calculate fees
-            fees, elevy = self.calculate_fees(
-                amount, txn_type, user_profile['accepts_fees']
-            )
+            fees, elevy = self.calculate_fees(amount, txn_type, user_profile['accepts_fees'])
 
-            # Determine time of day based on preferences
-            if np.random.random() < user_profile['pref_night']:
-                hour = np.random.choice([22, 23, 0, 1, 2, 3])
-            else:
-                # Center around preferred hour with noise
-                hour = int(np.clip(
-                    np.random.normal(user_profile['pref_hour'], 3),
-                    0, 23
-                ))
-
-            # Construct timestamp
-            txn_datetime = current_date.replace(
-                hour=hour,
-                minute=np.random.randint(0, 60),
-                second=np.random.randint(0, 60)
-            )
-
-            # Select recipient
-            if txn_type in ['TRANSFER', 'PAYMENT_SEND', 'CASH_OUT']:
-                # Reuse recipients or select new ones
-                if len(user_recipients) > 0 and np.random.random() < 0.6:
-                    recipient = np.random.choice(user_recipients)
-                else:
-                    recipient = np.random.choice(recipient_pool)
-                    user_recipients.append(recipient)
-                    # Limit recipient list size
-                    if len(user_recipients) > user_profile['typical_recipients']:
-                        user_recipients.pop(0)
-            else:
-                # Service providers for debits/payments
-                recipient = np.random.choice([
-                    'one4all.sp', 'MTN', 'Vodafone', 'AirtelTigo',
-                    'hubtel.sp', 'jumia.sp', 'uber.sp'
-                ])
+            recipient = self._select_recipient(txn_type, user_recipients)
+            if len(user_recipients) > user_profile['typical_recipients']:
+                user_recipients.pop(0)
 
             # Update balance
             balance_before = current_balance
@@ -345,15 +588,9 @@ class CalibratedMoMoDataGenerator:
             else:
                 current_balance -= (amount + fees + elevy)
 
-            balance_after = current_balance
-
-            # Create transaction record
-            recipient_name = recipient if isinstance(recipient, str) else recipient.get('name', 'Unknown')
-            recipient_phone = '0' if isinstance(recipient, str) else recipient.get('phone', '0')
-
             transaction = {
-                'TRANSACTION DATE': txn_datetime,
-                'FROM ACCT': user_profile['user_id'],
+                'TRANSACTION DATE': self._generate_timestamp(current_date, user_profile),
+                'FROM ACCT': user_profile['account_number'],
                 'FROM NAME': f"User {user_profile['user_id'][-6:]}",
                 'FROM NO.': user_profile['phone_number'],
                 'TRANS. TYPE': txn_type,
@@ -361,147 +598,160 @@ class CalibratedMoMoDataGenerator:
                 'FEES': fees,
                 'E-LEVY': elevy,
                 'BAL BEFORE': round(balance_before, 2),
-                'BAL AFTER': round(balance_after, 2),
-                'TO NO.': recipient_phone,
-                'TO NAME': recipient_name,
-                'TO ACCT': f"ACCT_{abs(hash(str(recipient))) % 100000000}",
-                'is_fraud': 1 if is_fraud else 0,
-                'fraud_type': user_profile['fraud_type']
+                'BAL AFTER': round(current_balance, 2),
+                'TO NO.': recipient['phone'],
+                'TO NAME': recipient['name'],
+                'TO ACCT': recipient['account']
             }
 
             transactions.append(transaction)
+            regular_txn_count += 1  # Increment regular transaction counter
 
             # Next transaction time
             hours_gap = np.random.exponential(user_profile['hours_between_txns'])
-
-            # Add weekend effect
-            if current_date.weekday() >= 5:  # Weekend
-                if np.random.random() < user_profile['pref_weekend']:
-                    hours_gap *= 0.7  # More frequent on weekends
+            if current_date.weekday() >= 5 and np.random.random() < user_profile['pref_weekend']:
+                hours_gap *= 0.7
 
             current_date += timedelta(hours=max(0.5, hours_gap))
 
-        return transactions
+        # Handle defaulted loan (no repayment transaction)
+        if active_loan and active_loan.get('repay_at_txn') is None:
+            # Loan defaulted - risk label already recorded
+            pass
+
+        # Sort transactions by date
+        transactions.sort(key=lambda x: x['TRANSACTION DATE'])
+
+        # Determine final credit risk label for user
+        if credit_risk_labels:
+            final_risk_label = max(credit_risk_labels)  # Worst outcome
+        else:
+            final_risk_label = -1  # No loans taken
+
+        return transactions, {
+            'user_id': user_profile['user_id'],
+            'credit_archetype': user_profile['credit_archetype'],
+            'loans_taken': loans_taken,
+            'credit_risk_label': final_risk_label,
+            'final_credit_limit': user_profile.get('credit_limit', 0),
+            'total_transactions': len(transactions)
+        }
+
+    def save_user_transactions(self, user_id, transactions):
+        """Save transactions for a single user to CSV."""
+
+        if not transactions:
+            return None
+
+        df = pd.DataFrame(transactions)
+        filename = f"{user_id}.csv"
+        filepath = self.output_dir / filename
+        df.to_csv(filepath, index=False)
+        return filepath
 
     def generate_dataset(self):
-        """Generate complete multi-user dataset"""
+        """Generate complete dataset with individual files per user."""
 
-        print(f"\nGenerating {self.n_users} users...")
-        users = self.generate_users()
+        print(f"\n{'='*80}")
+        print("GENERATING {0:,} INDIVIDUAL USER DATASETS".format(self.n_users))
+        print(f"{'='*80}")
 
-        # Create recipient pool for realistic social network
-        print("Creating recipient pool...")
-        recipient_pool = [
-            {'phone': f'233{np.random.randint(200000000, 600000000)}',
-             'name': f'Recipient_{i:05d}'}
-            for i in range(500)  # Pool of 500 potential recipients
-        ]
+        user_summaries = []
+        total_transactions = 0
+        archetype_counts = {k: 0 for k in self.CREDIT_ARCHETYPES.keys()}
+        risk_label_counts = {-1: 0, 0: 0, 1: 0, 2: 0}
 
-        # Add common service providers
-        service_providers = [
-            'one4all.sp', 'MTN', 'Vodafone', 'AirtelTigo', 'hubtel.sp',
-            'jumia.sp', 'uber.sp', 'bolt.sp', 'glovo.sp'
-        ]
-        recipient_pool.extend(service_providers)
+        for i in range(self.n_users):
+            if (i + 1) % 1000 == 0:
+                print(f"Progress: {i+1:,}/{self.n_users:,} users generated...")
 
-        print(f"Generating transactions for {len(users)} users...")
-        all_transactions = []
+            # Generate user profile
+            user_profile = self.generate_user_profile(i)
+            archetype_counts[user_profile['credit_archetype']] += 1
 
-        for i, user_profile in enumerate(users):
-            if (i + 1) % 200 == 0:
-                print(f"  Progress: {i+1}/{len(users)} users...")
+            # Generate transactions
+            transactions, summary = self.generate_transactions_for_user(user_profile)
 
-            user_transactions = self.generate_transactions_for_user(
-                user_profile, recipient_pool
-            )
-            all_transactions.extend(user_transactions)
+            # Save to individual file
+            self.save_user_transactions(user_profile['user_id'], transactions)
 
-        # Convert to DataFrame
-        df = pd.DataFrame(all_transactions)
+            # Track statistics
+            user_summaries.append(summary)
+            total_transactions += len(transactions)
+            risk_label_counts[summary['credit_risk_label']] += 1
 
-        # Sort by timestamp
-        df = df.sort_values('TRANSACTION DATE').reset_index(drop=True)
+        # Save user summaries
+        summary_df = pd.DataFrame(user_summaries)
+        summary_path = self.output_dir.parent / 'user_summaries.csv'
+        summary_df.to_csv(summary_path, index=False)
 
+        # Print statistics
         print(f"\n{'='*80}")
         print("GENERATION COMPLETE!")
         print(f"{'='*80}")
-        print(f"  Total users: {len(users)}")
-        print(f"  Legitimate users: {sum(1 for u in users if not u['is_fraudster'])}")
-        print(f"  Fraudulent users: {sum(1 for u in users if u['is_fraudster'])}")
-        print(f"  Total transactions: {len(df):,}")
-        print(f"  Fraud rate: {df['is_fraud'].mean():.2%}")
-        print(f"  Date range: {df['TRANSACTION DATE'].min()} to {df['TRANSACTION DATE'].max()}")
-        print(f"  Average transactions per user: {len(df) / len(users):.1f}")
+        print(f"\nTotal users: {self.n_users:,}")
+        print(f"Total transactions: {total_transactions:,}")
+        print(f"Average transactions per user: {total_transactions / self.n_users:.1f}")
+        print(f"\nOutput directory: {self.output_dir}")
+        print(f"User summaries: {summary_path}")
 
-        # Validation against real data
         print(f"\n{'='*80}")
-        print("VALIDATION AGAINST REAL DATA")
+        print("CREDIT BEHAVIOR DISTRIBUTION")
         print(f"{'='*80}")
+        for archetype, count in archetype_counts.items():
+            pct = count / self.n_users * 100
+            print(f"  {archetype}: {count:,} ({pct:.1f}%)")
 
-        print(f"\nAmount statistics:")
-        print(f"  Real data - Mean: GHS {self.calibration['amount_mean']:.2f}, Median: GHS {self.calibration['amount_median']:.2f}")
-        print(f"  Synthetic  - Mean: GHS {df['AMOUNT'].mean():.2f}, Median: GHS {df['AMOUNT'].median():.2f}")
+        print(f"\n{'='*80}")
+        print("CREDIT RISK LABEL DISTRIBUTION")
+        print(f"{'='*80}")
+        risk_labels = {
+            -1: "No loans taken",
+            0: "Good (repaid on time)",
+            1: "Late (repaid after term)",
+            2: "Default (failed to repay)"
+        }
+        for label, count in risk_label_counts.items():
+            pct = count / self.n_users * 100
+            print(f"  {label} - {risk_labels[label]}: {count:,} ({pct:.1f}%)")
 
-        print(f"\nTransaction type distribution:")
-        synthetic_types = df['TRANS. TYPE'].value_counts(normalize=True)
-        for txn_type in ['TRANSFER', 'DEBIT', 'PAYMENT_SEND', 'CASH_OUT', 'PAYMENT']:
-            real_pct = self.calibration['type_distribution'].get(txn_type, 0)
-            synthetic_pct = synthetic_types.get(txn_type, 0)
-            print(f"  {txn_type}: Real={real_pct:.1%}, Synthetic={synthetic_pct:.1%}")
+        # Calculate borrower-specific default rate
+        borrowers = self.n_users - risk_label_counts[-1]
+        if borrowers > 0:
+            defaults = risk_label_counts[2]
+            default_rate = defaults / borrowers * 100
+            print(f"\nDefault rate (among borrowers): {defaults:,}/{borrowers:,} ({default_rate:.2f}%)")
 
-        print(f"\nTemporal patterns:")
-        df['hour'] = pd.to_datetime(df['TRANSACTION DATE']).dt.hour
-        df['is_weekend'] = pd.to_datetime(df['TRANSACTION DATE']).dt.dayofweek >= 5
-        print(f"  Weekend rate: Real={self.calibration['weekend_rate']:.1%}, Synthetic={df['is_weekend'].mean():.1%}")
-        print(f"  Night rate: Real={self.calibration['night_rate']:.1%}, Synthetic={(df['hour'] >= 22).mean():.1%}")
-
-        return df, users
+        return summary_df
 
 
 def main():
-    """Generate calibrated synthetic dataset"""
+    """Generate calibrated synthetic dataset with per-user files."""
 
     print("=" * 80)
-    print("CALIBRATED SYNTHETIC MOBILE MONEY DATA GENERATION")
+    print("CALIBRATED MOBILE MONEY DATA GENERATOR v2.0")
+    print("Per-User Transaction Datasets with Credit/Loan Functionality")
     print("=" * 80)
 
     # Initialize generator
     generator = CalibratedMoMoDataGenerator(
-        n_users=2000,
+        n_users=10000,
         avg_transactions_per_user=15,
-        fraud_rate=0.05,
         start_date='2024-01-01',
-        duration_days=180  # 6 months
+        duration_days=180,
+        output_dir='data/user_transactions'
     )
 
     # Generate dataset
-    df, users = generator.generate_dataset()
+    summary_df = generator.generate_dataset()
 
-    # Save dataset
-    output_path = 'data/synthetic_momo_calibrated.csv'
-    df.to_csv(output_path, index=False)
-    print(f"\nSaved synthetic dataset to: {output_path}")
-
-    # Save user profiles for reference
-    user_df = pd.DataFrame(users)
-    user_path = 'data/synthetic_user_profiles.csv'
-    user_df.to_csv(user_path, index=False)
-    print(f"Saved user profiles to: {user_path}")
-
-    # Summary statistics
     print(f"\n{'='*80}")
-    print("DATASET SUMMARY")
+    print("SAMPLE USER SUMMARIES")
     print(f"{'='*80}")
-    print(f"\nTransaction volume by user (first 10 users):")
-    user_txn_counts = df.groupby('FROM ACCT').size().sort_values(ascending=False)
-    print(user_txn_counts.head(10))
+    print(summary_df.head(20).to_string())
 
-    print(f"\nFraud distribution:")
-    fraud_types = df['fraud_type'].value_counts()
-    print(fraud_types)
-
-    return df, users
+    return summary_df
 
 
 if __name__ == "__main__":
-    df, users = main()
+    summary_df = main()
