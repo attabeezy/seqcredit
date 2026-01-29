@@ -307,112 +307,79 @@ class TemporalTransactionFeatureEngineer:
         return pd.Series(user_features)
 
 
-def demonstrate_temporal_features():
-    """Demonstrate temporal feature engineering on real data"""
+def build_user_feature_dataset(transactions_dir='data/user_transactions',
+                                output_path='data/user_features.csv'):
+    """
+    Process all user transaction files and build a single user-level feature dataset.
+
+    Reads each CSV from transactions_dir, runs the full feature engineering pipeline,
+    computes user-level summary features, and concatenates everything into one
+    DataFrame indexed by user_id.
+
+    Args:
+        transactions_dir: Path to directory containing per-user CSV files.
+        output_path: Where to save the resulting feature dataset.
+
+    Returns:
+        DataFrame with one row per user, indexed by user_id.
+    """
+    from pathlib import Path
+
+    transactions_path = Path(transactions_dir)
+    csv_files = sorted(transactions_path.glob('USER_*.csv'))
+    total_files = len(csv_files)
 
     print("=" * 80)
-    print("TEMPORAL FEATURE ENGINEERING - REAL MOBILE MONEY DATA")
+    print("MULTI-USER FEATURE ENGINEERING PIPELINE")
     print("=" * 80)
+    print(f"\nFound {total_files} user transaction files in {transactions_dir}/")
 
-    # Load data
-    print("\n1. Loading real transaction data...")
-    df = pd.read_csv('data/transactions.xlsx - Table 5.csv')
-    print(f"   Loaded {len(df)} transactions")
-    print(f"   Date range: {pd.to_datetime(df['TRANSACTION DATE']).min()} to {pd.to_datetime(df['TRANSACTION DATE']).max()}")
-
-    # Filter to primary user
-    primary_user = df['FROM ACCT'].value_counts().index[0]
-    df_user = df[df['FROM ACCT'] == primary_user].copy()
-    print(f"   Filtered to primary user (Account {primary_user}): {len(df_user)} transactions")
-
-    # Extract features
-    print("\n2. Extracting temporal features...")
     engineer = TemporalTransactionFeatureEngineer()
-    df_features = engineer.extract_all_features(df_user)
+    rows = []
+    skipped = 0
 
-    # Count feature categories
-    feature_cols = [col for col in df_features.columns if col not in df.columns]
-    print(f"   Created {len(feature_cols)} engineered features")
+    for i, filepath in enumerate(csv_files):
+        user_id = filepath.stem  # e.g. USER_000000
 
-    # Categorize features
-    categories = {
-        'Transaction-level static': [c for c in feature_cols if any(x in c for x in ['log_amount', 'sqrt_amount', 'is_micro', 'is_small', 'is_medium', 'is_large', 'fee_to', 'elevy_to', 'total_cost'])],
-        'Categorical encodings': [c for c in feature_cols if c.startswith('is_') and any(x in c for x in ['transfer', 'debit', 'payment', 'cash', 'adjustment'])],
-        'Temporal extraction': [c for c in feature_cols if any(x in c for x in ['hour', 'day_', 'weekend', 'weekday', 'morning', 'afternoon', 'evening', 'night', '_sin', '_cos'])],
-        'Balance dynamics': [c for c in feature_cols if any(x in c for x in ['balance', 'amount_to_balance', 'deplete'])],
-        'Sequence features': [c for c in feature_cols if any(x in c for x in ['last_', 'cumulative', 'time_since', 'txn_number', 'reverse'])],
-        'Rolling windows': [c for c in feature_cols if 'rolling_' in c],
-        'Behavioral patterns': [c for c in feature_cols if any(x in c for x in ['unique_', 'repeated', 'self_transfer', 'diversity'])],
-        'Risk indicators': [c for c in feature_cols if any(x in c for x in ['unusual', 'rapid', 'risk_score', 'consecutive', 'frequency'])]
-    }
+        try:
+            df_user = pd.read_csv(filepath)
+        except Exception as e:
+            print(f"  [SKIP] {user_id}: could not read file ({e})")
+            skipped += 1
+            continue
 
-    print("\n3. Feature breakdown by category:")
-    for category, features in categories.items():
-        print(f"   - {category}: {len(features)} features")
+        if df_user.empty or len(df_user) < 2:
+            skipped += 1
+            continue
 
-    # Show sample features
-    print("\n4. Sample feature values (last 5 transactions):")
-    sample_features = [
-        'AMOUNT', 'BAL BEFORE', 'TRANS. TYPE',
-        'log_amount', 'is_transfer', 'hour', 'is_evening',
-        'balance_change', 'time_since_last_txn_hours',
-        'last_5_avg_amount', 'rolling_7d_count', 'risk_score'
-    ]
-    print(df_features[sample_features].tail().to_string(index=False))
+        try:
+            # Run full temporal feature extraction
+            df_features = engineer.extract_all_features(df_user)
+            # Compute user-level aggregate summary
+            user_summary = engineer.create_user_level_summary(df_features)
+            user_summary.name = user_id
+            rows.append(user_summary)
+        except Exception as e:
+            print(f"  [SKIP] {user_id}: feature extraction failed ({e})")
+            skipped += 1
+            continue
 
-    # Temporal trends
-    print("\n5. Temporal feature analysis:")
-    print(f"   - Average time between transactions: {df_features['time_since_last_txn_hours'].mean():.2f} hours")
-    print(f"   - Transactions per day: {len(df_user) / 200:.2f}")
-    print(f"   - Weekend transaction rate: {df_features['is_weekend'].mean():.1%}")
-    print(f"   - Night transaction rate: {df_features['is_night'].mean():.1%}")
-    print(f"   - Average risk score: {df_features['risk_score'].mean():.2f}")
+        if (i + 1) % 1000 == 0 or (i + 1) == total_files:
+            print(f"  Processed {i + 1}/{total_files} users...")
 
-    # User-level summary
-    print("\n6. User-level aggregated features:")
-    user_summary = engineer.create_user_level_summary(df_user)
-    print(f"   - Total volume: GHS {user_summary['total_volume']:.2f}")
-    print(f"   - Average transaction: GHS {user_summary['avg_transaction_amount']:.2f}")
-    print(f"   - Transaction frequency: {user_summary['transactions_per_day']:.2f} per day")
-    print(f"   - Balance volatility: {user_summary['balance_volatility']:.2f}")
-    print(f"   - Unique recipients: {int(user_summary['unique_recipients'])}")
+    # Combine into a single DataFrame
+    user_features_df = pd.DataFrame(rows)
+    user_features_df.index.name = 'user_id'
 
-    # Save engineered dataset
-    output_path = 'data/engineered_features_real_data.csv'
-    df_features.to_csv(output_path, index=False)
-    print(f"\nSaved engineered features to: {output_path}")
+    print(f"\nDone. {len(user_features_df)} users processed, {skipped} skipped.")
+    print(f"Feature matrix shape: {user_features_df.shape}")
 
-    # Save user summary
-    summary_path = 'data/user_level_summary.csv'
-    user_summary.to_csv(summary_path, header=['value'])
-    print(f"Saved user-level summary to: {summary_path}")
+    # Save
+    user_features_df.to_csv(output_path)
+    print(f"Saved to {output_path}")
 
-    print("\n" + "=" * 80)
-    print("NEXT STEPS FOR PAPERS A & B")
-    print("=" * 80)
-    print("""
-For Paper A (Feature Engineering Framework):
-1. You have temporal feature extraction working on real data
-2. Generate multiple synthetic users with varying behavior profiles
-3. Test framework robustness across different user types
-4. Compare against baseline feature sets (raw, simple stats, automated extraction)
-5. Evaluate: discriminative power, redundancy, stability, efficiency
-
-For Paper B (Static vs Sequential Comparison):
-1. You have sequential features (rolling windows, lookbacks)
-2. Create static aggregates from these features (user-level summary)
-3. Build LSTM model using sequence of last N transactions
-4. Compare static (Logistic Regression) vs sequential (LSTM) performance
-5. Analyze when sequential modeling provides meaningful gains
-
-Key Advantage of This Real Data:
-- Demonstrates framework works on actual mobile money transactions
-- Can validate synthetic data generator against real patterns
-- Shows practical feature engineering for deployment
-""")
-
-    return df_features
+    return user_features_df
 
 
 if __name__ == "__main__":
-    df_features = demonstrate_temporal_features()
+    user_features = build_user_feature_dataset()
