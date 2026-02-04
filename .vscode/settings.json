@@ -1,0 +1,15 @@
+{
+    // Run Python code in terminal instead of output panel
+    "python.terminal.executeInFileDir": true,
+    "python.terminal.activateEnvironment": true,
+    
+    // If using Code Runner extension, run in terminal
+    "code-runner.runInTerminal": true,
+    "code-runner.clearPreviousOutput": true,
+    
+    // For Python execution, use integrated terminal
+    "python.defaultInterpreterPath": "python",
+    
+    // Terminal settings
+    "terminal.integrated.defaultProfile.windows": "PowerShell"
+}

@@ -43,7 +43,7 @@ class CalibratedMoMoDataGenerator:
 
     # Service providers for debits/payments
     SERVICE_PROVIDERS = [
-        'one4all.sp', 'MTN', 'Vodafone', 'AirtelTigo', 'hubtel.sp',
+        'one4all.sp', 'MTN', 'Telecel', 'AirtelTigo', 'hubtel.sp',
         'jumia.sp', 'uber.sp', 'bolt.sp', 'glovo.sp', 'ECG', 'GWCL'
     ]
 
@@ -143,7 +143,7 @@ class CalibratedMoMoDataGenerator:
 
         print(f"Initialized generator for {n_users:,} users")
         print(f"Output directory: {self.output_dir}")
-        print(f"Calibration loaded:")
+        print("Calibration loaded:")
         print(f"  - Amount: mu={self.calibration['amount_lognormal_mu']:.2f}, "
               f"sigma={self.calibration['amount_lognormal_sigma']:.2f}")
         print(f"  - Balance: mean={self.calibration['balance_mean']:.2f}")
