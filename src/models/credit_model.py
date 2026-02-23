@@ -45,6 +45,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+TF_ENABLE_ONEDNN_OPTS = 0
 RANDOM_SEED = 42
 
 # LSTM feature columns selected from extract_all_features() output

@@ -102,10 +102,10 @@ sequential-crm-for-dce/
 │   ├── data/
 │   │   ├── feature_engineering.py    # Temporal feature extraction
 │   │   └── synthetic_data.py         # Synthetic data generator
-│   ├── models/
-│   │   ├── credit_model.py           # Model implementations
-│   │   └── lstm_test.py              # LSTM testing utilities
-│   └── utils/                        # Helper functions
+│   └──── models/
+│       ├── credit_model.py           # Model implementations
+│       └── lstm_test.py              # LSTM testing utilities
+│   
 ├── notebooks/
 │   ├── credit_risk_prediction_v1c.ipynb  # Main model (recommended)
 │   ├── credit_risk_prediction_v1b.ipynb  # Enhanced version
@@ -114,7 +114,7 @@ sequential-crm-for-dce/
 │   └── ctgan_syn_data_gen.ipynb          # CTGAN variant
 ├── docs/
 │   ├── SESSION.md                   # Detailed project log
-│   └── TECHNICAL_REPORT.md          # Technical specifications
+│   └── REPORT.md          # Technical specifications
 ├── requirements.txt                 # Python dependencies
 ├── LICENSE                          # MIT License
 └── README.md                        # This file
@@ -331,7 +331,7 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 For questions, issues, or suggestions:
 - **Open an Issue**: [GitHub Issues](https://github.com/yourusername/sequential-crm-for-dce/issues)
 - **Discussion**: Check [docs/SESSION.md](docs/SESSION.md) for detailed project background
-- **Technical Details**: See [docs/TECHNICAL_REPORT.md](docs/TECHNICAL_REPORT.md)
+- **Technical Details**: See [docs/REPORT.md](docs/REPORT.md)
 
 ---
 
