@@ -322,14 +322,14 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 ## 👤 Author
 
 **Benjamin Attabra** — Machine Learning Engineer  
-[GitHub](https://github.com/yourusername) | [Email](mailto:your.email@example.com)
+[GitHub](https://github.com/Attabeezy) | [Email](mailto:attabeezy@gmail.com)
 
 ---
 
 ## 🤝 Support
 
 For questions, issues, or suggestions:
-- **Open an Issue**: [GitHub Issues](https://github.com/yourusername/sequential-crm-for-dce/issues)
+- **Open an Issue**: [GitHub Issues](https://github.com/Attabeezy/sequential-crm-for-dce/issues)
 - **Discussion**: Check [docs/SESSION.md](docs/SESSION.md) for detailed project background
 - **Technical Details**: See [docs/REPORT.md](docs/REPORT.md)
 
