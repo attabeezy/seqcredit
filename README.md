@@ -90,10 +90,9 @@ pip install -r requirements.txt
 ```
 sequential-crm-for-dce/
 ├── data/
-│   ├── raw/                          # Original datasets
-│   │   ├── synthetic_transactions_calibrated.csv
-│   │   ├── user_features_engineered.csv
-│   │   └── user_summary_extended.csv
+│   ├── synthetic_transactions_calibrated.csv
+│   ├── user_features_engineered.csv
+│   ├── user_summary_extended.csv
 │   └── user_transactions/            # Individual user transaction files
 │       ├── USER_000000.csv
 │       ├── USER_000001.csv
@@ -217,8 +216,8 @@ from src.models.credit_model import CreditRiskDataLoader, CreditRiskModel
 
 # Load and prepare data
 loader = CreditRiskDataLoader(
-    features_path='data/raw/user_features_engineered.csv',
-    summaries_path='data/raw/user_summary_extended.csv'
+    features_path='data/user_features_engineered.csv',
+    summaries_path='data/user_summary_extended.csv'
 )
 X_train, X_test, y_train, y_test = loader.load_and_split()
 

@@ -218,3 +218,7 @@ __marimo__/
 # Generated synthetic data (can be regenerated with src/synthetic_data.py)
 data/user_transactions/
 data/test_user_transactions/
+
+# IDE folders
+.idea/
+.vscode/
