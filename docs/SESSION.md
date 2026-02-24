@@ -29,7 +29,7 @@ This foundational understanding informed how I designed the feature engineering 
 
 To make sense of the raw transaction data, I developed a feature engineering pipeline. This process extracts meaningful information from transaction histories, transforming them into features that predictive models can use. These features capture various aspects of user behavior, such as transaction frequency, amount patterns, and balance dynamics.
 
-The core logic for this is in `src/data/feature_engineering.py`.
+The core logic for this is in `src/seqcredit_model/feature_engineering.py`.
 
 ### Usage
 
@@ -37,7 +37,7 @@ The core logic for this is in `src/data/feature_engineering.py`.
 import sys
 
 sys.path.append('../src')
-from data.feature_engineering import TemporalTransactionFeatureEngineer
+from seqcredit_model.feature_engineering import TemporalTransactionFeatureEngineer
 
 # Initialize and extract features
 engineer = TemporalTransactionFeatureEngineer()
@@ -57,14 +57,14 @@ Initially, the generator focused on general transaction patterns. However, to sp
 *   **Modeling Borrowing Behavior:** Simulating different user archetypes (e.g., responsible borrowers, risky borrowers, defaulters) to create a diverse dataset for credit risk prediction.
 *   **Generating Individual User Files:** Instead of one large file, the generator now creates separate CSV files for each user's transactions, stored in `data/user_transactions/`. This design is better suited for sequential modeling.
 
-The primary script for this is `src/data/synthetic_data.py`.
+The primary script for this is `src/seqcredit_model/synthetic_data.py`.
 
 ### Usage
 
 ```python
 import sys
 sys.path.append('src')
-from data.synthetic_data import CalibratedMoMoDataGenerator
+from seqcredit_model.synthetic_data import CalibratedMoMoDataGenerator
 
 # Generate individual user datasets
 generator = CalibratedMoMoDataGenerator(
@@ -91,7 +91,7 @@ The goal is a binary classification: predicting whether a borrower will default 
 
 ### Core Components:
 
-The main modeling logic resides in `src/models/credit_model.py` and is orchestrated through `notebooks/credit_risk_modeling.ipynb`.
+The main modeling logic resides in `src/seqcredit_model/credit_model.py` and is orchestrated through `notebooks/credit_risk_modeling.ipynb`.
 
 *   **Data Loading and Splitting:** A `CreditRiskDataLoader` handles loading the various datasets, merging user features with summaries, and preparing sequences for the LSTM model. It also ensures a consistent train/test split across all models for fair comparison.
 *   **Model Implementations:** I implemented several models:

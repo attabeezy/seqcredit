@@ -23,7 +23,7 @@ pip install -r requirements.txt
 Open the main notebook:
 
 ```bash
-jupyter notebook notebooks/credit_risk_prediction_v1c.ipynb
+jupyter notebook notebooks/credit_risk_prediction.ipynb
 ```
 
 ---
@@ -34,19 +34,19 @@ jupyter notebook notebooks/credit_risk_prediction_v1c.ipynb
 sequential-crm-for-dce/
 ├── data/
 │   ├── user_transactions/        # Per-user transaction CSVs
-│   ├── user_features_engineered.csv
-│   └── user_summary_extended.csv
+│   ├── features_engineered.csv
+│   └── summary_extended.csv
 ├── src/
-│   ├── data/
-│   │   ├── feature_engineering.py
-│   │   └── synthetic_data.py
-│   └── models/
+│   └── seqcredit_model/
+│       ├── feature_engineering.py
+│       ├── synthetic_data.py
 │       ├── credit_model.py
 │       └── lstm_test.py
 ├── notebooks/
-│   ├── credit_risk_prediction_v1c.ipynb  # main
-│   ├── syn_data_gen.ipynb
-│   └── ctgan_syn_data_gen.ipynb
+│   ├── credit_risk_prediction.ipynb      # main (set VERSION = 'a'/'b'/'c')
+│   ├── credit_risk_modeling.ipynb
+│   ├── data_generation.ipynb
+│   └── ctgan_data_generation.ipynb
 ├── docs/
 │   ├── REPORT.md
 │   └── SESSION.md

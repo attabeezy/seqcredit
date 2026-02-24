@@ -1,15 +1,15 @@
 """
 Temporal Feature Engineering for Real Mobile Money Transaction Data
 
-Location: src/feature_engineering.py
+Location: src/seqcredit_model/feature_engineering.py
 
 Import path:
-    from src.feature_engineering import TemporalTransactionFeatureEngineer
+    from seqcredit_model.feature_engineering import TemporalTransactionFeatureEngineer
 
 Or from project root:
     import sys
     sys.path.append('src')
-    from feature_engineering import TemporalTransactionFeatureEngineer
+    from seqcredit_model.feature_engineering import TemporalTransactionFeatureEngineer
 
 This demonstrates the COMPLETE feature engineering pipeline on actual transaction data
 with timestamps, balance tracking, and counterparty information.
@@ -308,7 +308,7 @@ class TemporalTransactionFeatureEngineer:
 
 
 def build_user_feature_dataset(transactions_dir='data/user_transactions',
-                                output_path='data/user_features.csv'):
+                                output_path='data/features.csv'):
     """
     Process all user transaction files and build a single user-level feature dataset.
 

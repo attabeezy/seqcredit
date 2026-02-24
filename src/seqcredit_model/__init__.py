@@ -10,9 +10,9 @@ Modules:
     - models: Credit risk prediction models (LR, XGBoost, LSTM)
 """
 
-from .data.feature_engineering import TemporalTransactionFeatureEngineer
-from .data.synthetic_data import CalibratedMoMoDataGenerator
-from .models.credit_model import (
+from .feature_engineering import TemporalTransactionFeatureEngineer
+from .synthetic_data import CalibratedMoMoDataGenerator
+from .credit_model import (
     CreditRiskDataLoader,
     LogisticRegressionModel,
     XGBoostModel,

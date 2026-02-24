@@ -1,7 +1,7 @@
 """
 Calibrated Synthetic Mobile Money Data Generator v2.0
 
-Location: src/synthetic_data.py
+Location: src/seqcredit_model/synthetic_data.py
 
 This generator creates realistic per-user transaction datasets calibrated against
 actual mobile money patterns from Ghana (482 real transactions analyzed).

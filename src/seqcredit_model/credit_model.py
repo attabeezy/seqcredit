@@ -1,7 +1,7 @@
 """
 Credit Risk Prediction Models for Mobile Money Transaction Data
 
-Location: src/models.py
+Location: src/seqcredit_model/credit_model.py
 
 Provides three model implementations for binary default prediction:
   1. Logistic Regression (static, user-level features)
@@ -12,7 +12,7 @@ Target: default (credit_risk_label=2) vs non-default (0 or 1).
 Non-borrowers (credit_risk_label=-1) are excluded.
 
 Usage:
-    from src.models import (
+    from seqcredit_model import (
         CreditRiskDataLoader, LogisticRegressionModel,
         XGBoostModel, LSTMModel, ModelEvaluator, set_random_seeds
     )
@@ -100,8 +100,8 @@ class CreditRiskDataLoader:
     """
 
     def __init__(self,
-                 features_path='data/user_features.csv',
-                 summaries_path='data/user_summaries.csv',
+                 features_path='data/features.csv',
+                 summaries_path='data/summary.csv',
                  transactions_dir='data/user_transactions',
                  test_size=0.2,
                  random_state=RANDOM_SEED):
@@ -117,7 +117,7 @@ class CreditRiskDataLoader:
 
     def load_static_data(self) -> Tuple[pd.DataFrame, pd.Series]:
         """
-        Load and merge user_features.csv with user_summaries.csv.
+        Load and merge features.csv with summary.csv.
         Filter non-borrowers, create binary target, add loan features.
 
         Returns:
@@ -206,7 +206,7 @@ class CreditRiskDataLoader:
         Returns dict with X_train_seq, X_test_seq, y_train, y_test,
         feature_names, seq_scaler.
         """
-        from src.feature_engineering import TemporalTransactionFeatureEngineer
+        from seqcredit_model.feature_engineering import TemporalTransactionFeatureEngineer
 
         if feature_columns is None:
             feature_columns = LSTM_FEATURE_COLUMNS
