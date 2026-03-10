@@ -24,12 +24,16 @@ Credit Risk Labels:
 - 2: Default (failed to repay within 60 days)
 """
 
-import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
 import json
 import os
 from pathlib import Path
+import pandas as pd
+import numpy as np
+try:
+    from seqcredit_model.config import CALIBRATION_FILE, TRANSACTIONS_DIR
+except ModuleNotFoundError:
+    from config import CALIBRATION_FILE, TRANSACTIONS_DIR
 
 
 class CalibratedMoMoDataGenerator:
@@ -94,11 +98,11 @@ class CalibratedMoMoDataGenerator:
 
     def __init__(self,
                  n_users=10000,
-                 avg_transactions_per_user=15,
+                 avg_transactions_per_user=100,
                  start_date='2024-01-01',
                  duration_days=180,
-                 output_dir='data/user_transactions',
-                 calibration_file='data/real_data_calibration.json'):
+                 output_dir=str(TRANSACTIONS_DIR),
+                 calibration_file=str(CALIBRATION_FILE)):
         """
         Initialize generator with calibration parameters.
 
@@ -467,7 +471,7 @@ class CalibratedMoMoDataGenerator:
 
         # Tracking
         user_recipients = []
-        n_transactions = max(5, min(50, int(np.random.poisson(self.avg_transactions_per_user))))
+        n_transactions = max(50, np.random.poisson(lam=self.avg_transactions_per_user))
 
         # Loan tracking
         active_loan = None
@@ -736,10 +740,10 @@ def main():
     # Initialize generator
     generator = CalibratedMoMoDataGenerator(
         n_users=10000,
-        avg_transactions_per_user=15,
+        avg_transactions_per_user=100,
         start_date='2024-01-01',
         duration_days=180,
-        output_dir='data/user_transactions'
+        output_dir=str(TRANSACTIONS_DIR)
     )
 
     # Generate dataset

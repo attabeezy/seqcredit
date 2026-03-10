@@ -17,12 +17,15 @@ with timestamps, balance tracking, and counterparty information.
 This is what you need for Papers A & B!
 """
 
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 import warnings
+try:
+    from seqcredit_model.config import TRANSACTIONS_DIR, FEATURES_FILE
+except ModuleNotFoundError:
+    from config import TRANSACTIONS_DIR, FEATURES_FILE
 warnings.filterwarnings('ignore')
-
 
 class TemporalTransactionFeatureEngineer:
     """
@@ -307,8 +310,8 @@ class TemporalTransactionFeatureEngineer:
         return pd.Series(user_features)
 
 
-def build_user_feature_dataset(transactions_dir='data/user_transactions',
-                                output_path='data/features.csv'):
+def build_user_feature_dataset(transactions_dir=str(TRANSACTIONS_DIR),
+                                output_path=str(FEATURES_FILE)):
     """
     Process all user transaction files and build a single user-level feature dataset.
 

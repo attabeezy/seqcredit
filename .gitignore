@@ -215,6 +215,9 @@ __marimo__/
 .virtual_documents/
 .claude/
 
+# Claude Code
+CLAUDE.md
+
 # Generated synthetic data (can be regenerated with src/synthetic_data.py)
 data/user_transactions/
 data/test_user_transactions/

@@ -18,10 +18,18 @@ Usage:
     )
 """
 
-import numpy as np
-import pandas as pd
 from pathlib import Path
 from typing import Tuple, Dict, List, Optional
+try:
+    from seqcredit_model.config import (
+        FEATURES_FILE, SUMMARIES_FILE, TRANSACTIONS_DIR, LSTM_CACHE_FILE
+    )
+except ModuleNotFoundError:
+    from config import (
+        FEATURES_FILE, SUMMARIES_FILE, TRANSACTIONS_DIR, LSTM_CACHE_FILE
+    )
+import numpy as np
+import pandas as pd
 
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
@@ -59,15 +67,17 @@ LSTM_FEATURE_COLUMNS = [
     # Temporal (6)
     'hour_sin', 'hour_cos', 'day_sin', 'day_cos',
     'is_weekend', 'time_since_last_txn_hours',
-    # Balance dynamics (6)
+    # Balance dynamics (7)
     'log_balance_before', 'balance_pct_change', 'is_low_balance',
     'is_zero_balance', 'amount_to_balance_ratio', 'will_deplete_balance',
+    'balance_change',
     # Behavioral (3)
     'is_repeated_recipient', 'is_self_transfer', 'unique_txn_types_last_10',
     # Risk indicators (3)
     'unusual_hour', 'rapid_transaction', 'risk_score',
-    # Loan-specific (2)
-    'is_loan_disbursement', 'is_loan_repayment',
+    # Trajectory / volatility (5)
+    'amount_vs_last_5_avg', 'rolling_7d_std', 'reverse_txn_number',
+    'last_5_std_amount',
 ]
 
 
@@ -100,9 +110,9 @@ class CreditRiskDataLoader:
     """
 
     def __init__(self,
-                 features_path='data/features.csv',
-                 summaries_path='data/summary.csv',
-                 transactions_dir='data/user_transactions',
+                 features_path=str(FEATURES_FILE),
+                 summaries_path=str(SUMMARIES_FILE),
+                 transactions_dir=str(TRANSACTIONS_DIR),
                  test_size=0.2,
                  random_state=RANDOM_SEED):
         self.features_path = features_path
@@ -196,7 +206,7 @@ class CreditRiskDataLoader:
 
     def load_sequences(self, max_seq_len=50,
                        feature_columns=None,
-                       cache_path='data/lstm_sequences.npz') -> Dict:
+                       cache_path=str(LSTM_CACHE_FILE)) -> Dict:
         """
         Load per-user transaction CSVs for borrowers, extract features,
         create padded sequences for LSTM.
@@ -375,9 +385,6 @@ class CreditRiskDataLoader:
                     df_user = pd.read_csv(filepath)
 
                     credit_txns = df_user[df_user['TRANS. TYPE'] == 'CREDIT']
-                    repay_txns = df_user[
-                        df_user['TRANS. TYPE'] == 'LOAN_REPAYMENT'
-                    ]
                     total_txns = len(df_user)
 
                     # Loan activity features
@@ -402,53 +409,7 @@ class CreditRiskDataLoader:
                         else 0
                     )
 
-                    # Repayment features
-                    loan_feats['total_repayment_volume'] = (
-                        repay_txns['AMOUNT'].sum() if len(repay_txns) > 0
-                        else 0
-                    )
-                    loan_feats['repayment_to_loan_ratio'] = (
-                        loan_feats['total_repayment_volume'] /
-                        (loan_feats['total_loan_volume'] + 1)
-                    )
-                    loan_feats['avg_repayment_amount'] = (
-                        repay_txns['AMOUNT'].mean() if len(repay_txns) > 0
-                        else 0
-                    )
-                    loan_feats['has_any_repayment'] = (
-                        1 if len(repay_txns) > 0 else 0
-                    )
-                    loan_feats['pct_repayment_transactions'] = (
-                        len(repay_txns) / total_txns if total_txns > 0
-                        else 0
-                    )
-
                     # Timing features
-                    if len(credit_txns) > 0 and len(repay_txns) > 0:
-                        df_user['TRANSACTION DATE'] = pd.to_datetime(
-                            df_user['TRANSACTION DATE']
-                        )
-                        days_list = []
-                        for _, ct in credit_txns.iterrows():
-                            ct_date = pd.to_datetime(ct['TRANSACTION DATE'])
-                            later_repays = repay_txns[
-                                pd.to_datetime(
-                                    repay_txns['TRANSACTION DATE']
-                                ) > ct_date
-                            ]
-                            if len(later_repays) > 0:
-                                first_repay = pd.to_datetime(
-                                    later_repays.iloc[0]['TRANSACTION DATE']
-                                )
-                                days_list.append(
-                                    (first_repay - ct_date).days
-                                )
-                        loan_feats['avg_days_loan_to_repayment'] = (
-                            np.mean(days_list) if days_list else 30
-                        )
-                    else:
-                        loan_feats['avg_days_loan_to_repayment'] = 0
-
                     if len(credit_txns) > 0:
                         first_credit_idx = df_user[
                             df_user['TRANS. TYPE'] == 'CREDIT'
@@ -482,11 +443,6 @@ class CreditRiskDataLoader:
                     for col in ['total_loan_volume', 'avg_loan_amount',
                                 'max_loan_amount', 'loan_to_total_volume_ratio',
                                 'pct_credit_transactions',
-                                'total_repayment_volume',
-                                'repayment_to_loan_ratio',
-                                'avg_repayment_amount', 'has_any_repayment',
-                                'pct_repayment_transactions',
-                                'avg_days_loan_to_repayment',
                                 'loan_timing_in_sequence',
                                 'avg_balance_at_loan', 'min_balance_at_loan',
                                 'balance_to_loan_ratio_at_disbursement']:
@@ -495,11 +451,6 @@ class CreditRiskDataLoader:
                 for col in ['total_loan_volume', 'avg_loan_amount',
                             'max_loan_amount', 'loan_to_total_volume_ratio',
                             'pct_credit_transactions',
-                            'total_repayment_volume',
-                            'repayment_to_loan_ratio',
-                            'avg_repayment_amount', 'has_any_repayment',
-                            'pct_repayment_transactions',
-                            'avg_days_loan_to_repayment',
                             'loan_timing_in_sequence',
                             'avg_balance_at_loan', 'min_balance_at_loan',
                             'balance_to_loan_ratio_at_disbursement']:
@@ -715,9 +666,9 @@ class LSTMModel:
         """
         self.model = Sequential([
             Masking(mask_value=0.0, input_shape=input_shape),
-            KerasLSTM(self.lstm_units_1, return_sequences=True),
+            KerasLSTM(self.lstm_units_1, return_sequences=True, recurrent_dropout=0.2),
             Dropout(self.dropout_rate),
-            KerasLSTM(self.lstm_units_2, return_sequences=False),
+            KerasLSTM(self.lstm_units_2, return_sequences=False, recurrent_dropout=0.2),
             Dropout(self.dropout_rate),
             Dense(self.dense_units, activation='relu'),
             Dropout(self.dropout_rate * 0.67),  # lighter dropout before output
