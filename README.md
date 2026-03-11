@@ -34,8 +34,8 @@ jupyter notebook notebooks/credit_risk_prediction.ipynb
 sequential-crm-for-dce/
 ├── data/
 │   ├── user_transactions/        # Per-user transaction CSVs
-│   ├── features_engineered.csv
-│   └── summary_extended.csv
+│   ├── user_features.csv
+│   └── user_labels.csv
 ├── src/
 │   └── seqcredit_model/
 │       ├── feature_engineering.py

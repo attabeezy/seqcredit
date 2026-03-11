@@ -22,11 +22,11 @@ from pathlib import Path
 from typing import Tuple, Dict, List, Optional
 try:
     from seqcredit_model.config import (
-        FEATURES_FILE, SUMMARIES_FILE, TRANSACTIONS_DIR, LSTM_CACHE_FILE
+        USER_FEATURES_FILE, USER_LABELS_FILE, TRANSACTIONS_DIR, LSTM_CACHE_FILE
     )
 except ModuleNotFoundError:
     from config import (
-        FEATURES_FILE, SUMMARIES_FILE, TRANSACTIONS_DIR, LSTM_CACHE_FILE
+        USER_FEATURES_FILE, USER_LABELS_FILE, TRANSACTIONS_DIR, LSTM_CACHE_FILE
     )
 import numpy as np
 import pandas as pd
@@ -110,8 +110,8 @@ class CreditRiskDataLoader:
     """
 
     def __init__(self,
-                 features_path=str(FEATURES_FILE),
-                 summaries_path=str(SUMMARIES_FILE),
+                 features_path=str(USER_FEATURES_FILE),
+                 summaries_path=str(USER_LABELS_FILE),
                  transactions_dir=str(TRANSACTIONS_DIR),
                  test_size=0.2,
                  random_state=RANDOM_SEED):
@@ -127,7 +127,7 @@ class CreditRiskDataLoader:
 
     def load_static_data(self) -> Tuple[pd.DataFrame, pd.Series]:
         """
-        Load and merge features.csv with summary.csv.
+        Load and merge user_features.csv with user_labels.csv.
         Filter non-borrowers, create binary target, add loan features.
 
         Returns:

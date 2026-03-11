@@ -31,9 +31,9 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 try:
-    from seqcredit_model.config import CALIBRATION_FILE, TRANSACTIONS_DIR
+    from seqcredit_model.config import SYNTHETIC_PARAMS_FILE, TRANSACTIONS_DIR
 except ModuleNotFoundError:
-    from config import CALIBRATION_FILE, TRANSACTIONS_DIR
+    from config import SYNTHETIC_PARAMS_FILE, TRANSACTIONS_DIR
 
 
 class CalibratedMoMoDataGenerator:
@@ -102,7 +102,7 @@ class CalibratedMoMoDataGenerator:
                  start_date='2024-01-01',
                  duration_days=180,
                  output_dir=str(TRANSACTIONS_DIR),
-                 calibration_file=str(CALIBRATION_FILE)):
+                 calibration_file=str(SYNTHETIC_PARAMS_FILE)):
         """
         Initialize generator with calibration parameters.
 
@@ -686,7 +686,7 @@ class CalibratedMoMoDataGenerator:
 
         # Save user summaries
         summary_df = pd.DataFrame(user_summaries)
-        summary_path = self.output_dir.parent / 'user_summaries.csv'
+        summary_path = self.output_dir.parent / 'user_labels.csv'
         summary_df.to_csv(summary_path, index=False)
 
         # Print statistics
@@ -697,7 +697,7 @@ class CalibratedMoMoDataGenerator:
         print(f"Total transactions: {total_transactions:,}")
         print(f"Average transactions per user: {total_transactions / self.n_users:.1f}")
         print(f"\nOutput directory: {self.output_dir}")
-        print(f"User summaries: {summary_path}")
+        print(f"User labels: {summary_path}")
 
         print(f"\n{'='*80}")
         print("CREDIT BEHAVIOR DISTRIBUTION")

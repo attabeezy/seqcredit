@@ -100,10 +100,115 @@ The main modeling logic resides in `src/seqcredit_model/credit_model.py` and is 
     *   **LSTM Model:** A recurrent neural network designed for sequential data, capable of learning patterns over time in transaction histories.
 *   **Model Evaluation:** A `ModelEvaluator` helps compare the performance of these different models using metrics like ROC curves, precision-recall curves, and confusion matrices.
 
-### Remaining Tasks:
+### Completed Tasks:
 
-*   Ensure all necessary dependencies are installed (`scikit-learn`, `xgboost`, `tensorflow`, `seaborn`).
-*   Run the `credit_risk_modeling.ipynb` notebook end-to-end to verify everything works as expected.
-*   Debug any issues that arise during testing.
-*   Analyze and interpret the results to understand the strengths and weaknesses of each modeling approach.
+- [x] All dependencies installed and verified
+- [x] Notebooks tested and working
+- [x] Model results analyzed
+- [x] File naming standardized
+- [x] Documentation created (AGENTS.md, CLAUDE.md)
+
+---
+
+## March 2026: Data Pipeline Restructuring
+
+### Critical Bug Fix: Stale Labels Issue
+
+**Discovered:** Models were training on `summary_extended.csv` which contained labels from a previous data generation run. This file didn't match the current transaction files:
+
+| File | USER_000000 Transactions | Status |
+|------|-------------------------|--------|
+| `summary_extended.csv` | 21 | STALE (old generation) |
+| `user_transactions/USER_000000.csv` | 114 | Current (actual data) |
+| `user_summaries.csv` | 114 | Correct (matches transactions) |
+
+**Impact:** Models may have been trained on mismatched labels, potentially affecting accuracy.
+
+**Resolution:** Used `user_summaries.csv` (renamed to `user_labels.csv`) which is the correct output from synthetic data generation.
+
+### File Renaming
+
+Standardized data file names for clarity:
+
+| Old Name | New Name | Purpose |
+|----------|----------|---------|
+| `calibration.json` | `synthetic_params.json` | Parameters for synthetic data generation |
+| `features.csv` | `user_features.csv` | User-level aggregated features |
+| `user_summaries.csv` | `user_labels.csv` | Credit risk labels per user |
+| `summary_extended.csv` | → `legacy/` | Stale data, moved out of active pipeline |
+
+### Legacy Directory Created
+
+Moved unused/test files to `data/legacy/`:
+
+- `raw_part1.csv`, `raw_part2.csv` — Test data for single user
+- `features_engineered.csv` — Transaction-level features from raw files
+- `transactions.csv` — Old fraud detection dataset (different schema)
+- `transactions_calibrated.csv` — Calibrated variant of above
+- `profiles.csv` — User profiles for simulation
+- `summary.csv` — Old aggregate stats
+- `summary_extended.csv` — Stale labels (the bug)
+
+All legacy files added to `.gitignore`.
+
+### Config Changes
+
+Updated `src/seqcredit_model/config.py`:
+
+```python
+# Before
+CALIBRATION_FILE = DATA_DIR / 'calibration.json'
+FEATURES_FILE    = DATA_DIR / 'features.csv'
+SUMMARIES_FILE   = DATA_DIR / 'summary_extended.csv'  # BUG
+
+# After
+SYNTHETIC_PARAMS_FILE = DATA_DIR / 'synthetic_params.json'
+USER_FEATURES_FILE     = DATA_DIR / 'user_features.csv'
+USER_LABELS_FILE      = DATA_DIR / 'user_labels.csv'  # FIXED
+LEGACY_DIR            = DATA_DIR / 'legacy'
+```
+
+### Code Updates
+
+Updated all source files to use new config constants:
+
+- `synthetic_data.py`: `CALIBRATION_FILE` → `SYNTHETIC_PARAMS_FILE`, output path → `user_labels.csv`
+- `feature_engineering.py`: `FEATURES_FILE` → `USER_FEATURES_FILE`
+- `credit_model.py`: `FEATURES_FILE` → `USER_FEATURES_FILE`, `SUMMARIES_FILE` → `USER_LABELS_FILE`
+
+### Documentation Created
+
+- **AGENTS.md**: Guide for AI coding agents (build/lint commands, code style, architecture)
+- **CLAUDE.md**: Guide for Claude Code (setup, architecture, key patterns)
+- **docs/REPORT.md**: Comprehensive project report
+- **docs/SESSION.md**: This development log
+
+### LSTM Cache Cleanup
+
+Deleted `data/lstm_sequences.npz` (was built with stale labels). Needs regeneration after running feature engineering.
+
+### Final Data Structure
+
+```
+data/
+├── synthetic_params.json     # Calibration parameters
+├── user_features.csv         # Aggregated user features (10,000 users)
+├── user_labels.csv           # Credit risk labels (correct)
+├── model_comparison.csv      # Model evaluation output
+├── lstm_sequences.npz        # Cache (regenerate)
+├── user_transactions/        # Per-user CSVs (10,000 files)
+│   └── USER_XXXXXX.csv
+└── legacy/                   # Old/unused files (gitignored)
+    ├── summary_extended.csv  # Stale labels
+    ├── transactions.csv
+    └── ...
+```
+
+### Next Steps
+
+- [ ] Regenerate LSTM sequences: delete `lstm_sequences.npz` and re-run training
+- [ ] Re-train all models with corrected labels
+- [ ] Compare performance metrics before/after fix
+- [ ] Consider adding data validation checks in `CreditRiskDataLoader` to catch mismatches
+
 
