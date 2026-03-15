@@ -25,10 +25,11 @@ seqcredit-model/
 │   ├── feature_engineering.py    # Transaction feature extraction
 │   └── credit_model.py           # Models + data loader + evaluator
 ├── notebooks/                    # Jupyter experiments
-│   ├── credit_risk_prediction.ipynb  # Main entry point
-│   ├── credit_risk_modeling.ipynb
-│   ├── data_generation.ipynb
-│   └── data_statistics.ipynb
+│   ├── credit_risk_model.ipynb       # Primary modeling notebook
+│   ├── credit_risk_pred.ipynb        # Replication / reference
+│   ├── data_generator.ipynb
+│   ├── ctgan_generator.ipynb
+│   └── data_analysis.ipynb           # Descriptive stats + EDA
 ├── data/                         # Generated data
 │   ├── synthetic_params.json     # Calibration parameters
 │   ├── user_features.csv         # Aggregated user features
@@ -187,10 +188,8 @@ python src/seqcredit_model/feature_engineering.py
 ### Run Experiments
 
 ```bash
-jupyter notebook notebooks/credit_risk_prediction.ipynb
+jupyter notebook notebooks/credit_risk_model.ipynb
 ```
-
-Set `VERSION = 'a'`, `'b'`, or `'c'` in notebook for different model configurations.
 
 ---
 

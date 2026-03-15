@@ -24,12 +24,13 @@ from .credit_model import (
 
 __version__ = "0.1.0"
 __all__ = [
-    'TemporalTransactionFeatureEngineer',
-    'CalibratedMoMoDataGenerator',
-    'CreditRiskDataLoader',
-    'LogisticRegressionModel',
-    'XGBoostModel',
-    'LSTMModel',
-    'ModelEvaluator',
-    'set_random_seeds',
+    "config",
+    "TemporalTransactionFeatureEngineer",
+    "CalibratedMoMoDataGenerator",
+    "CreditRiskDataLoader",
+    "LogisticRegressionModel",
+    "XGBoostModel",
+    "LSTMModel",
+    "ModelEvaluator",
+    "set_random_seeds",
 ]

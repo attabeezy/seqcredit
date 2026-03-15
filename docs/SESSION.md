@@ -91,7 +91,7 @@ The goal is a binary classification: predicting whether a borrower will default 
 
 ### Core Components:
 
-The main modeling logic resides in `src/seqcredit_model/credit_model.py` and is orchestrated through `notebooks/credit_risk_modeling.ipynb`.
+The main modeling logic resides in `src/seqcredit_model/credit_model.py` and is orchestrated through `notebooks/credit_risk_model.ipynb`.
 
 *   **Data Loading and Splitting:** A `CreditRiskDataLoader` handles loading the various datasets, merging user features with summaries, and preparing sequences for the LSTM model. It also ensures a consistent train/test split across all models for fair comparison.
 *   **Model Implementations:** I implemented several models:

@@ -9,8 +9,8 @@ See [docs/REPORT.md](docs/REPORT.md) for full technical details.
 ## Setup
 
 ```bash
-git clone https://github.com/Attabeezy/sequential-crm-for-dce.git
-cd sequential-crm-for-dce
+git clone https://github.com/attabeezy/seqcredit-model.git
+cd seqcredit-model
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
@@ -23,7 +23,7 @@ pip install -r requirements.txt
 Open the main notebook:
 
 ```bash
-jupyter notebook notebooks/credit_risk_prediction.ipynb
+jupyter notebook notebooks/credit_risk_model.ipynb
 ```
 
 ---
@@ -31,7 +31,7 @@ jupyter notebook notebooks/credit_risk_prediction.ipynb
 ## Project Structure
 
 ```
-sequential-crm-for-dce/
+seqcredit-model/
 ├── data/
 │   ├── user_transactions/        # Per-user transaction CSVs
 │   ├── user_features.csv
@@ -40,13 +40,15 @@ sequential-crm-for-dce/
 │   └── seqcredit_model/
 │       ├── feature_engineering.py
 │       ├── synthetic_data.py
-│       ├── credit_model.py
-│       └── lstm_test.py
+│       └── credit_model.py
+├── tests/
+│   └── lstm_test.py
 ├── notebooks/
-│   ├── credit_risk_prediction.ipynb      # main (set VERSION = 'a'/'b'/'c')
-│   ├── credit_risk_modeling.ipynb
-│   ├── data_generation.ipynb
-│   └── ctgan_data_generation.ipynb
+│   ├── credit_risk_model.ipynb           # Primary modeling notebook
+│   ├── credit_risk_pred.ipynb            # Replication / reference
+│   ├── data_generator.ipynb
+│   ├── ctgan_generator.ipynb
+│   └── data_analysis.ipynb               # Descriptive stats + EDA
 ├── docs/
 │   ├── REPORT.md
 │   └── SESSION.md
