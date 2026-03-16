@@ -612,7 +612,7 @@ class CalibratedMoMoDataGenerator:
             "loans_taken": loans_taken,
             "credit_risk_label": final_risk_label,
             "final_credit_limit": user_profile.get("credit_limit", 0),
-            "total_transactions": len(transactions),
+            "gen_txn_count": len(transactions),
         }
 
     def save_user_transactions(self, user_id, transactions):
@@ -631,7 +631,7 @@ class CalibratedMoMoDataGenerator:
         print(f"Generating {self.n_users:,} user datasets...")
 
         user_summaries = []
-        total_transactions = 0
+        gen_txn_count = 0
         archetype_counts = {k: 0 for k in self.CREDIT_ARCHETYPES.keys()}
         risk_label_counts = {-1: 0, 0: 0, 1: 0, 2: 0}
 
@@ -647,15 +647,15 @@ class CalibratedMoMoDataGenerator:
             self.save_user_transactions(user_profile["user_id"], transactions)
 
             user_summaries.append(summary)
-            total_transactions += len(transactions)
+            gen_txn_count += len(transactions)
             risk_label_counts[summary["credit_risk_label"]] += 1
 
         summary_df = pd.DataFrame(user_summaries)
         summary_path = self.output_dir.parent / "user_labels.csv"
         summary_df.to_csv(summary_path, index=False)
 
-        print(f"Done. {total_transactions:,} total transactions")
-        print(f"Users: {self.n_users:,}, Avg: {total_transactions / self.n_users:.1f}")
+        print(f"Done. {gen_txn_count:,} total transactions")
+        print(f"Users: {self.n_users:,}, Avg: {gen_txn_count / self.n_users:.1f}")
         print(f"Output: {self.output_dir}")
         print(f"Labels: {summary_path}")
 

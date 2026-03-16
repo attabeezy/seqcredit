@@ -211,7 +211,7 @@ class TemporalTransactionFeatureEngineer:
         df["TRANSACTION DATE"] = pd.to_datetime(df["TRANSACTION DATE"])
 
         user_features = {
-            "total_transactions": len(df),
+            "obs_txn_count": len(df),
             "total_volume": df["AMOUNT"].sum(),
             "avg_transaction_amount": df["AMOUNT"].mean(),
             "median_transaction_amount": df["AMOUNT"].median(),

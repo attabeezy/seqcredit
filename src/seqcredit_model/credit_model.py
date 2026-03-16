@@ -181,32 +181,31 @@ class CreditRiskDataLoader:
                 issues.append(f"Unexpected credit_risk_label values: {invalid}")
 
         # 4. Transaction count consistency between features and labels
-        # Both files record total_transactions at generation time; a mismatch means
+        # Both files record transaction counts; a mismatch means
         # one file is from a different synthetic data run (the stale-labels bug).
         if (
-            "total_transactions" in df_features.columns
-            and "total_transactions" in df_labels.columns
+            "obs_txn_count" in df_features.columns
+            and "gen_txn_count" in df_labels.columns
         ):
-            merged_check = df_features[["user_id", "total_transactions"]].merge(
-                df_labels[["user_id", "total_transactions"]],
+            merged_check = df_features[["user_id", "obs_txn_count"]].merge(
+                df_labels[["user_id", "gen_txn_count"]],
                 on="user_id",
-                suffixes=("_feat", "_label"),
             )
             mismatched = merged_check[
-                merged_check["total_transactions_feat"]
-                != merged_check["total_transactions_label"]
+                merged_check["obs_txn_count"]
+                != merged_check["gen_txn_count"]
             ]
             if len(mismatched) > 0:
                 pct = len(mismatched) / len(merged_check) * 100
                 issues.append(
-                    f"total_transactions mismatch between features and labels for "
+                    f"Transaction count mismatch (obs_txn_count vs gen_txn_count) for "
                     f"{len(mismatched):,} users ({pct:.1f}%) — "
                     f"files may be from different data generation runs"
                 )
 
-        # 5. Spot-check: transaction CSV row counts vs label total_transactions
+        # 5. Spot-check: transaction CSV row counts vs label gen_txn_count
         # Reads 20 random user files to verify labels weren't generated from stale data.
-        if "total_transactions" in df_labels.columns and len(overlap) > 0:
+        if "gen_txn_count" in df_labels.columns and len(overlap) > 0:
             transactions_path = Path(self.transactions_dir)
             sample_ids = (
                 df_labels[df_labels["user_id"].isin(overlap)]["user_id"]
@@ -220,14 +219,14 @@ class CreditRiskDataLoader:
                     continue
                 actual_count = len(pd.read_csv(fpath))
                 label_count = int(
-                    df_labels.loc[df_labels["user_id"] == uid, "total_transactions"].iloc[0]
+                    df_labels.loc[df_labels["user_id"] == uid, "gen_txn_count"].iloc[0]
                 )
                 if abs(actual_count - label_count) > 5:
                     bad_files.append((uid, actual_count, label_count))
             if bad_files:
                 example = bad_files[0]
                 issues.append(
-                    f"Transaction file row counts don't match label total_transactions "
+                    f"Transaction file row counts don't match gen_txn_count "
                     f"for {len(bad_files)} of {len(sample_ids)} sampled users. "
                     f"Example: {example[0]} has {example[1]} rows but label says {example[2]}. "
                     f"Labels may be stale — regenerate with synthetic_data.py."
@@ -275,7 +274,7 @@ class CreditRiskDataLoader:
             "credit_risk_label",
             "credit_archetype",
             "default",
-            "total_transactions_y",
+            "gen_txn_count",
         ]
         feature_cols = [c for c in df.columns if c not in drop_cols]
         X = df[feature_cols].copy()

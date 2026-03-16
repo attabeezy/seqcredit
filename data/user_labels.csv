@@ -1,4 +1,4 @@
-user_id,credit_archetype,loans_taken,credit_risk_label,final_credit_limit,total_transactions
+user_id,credit_archetype,loans_taken,credit_risk_label,final_credit_limit,gen_txn_count
 USER_000000,occasional_borrower,2,1,62.5,114
 USER_000001,occasional_borrower,1,0,62.5,107
 USER_000002,occasional_borrower,1,0,62.5,99
