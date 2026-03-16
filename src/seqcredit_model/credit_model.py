@@ -1,5 +1,9 @@
 """Credit risk prediction models for mobile money data."""
 
+import os
+
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+
 from pathlib import Path
 from typing import Tuple, Dict, List
 
@@ -38,6 +42,7 @@ from sklearn.metrics import (
 from sklearn.utils.class_weight import compute_class_weight
 
 import xgboost as xgb
+import lightgbm as lgb
 
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -130,7 +135,9 @@ class CreditRiskDataLoader:
         self._test_user_ids = None
         self._static_data = None
 
-    def _validate_data(self, df_features: pd.DataFrame, df_labels: pd.DataFrame) -> None:
+    def _validate_data(
+        self, df_features: pd.DataFrame, df_labels: pd.DataFrame
+    ) -> None:
         """Validate consistency between features and labels before merging.
 
         Raises ValueError for critical mismatches (different runs, missing columns,
@@ -192,8 +199,7 @@ class CreditRiskDataLoader:
                 on="user_id",
             )
             mismatched = merged_check[
-                merged_check["obs_txn_count"]
-                != merged_check["gen_txn_count"]
+                merged_check["obs_txn_count"] != merged_check["gen_txn_count"]
             ]
             if len(mismatched) > 0:
                 pct = len(mismatched) / len(merged_check) * 100
@@ -250,7 +256,11 @@ class CreditRiskDataLoader:
                 + "\n".join(f"  - {issue}" for issue in issues)
             )
 
-        label_values = set(df_labels["credit_risk_label"].unique()) if "credit_risk_label" in df_labels.columns else {}
+        label_values = (
+            set(df_labels["credit_risk_label"].unique())
+            if "credit_risk_label" in df_labels.columns
+            else {}
+        )
         print(
             f"[DataLoader] Validation passed: {len(overlap):,} matching users, "
             f"label values={sorted(label_values)}"
@@ -688,7 +698,6 @@ class XGBoostModel:
             "colsample_bytree": colsample_bytree,
             "random_state": random_state,
             "eval_metric": "auc",
-            "use_label_encoder": False,
         }
         self.random_state = random_state
         self.model = xgb.XGBClassifier(**self.params)
@@ -726,6 +735,171 @@ class XGBoostModel:
 
             model = xgb.XGBClassifier(**self.params)
             model.fit(X_tr, y_tr, eval_set=[(X_val, y_val)], verbose=False)
+            y_proba = model.predict_proba(X_val)[:, 1]
+            y_pred = (y_proba >= 0.5).astype(int)
+
+            results["auc_roc"].append(roc_auc_score(y_val, y_proba))
+            results["auc_pr"].append(average_precision_score(y_val, y_proba))
+            results["f1"].append(f1_score(y_val, y_pred))
+            results["accuracy"].append(accuracy_score(y_val, y_pred))
+
+        return results
+
+
+class RandomForestModel:
+    """Random Forest classifier for credit risk prediction."""
+
+    def __init__(
+        self,
+        n_estimators=200,
+        max_depth=10,
+        min_samples_split=5,
+        min_samples_leaf=2,
+        class_weight="balanced",
+        random_state=RANDOM_SEED,
+    ):
+        from sklearn.ensemble import RandomForestClassifier
+
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
+        self.min_samples_split = min_samples_split
+        self.min_samples_leaf = min_samples_leaf
+        self.class_weight = class_weight
+        self.random_state = random_state
+
+        self.model = RandomForestClassifier(
+            n_estimators=n_estimators,
+            max_depth=max_depth,
+            min_samples_split=min_samples_split,
+            min_samples_leaf=min_samples_leaf,
+            class_weight=class_weight,
+            random_state=random_state,
+            n_jobs=-1,
+        )
+
+    def fit(self, X_train, y_train):
+        self.model.fit(X_train, y_train)
+        return self
+
+    def predict_proba(self, X) -> np.ndarray:
+        return self.model.predict_proba(X)[:, 1]
+
+    def predict(self, X, threshold=0.5) -> np.ndarray:
+        return (self.predict_proba(X) >= threshold).astype(int)
+
+    def get_feature_importance(self, feature_names: List[str]) -> pd.DataFrame:
+        importances = self.model.feature_importances_
+        imp_df = pd.DataFrame({"feature": feature_names, "importance": importances})
+        return imp_df.sort_values("importance", ascending=False)
+
+    def cross_validate(self, X, y, n_splits=5) -> Dict:
+        from sklearn.ensemble import RandomForestClassifier
+
+        skf = StratifiedKFold(
+            n_splits=n_splits, shuffle=True, random_state=self.random_state
+        )
+        results = {"auc_roc": [], "auc_pr": [], "f1": [], "accuracy": []}
+
+        for train_idx, val_idx in skf.split(X, y):
+            X_tr, X_val = X[train_idx], X[val_idx]
+            y_tr, y_val = y[train_idx], y[val_idx]
+
+            model = RandomForestClassifier(
+                n_estimators=self.n_estimators,
+                max_depth=self.max_depth,
+                min_samples_split=self.min_samples_split,
+                min_samples_leaf=self.min_samples_leaf,
+                class_weight=self.class_weight,
+                random_state=self.random_state,
+                n_jobs=-1,
+            )
+            model.fit(X_tr, y_tr)
+            y_proba = model.predict_proba(X_val)[:, 1]
+            y_pred = (y_proba >= 0.5).astype(int)
+
+            results["auc_roc"].append(roc_auc_score(y_val, y_proba))
+            results["auc_pr"].append(average_precision_score(y_val, y_proba))
+            results["f1"].append(f1_score(y_val, y_pred))
+            results["accuracy"].append(accuracy_score(y_val, y_pred))
+
+        return results
+
+
+class LightGBMModel:
+    """LightGBM classifier for credit risk prediction."""
+
+    def __init__(
+        self,
+        n_estimators=200,
+        max_depth=5,
+        learning_rate=0.1,
+        num_leaves=31,
+        class_weight="balanced",
+        random_state=RANDOM_SEED,
+    ):
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
+        self.learning_rate = learning_rate
+        self.num_leaves = num_leaves
+        self.class_weight = class_weight
+        self.random_state = random_state
+
+        self.model = lgb.LGBMClassifier(
+            n_estimators=n_estimators,
+            max_depth=max_depth,
+            learning_rate=learning_rate,
+            num_leaves=num_leaves,
+            class_weight=class_weight,
+            random_state=random_state,
+            verbose=-1,
+        )
+
+    def fit(self, X_train, y_train, X_val=None, y_val=None, early_stopping_rounds=20):
+        fit_params = {}
+        if X_val is not None and y_val is not None:
+            fit_params["eval_set"] = [(X_val, y_val)]
+            fit_params["callbacks"] = [
+                lgb.early_stopping(early_stopping_rounds, verbose=False)
+            ]
+        self.model.fit(X_train, y_train, **fit_params)
+        return self
+
+    def predict_proba(self, X) -> np.ndarray:
+        return self.model.predict_proba(X)[:, 1]
+
+    def predict(self, X, threshold=0.5) -> np.ndarray:
+        return (self.predict_proba(X) >= threshold).astype(int)
+
+    def get_feature_importance(self, feature_names: List[str]) -> pd.DataFrame:
+        importances = self.model.feature_importances_
+        imp_df = pd.DataFrame({"feature": feature_names, "importance": importances})
+        return imp_df.sort_values("importance", ascending=False)
+
+    def cross_validate(self, X, y, n_splits=5) -> Dict:
+        skf = StratifiedKFold(
+            n_splits=n_splits, shuffle=True, random_state=self.random_state
+        )
+        results = {"auc_roc": [], "auc_pr": [], "f1": [], "accuracy": []}
+
+        for train_idx, val_idx in skf.split(X, y):
+            X_tr, X_val = X[train_idx], X[val_idx]
+            y_tr, y_val = y[train_idx], y[val_idx]
+
+            model = lgb.LGBMClassifier(
+                n_estimators=self.n_estimators,
+                max_depth=self.max_depth,
+                learning_rate=self.learning_rate,
+                num_leaves=self.num_leaves,
+                class_weight=self.class_weight,
+                random_state=self.random_state,
+                verbose=-1,
+            )
+            model.fit(
+                X_tr,
+                y_tr,
+                eval_set=[(X_val, y_val)],
+                callbacks=[lgb.early_stopping(20, verbose=False)],
+            )
             y_proba = model.predict_proba(X_val)[:, 1]
             y_pred = (y_proba >= 0.5).astype(int)
 
@@ -880,6 +1054,163 @@ class LSTMModel:
             )
 
             y_proba = fold_model.predict_proba(X_val)
+            y_pred = (y_proba >= 0.5).astype(int)
+
+            results["auc_roc"].append(roc_auc_score(y_val, y_proba))
+            results["auc_pr"].append(average_precision_score(y_val, y_proba))
+            results["f1"].append(f1_score(y_val, y_pred))
+            results["accuracy"].append(accuracy_score(y_val, y_pred))
+
+            print(f"  Fold {fold + 1} AUC-ROC: {results['auc_roc'][-1]:.4f}")
+
+        return results
+
+
+class HybridLSTMModel:
+    """Hybrid LSTM model combining sequential and static features for credit risk prediction."""
+
+    def __init__(
+        self,
+        lstm_units_1=32,
+        lstm_units_2=16,
+        dense_units=16,
+        dropout_rate=0.3,
+        learning_rate=0.001,
+    ):
+        self.lstm_units_1 = lstm_units_1
+        self.lstm_units_2 = lstm_units_2
+        self.dense_units = dense_units
+        self.dropout_rate = dropout_rate
+        self.learning_rate = learning_rate
+        self.model = None
+        self.history = None
+
+    def build_model(self, seq_input_shape: Tuple[int, int], static_input_dim: int):
+        """Build a hybrid LSTM model with both sequence and static inputs.
+
+        Architecture:
+        - LSTM branch: processes transaction sequences
+        - Static branch: processes aggregated user features
+        - Fusion: concatenate LSTM output + static features → Dense → sigmoid
+        """
+        from tensorflow.keras import Input, Model
+        from tensorflow.keras.layers import Concatenate
+
+        seq_input = Input(shape=seq_input_shape, name="sequence_input")
+        static_input = Input(shape=(static_input_dim,), name="static_input")
+
+        x = Masking(mask_value=0.0, name="masking")(seq_input)
+        x = KerasLSTM(self.lstm_units_1, return_sequences=True, recurrent_dropout=0.2)(
+            x
+        )
+        x = Dropout(self.dropout_rate)(x)
+        x = KerasLSTM(self.lstm_units_2, return_sequences=False, recurrent_dropout=0.2)(
+            x
+        )
+        x = Dropout(self.dropout_rate)(x)
+
+        s = Dense(self.dense_units // 2, activation="relu")(static_input)
+        s = Dropout(self.dropout_rate * 0.67)(s)
+
+        combined = Concatenate()([x, s])
+        combined = Dense(self.dense_units, activation="relu")(combined)
+        combined = Dropout(self.dropout_rate * 0.67)(combined)
+        output = Dense(1, activation="sigmoid")(combined)
+
+        self.model = Model(inputs=[seq_input, static_input], outputs=output)
+        self.model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=self.learning_rate),
+            loss="binary_crossentropy",
+            metrics=[tf.keras.metrics.AUC(name="auc")],
+        )
+
+        return self
+
+    def fit(
+        self,
+        X_train_seq,
+        X_train_static,
+        y_train,
+        X_val_seq=None,
+        X_val_static=None,
+        y_val=None,
+        epochs=100,
+        batch_size=32,
+        class_weight=None,
+    ):
+        """Train the hybrid LSTM with early stopping on validation AUC."""
+        if self.model is None:
+            seq_shape = (X_train_seq.shape[1], X_train_seq.shape[2])
+            static_dim = X_train_static.shape[1]
+            self.build_model(seq_shape, static_dim)
+
+        callbacks = [
+            EarlyStopping(
+                patience=10, monitor="val_auc", mode="max", restore_best_weights=True
+            ),
+            ReduceLROnPlateau(patience=5, factor=0.5, monitor="val_auc", mode="max"),
+        ]
+
+        validation_data = None
+        if X_val_seq is not None and X_val_static is not None:
+            validation_data = ([X_val_seq, X_val_static], y_val)
+
+        self.history = self.model.fit(
+            [X_train_seq, X_train_static],
+            y_train,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_split=0.15 if validation_data is None else 0.0,
+            validation_data=validation_data,
+            callbacks=callbacks,
+            class_weight=class_weight,
+            verbose=1,
+        )
+
+        return self.history
+
+    def predict_proba(self, X_seq, X_static) -> np.ndarray:
+        return self.model.predict([X_seq, X_static], verbose=0).flatten()
+
+    def predict(self, X_seq, X_static, threshold=0.5) -> np.ndarray:
+        return (self.predict_proba(X_seq, X_static) >= threshold).astype(int)
+
+    def cross_validate(
+        self, X_seq, X_static, y, n_splits=5, epochs=100, batch_size=32, class_weight=None
+    ) -> Dict:
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RANDOM_SEED)
+        results = {"auc_roc": [], "auc_pr": [], "f1": [], "accuracy": []}
+
+        seq_shape = (X_seq.shape[1], X_seq.shape[2])
+        static_dim = X_static.shape[1]
+
+        for fold, (train_idx, val_idx) in enumerate(skf.split(X_seq, y)):
+            print(f"\n--- Fold {fold + 1}/{n_splits} ---")
+            X_seq_tr, X_seq_val = X_seq[train_idx], X_seq[val_idx]
+            X_static_tr, X_static_val = X_static[train_idx], X_static[val_idx]
+            y_tr, y_val = y[train_idx], y[val_idx]
+
+            fold_model = HybridLSTMModel(
+                lstm_units_1=self.lstm_units_1,
+                lstm_units_2=self.lstm_units_2,
+                dense_units=self.dense_units,
+                dropout_rate=self.dropout_rate,
+                learning_rate=self.learning_rate,
+            )
+            fold_model.build_model(seq_shape, static_dim)
+            fold_model.fit(
+                X_seq_tr,
+                X_static_tr,
+                y_tr,
+                X_val_seq=X_seq_val,
+                X_val_static=X_static_val,
+                y_val=y_val,
+                epochs=epochs,
+                batch_size=batch_size,
+                class_weight=class_weight,
+            )
+
+            y_proba = fold_model.predict_proba(X_seq_val, X_static_val)
             y_pred = (y_proba >= 0.5).astype(int)
 
             results["auc_roc"].append(roc_auc_score(y_val, y_proba))

@@ -247,4 +247,116 @@ Restructured `notebooks/data_analysis.ipynb` from an EDA/narrative notebook into
 - `docs/REPORT.md` — added Descriptive Statistics Notebook section
 - `docs/SESSION.md` — this entry
 
+---
+
+## March 16, 2026: Model Expansion & Hybrid LSTM
+
+### Goal
+
+Expand the model portfolio with additional classifiers and improve the LSTM architecture by combining sequential with static features.
+
+### What Was Done
+
+**1. Added New Model Classes to `src/seqcredit_model/credit_model.py`:**
+
+| Class | Description |
+|-------|-------------|
+| `RandomForestModel` | sklearn RandomForest with balanced class weights |
+| `LightGBMModel` | LightGBM with early stopping support |
+| `HybridLSTMModel` | Dual-branch LSTM + static features (early fusion) |
+
+**2. Created `/experiments` Directory:**
+
+```
+experiments/
+├── lr_model.ipynb      # Logistic Regression
+├── xgb_model.ipynb     # XGBoost
+├── rf_model.ipynb      # Random Forest
+├── lgbm_model.ipynb    # LightGBM
+└── lstm_model.ipynb    # Hybrid LSTM (sequence + static)
+```
+
+Each notebook follows a consistent structure:
+- Setup (imports, paths, seeds)
+- Data Preparation (CreditRiskDataLoader)
+- Model Training (cross-validation + fit)
+- Evaluation (AUC-ROC, AUC-PR, classification report)
+- Visualization (ROC curves, PR curves, confusion matrices)
+
+**3. Hybrid LSTM Architecture:**
+
+The new `HybridLSTMModel` combines:
+- **Sequential branch**: LSTM layers processing transaction sequences
+- **Static branch**: Dense layers processing user-level features
+- **Fusion**: Concatenate → Dense → sigmoid output
+
+This addresses the poor performance of pure LSTM (AUC ~0.50) by incorporating the highly predictive static features.
+
+**4. Updated Documentation:**
+
+- `AGENTS.md` — Added experiments section, updated model list
+- `CLAUDE.md` — Added experiments, updated architecture
+- `README.md` — Updated project structure
+- `docs/REPORT.md` — Updated model descriptions, key classes table
+
+### Files Changed
+
+- `src/seqcredit_model/credit_model.py` — Added 3 new model classes (~250 lines)
+- `experiments/lr_model.ipynb` — New notebook
+- `experiments/xgb_model.ipynb` — New notebook
+- `experiments/rf_model.ipynb` — New notebook
+- `experiments/lgbm_model.ipynb` — New notebook
+- `experiments/lstm_model.ipynb` — New notebook (hybrid)
+- `AGENTS.md` — Documentation update
+- `CLAUDE.md` — Documentation update
+- `README.md` — Documentation update
+- `docs/REPORT.md` — Documentation update
+
+### Lint Check
+
+```bash
+ruff check src/          # ✅ All checks passed
+ruff format --check src/  # ✅ All files formatted
+```
+
+### Next Steps
+
+- [ ] Run individual model notebooks and verify they work
+- [ ] Compare model performance across all 5 models
+- [ ] Evaluate if hybrid LSTM outperforms static models
+
+---
+
+## March 16, 2026: Model Implementation Bug Fixes
+
+### Goal
+
+Scan the model implementation for bugs and fix all issues found across `credit_model.py` and the experiment notebooks.
+
+### Bugs Found & Fixed
+
+**`src/seqcredit_model/credit_model.py`**
+
+| # | Bug | Fix |
+|---|-----|-----|
+| 1 | `XGBoostModel` passed deprecated `use_label_encoder=False` param — raises a warning in XGBoost ≥1.6 | Removed the key from the params dict |
+| 2 | `TF_ENABLE_ONEDNN_OPTS = 0` was set as a Python variable, not an environment variable — had no effect on TensorFlow | Replaced with `os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"` before all imports |
+| 3 | `HybridLSTMModel.fit()` built `validation_data = ([X_val_seq, X_val_static], y_train)` — used `y_train` instead of `y_val`, causing early stopping to monitor the wrong labels | Changed `y_train` → `y_val` in the tuple |
+| 4 | `HybridLSTMModel.fit()` referenced `y_val` in the body but `y_val` was not in the method signature — `NameError` at runtime whenever a validation set was passed | Added `y_val=None` parameter to the signature |
+| 5 | `HybridLSTMModel` had no `cross_validate()` method — inconsistent with every other model class (`LogisticRegressionModel`, `XGBoostModel`, `RandomForestModel`, `LightGBMModel`, `LSTMModel`) | Added `cross_validate(self, X_seq, X_static, y, n_splits=5, epochs=100, batch_size=32, class_weight=None)` using `StratifiedKFold`, mirroring `LSTMModel.cross_validate` |
+
+**`experiments/lstm_model.ipynb`**
+
+| # | Bug | Fix |
+|---|-----|-----|
+| 6 | Cell-7 created a second independent `train_test_split` — the LSTM was trained and evaluated on a different user partition than all static models, making comparisons invalid | Replaced `train_test_split(...)` block with `loader._train_user_ids` / `loader._test_user_ids` (set by `prepare_static_splits()`) |
+
+### Files Changed
+
+- `src/seqcredit_model/credit_model.py` — Bugs 1–5
+- `experiments/lstm_model.ipynb` — Bug 6 (cell-7)
+
+### Outstanding
+
+- [ ] Add `save()`/`load()` methods to all model classes (low priority, deferred)
 

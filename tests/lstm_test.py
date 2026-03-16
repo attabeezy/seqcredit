@@ -5,6 +5,10 @@ Keras sequence padding, one-hot encoding, and a basic LSTM training loop
 work correctly before integrating the full model into credit_model.py.
 """
 
+import os
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, LSTM, Dense
@@ -28,7 +32,7 @@ labels = to_categorical(labels, num_classes=num_classes)
 # Define the LSTM model
 model = Sequential()
 model.add(
-    Embedding(input_dim=10, output_dim=32, input_length=max_seq_length)
+    Embedding(input_dim=11, output_dim=32)
 )  # Assuming vocabulary size is 10
 model.add(LSTM(64, return_sequences=False))
 model.add(Dense(num_classes, activation="softmax"))

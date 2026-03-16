@@ -35,12 +35,19 @@ seqcredit-model/
 ├── data/
 │   ├── user_transactions/        # Per-user transaction CSVs
 │   ├── user_features.csv
-│   └── user_labels.csv
+│   ├── user_labels.csv
+│   └── lstm_sequences.npz        # Cached LSTM sequences
 ├── src/
 │   └── seqcredit_model/
 │       ├── feature_engineering.py
 │       ├── synthetic_data.py
-│       └── credit_model.py
+│       └── credit_model.py       # Model classes (LR, XGB, RF, LightGBM, LSTM, HybridLSTM)
+├── experiments/                   # Individual model notebooks
+│   ├── lr_model.ipynb             # Logistic Regression
+│   ├── xgb_model.ipynb            # XGBoost
+│   ├── rf_model.ipynb             # Random Forest
+│   ├── lgbm_model.ipynb           # LightGBM
+│   └── lstm_model.ipynb           # Hybrid LSTM (sequence + static)
 ├── tests/
 │   └── lstm_test.py
 ├── notebooks/
@@ -51,7 +58,8 @@ seqcredit-model/
 │   └── data_analysis.ipynb               # Descriptive statistics notebook
 ├── docs/
 │   ├── REPORT.md
-│   └── SESSION.md
+│   ├── SESSION.md
+│   └── DATACARD.md
 └── requirements.txt
 ```
 

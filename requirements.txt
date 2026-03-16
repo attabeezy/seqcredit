@@ -3,5 +3,9 @@ matplotlib
 numpy
 scikit-learn
 xgboost
+lightgbm
 tensorflow
 seaborn
+faker
+kagglehub
+jupyter

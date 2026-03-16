@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This project develops a credit risk prediction system using mobile money transaction data. It implements both traditional static models (Logistic Regression, XGBoost) and sequential deep learning models (LSTM) to predict loan default risk. A key feature is the synthetic data generator calibrated to real Ghanaian mobile money patterns, enabling model development without privacy concerns.
+This project develops a credit risk prediction system using mobile money transaction data. It implements both traditional static models (Logistic Regression, XGBoost, Random Forest, LightGBM) and sequential deep learning models (LSTM, Hybrid LSTM) to predict loan default risk. A key feature is the synthetic data generator calibrated to real Ghanaian mobile money patterns, enabling model development without privacy concerns.
 
 **Critical Bug Fixed (March 2026):** Discovered that models were training on stale label data (`summary_extended.csv`) that didn't match the current transaction files. This has been corrected by using `user_labels.csv` which contains the correct, current labels.
 
@@ -24,7 +24,13 @@ seqcredit-model/
 │   ├── synthetic_data.py         # Synthetic data generation
 │   ├── feature_engineering.py    # Transaction feature extraction
 │   └── credit_model.py           # Models + data loader + evaluator
-├── notebooks/                    # Jupyter experiments
+├── experiments/                  # Individual model notebooks
+│   ├── lr_model.ipynb            # Logistic Regression
+│   ├── xgb_model.ipynb           # XGBoost
+│   ├── rf_model.ipynb            # Random Forest
+│   ├── lgbm_model.ipynb           # LightGBM
+│   └── lstm_model.ipynb          # Hybrid LSTM (sequence + static)
+├── notebooks/                    # Jupyter notebooks
 │   ├── credit_risk_model.ipynb       # Primary modeling notebook
 │   ├── credit_risk_pred.ipynb        # Replication / reference
 │   ├── data_generator.ipynb
@@ -39,7 +45,8 @@ seqcredit-model/
 │   └── legacy/                   # Old/unused files
 ├── docs/
 │   ├── REPORT.md                 # This file
-│   └── SESSION.md                # Development log
+│   ├── SESSION.md                # Development log
+│   └── DATACARD.md               # Data documentation
 ├── AGENTS.md                     # AI coding agent guide
 ├── CLAUDE.md                     # Claude Code guide
 └── requirements.txt              # Python dependencies
@@ -116,12 +123,29 @@ results = model.cross_validate(X, y, n_splits=5)
 - Uses `scale_pos_weight` for class imbalance
 - Hyperparameters: 200 estimators, max_depth=5, learning_rate=0.1
 
+### Random Forest (`RandomForestModel`)
+
+- Input: Same static features
+- Uses `class_weight='balanced'` for imbalance handling
+- Hyperparameters: 200 estimators, max_depth=10, min_samples_split=5
+
+### LightGBM (`LightGBMModel`)
+
+- Input: Same static features
+- Uses early stopping with validation set
+- Hyperparameters: 200 estimators, max_depth=5, num_leaves=31
+
 ### LSTM (`LSTMModel`)
 
-- Input: Padded transaction sequences (max_len=50, 35 features per transaction)
+- Input: Padded transaction sequences (max_len=100, 38 features per transaction)
 - Architecture: Masking → LSTM(64) → Dropout → LSTM(32) → Dense(16) → Dropout → Dense(1, sigmoid)
 - Uses pre-padding so recent transactions are at sequence end
-- Features: `LSTM_FEATURE_COLUMNS` defined in config
+
+### Hybrid LSTM (`HybridLSTMModel`)
+
+- Input: Both padded transaction sequences AND static user features
+- Architecture: Dual-branch - LSTM processes sequences, Dense processes static features → Concatenate → Dense → sigmoid
+- Combines sequential patterns with static user characteristics for improved prediction
 
 ---
 
@@ -134,7 +158,10 @@ results = model.cross_validate(X, y, n_splits=5)
 | `CreditRiskDataLoader` | `credit_model.py` | Load/merge/split data for models |
 | `LogisticRegressionModel` | `credit_model.py` | Baseline static classifier |
 | `XGBoostModel` | `credit_model.py` | Gradient boosting classifier |
+| `RandomForestModel` | `credit_model.py` | Random Forest classifier |
+| `LightGBMModel` | `credit_model.py` | LightGBM gradient boosting |
 | `LSTMModel` | `credit_model.py` | Sequential deep learning model |
+| `HybridLSTMModel` | `credit_model.py` | Hybrid LSTM + static features |
 | `ModelEvaluator` | `credit_model.py` | Compare models, generate plots |
 
 ---
