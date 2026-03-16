@@ -204,11 +204,47 @@ data/
     └── ...
 ```
 
-### Next Steps
+### Next Steps (after March 2026 pipeline fix)
 
-- [ ] Regenerate LSTM sequences: delete `lstm_sequences.npz` and re-run training
-- [ ] Re-train all models with corrected labels
-- [ ] Compare performance metrics before/after fix
-- [ ] Consider adding data validation checks in `CreditRiskDataLoader` to catch mismatches
+- [x] Regenerate LSTM sequences: delete `lstm_sequences.npz` and re-run training
+- [x] Re-train all models with corrected labels
+- [x] Compare performance metrics before/after fix
+- [x] Consider adding data validation checks in `CreditRiskDataLoader` to catch mismatches
+
+---
+
+## March 15, 2026: Descriptive Statistics Notebook
+
+### Goal
+
+Deliver a dedicated descriptive statistics notebook covering numerical variability (mean, std, CV) and categorical distributions (unique value counts, frequencies) for the synthetic dataset.
+
+### What Was Done
+
+Restructured `notebooks/data_analysis.ipynb` from an EDA/narrative notebook into a formal descriptive statistics notebook. The previous version was visualization-first (user stories, radar charts, behavioral narrative); the new version leads with statistical tables and uses plots only to support them.
+
+**Removed:**
+- Individual user story section (balance trajectory plots for 3 users)
+- Archetype radar chart
+- "Feature Engineering Preview" framing (correlation-with-default bar chart)
+- All EDA narrative markdown (Part 1–6 story structure)
+
+**Added:**
+
+| Section | Content |
+|---------|---------|
+| 1 — Dataset Overview | Shape, column listings, null counts for features/labels/transactions |
+| 2 — Numerical Stats | `describe()` + CV table for all numeric features; top-15 CV ranking chart; violin plots annotated with μ and σ per archetype |
+| 3 — Categorical Stats | Frequency tables (count + %) for `credit_archetype`, `credit_risk_label`, `TRANS. TYPE`, `LOAN_PROVIDER`, day of week, hour of day; bar charts for each |
+| 4 — Distributions | Amount stats (CV, skew, kurtosis); log-scale histogram; IQR box by type; loan disbursement vs repayment stats |
+| 5 — Correlations | Pearson heatmap + printed top-10 correlations with default target |
+| 6 — Summary | Mean ± std table; styled gradient mean table by archetype |
+
+### Files Changed
+
+- `notebooks/data_analysis.ipynb` — full rewrite
+- `README.md` — updated notebook description
+- `docs/REPORT.md` — added Descriptive Statistics Notebook section
+- `docs/SESSION.md` — this entry
 
 

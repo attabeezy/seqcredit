@@ -48,7 +48,7 @@ seqcredit-model/
 │   ├── credit_risk_pred.ipynb            # Replication / reference
 │   ├── data_generator.ipynb
 │   ├── ctgan_generator.ipynb
-│   └── data_analysis.ipynb               # Descriptive stats + EDA
+│   └── data_analysis.ipynb               # Descriptive statistics notebook
 ├── docs/
 │   ├── REPORT.md
 │   └── SESSION.md

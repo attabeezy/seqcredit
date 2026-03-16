@@ -130,10 +130,139 @@ class CreditRiskDataLoader:
         self._test_user_ids = None
         self._static_data = None
 
+    def _validate_data(self, df_features: pd.DataFrame, df_labels: pd.DataFrame) -> None:
+        """Validate consistency between features and labels before merging.
+
+        Raises ValueError for critical mismatches (different runs, missing columns,
+        invalid labels). Prints warnings for minor issues (partial overlaps, NaNs).
+        """
+        issues = []
+        warnings_list = []
+
+        # 1. Duplicate user IDs in either file
+        feat_dupes = df_features["user_id"].duplicated().sum()
+        label_dupes = df_labels["user_id"].duplicated().sum()
+        if feat_dupes > 0:
+            issues.append(f"user_features has {feat_dupes} duplicate user_id(s)")
+        if label_dupes > 0:
+            issues.append(f"user_labels has {label_dupes} duplicate user_id(s)")
+
+        # 2. User ID alignment between files
+        feat_ids = set(df_features["user_id"])
+        label_ids = set(df_labels["user_id"])
+        only_in_features = feat_ids - label_ids
+        only_in_labels = label_ids - feat_ids
+        overlap = feat_ids & label_ids
+
+        if len(overlap) == 0:
+            issues.append(
+                "No users overlap between features and labels — "
+                "files are likely from different data generation runs"
+            )
+        if only_in_features:
+            warnings_list.append(
+                f"{len(only_in_features):,} user(s) in features but not in labels "
+                f"(will be dropped on merge)"
+            )
+        if only_in_labels:
+            warnings_list.append(
+                f"{len(only_in_labels):,} user(s) in labels but not in features "
+                f"(will be dropped on merge)"
+            )
+
+        # 3. Required columns
+        if "credit_risk_label" not in df_labels.columns:
+            issues.append("'credit_risk_label' column missing from labels file")
+        else:
+            valid_labels = {-1, 0, 1, 2}
+            actual_labels = set(df_labels["credit_risk_label"].unique())
+            invalid = actual_labels - valid_labels
+            if invalid:
+                issues.append(f"Unexpected credit_risk_label values: {invalid}")
+
+        # 4. Transaction count consistency between features and labels
+        # Both files record total_transactions at generation time; a mismatch means
+        # one file is from a different synthetic data run (the stale-labels bug).
+        if (
+            "total_transactions" in df_features.columns
+            and "total_transactions" in df_labels.columns
+        ):
+            merged_check = df_features[["user_id", "total_transactions"]].merge(
+                df_labels[["user_id", "total_transactions"]],
+                on="user_id",
+                suffixes=("_feat", "_label"),
+            )
+            mismatched = merged_check[
+                merged_check["total_transactions_feat"]
+                != merged_check["total_transactions_label"]
+            ]
+            if len(mismatched) > 0:
+                pct = len(mismatched) / len(merged_check) * 100
+                issues.append(
+                    f"total_transactions mismatch between features and labels for "
+                    f"{len(mismatched):,} users ({pct:.1f}%) — "
+                    f"files may be from different data generation runs"
+                )
+
+        # 5. Spot-check: transaction CSV row counts vs label total_transactions
+        # Reads 20 random user files to verify labels weren't generated from stale data.
+        if "total_transactions" in df_labels.columns and len(overlap) > 0:
+            transactions_path = Path(self.transactions_dir)
+            sample_ids = (
+                df_labels[df_labels["user_id"].isin(overlap)]["user_id"]
+                .sample(min(20, len(overlap)), random_state=42)
+                .tolist()
+            )
+            bad_files = []
+            for uid in sample_ids:
+                fpath = transactions_path / f"{uid}.csv"
+                if not fpath.exists():
+                    continue
+                actual_count = len(pd.read_csv(fpath))
+                label_count = int(
+                    df_labels.loc[df_labels["user_id"] == uid, "total_transactions"].iloc[0]
+                )
+                if abs(actual_count - label_count) > 5:
+                    bad_files.append((uid, actual_count, label_count))
+            if bad_files:
+                example = bad_files[0]
+                issues.append(
+                    f"Transaction file row counts don't match label total_transactions "
+                    f"for {len(bad_files)} of {len(sample_ids)} sampled users. "
+                    f"Example: {example[0]} has {example[1]} rows but label says {example[2]}. "
+                    f"Labels may be stale — regenerate with synthetic_data.py."
+                )
+
+        # 6. NaN check in numeric features (warning only)
+        nan_counts = df_features.select_dtypes(include=np.number).isnull().sum()
+        nan_cols = nan_counts[nan_counts > 0]
+        if len(nan_cols) > 0:
+            warnings_list.append(
+                f"{nan_cols.sum()} NaN value(s) across {len(nan_cols)} feature column(s): "
+                f"{list(nan_cols.index[:5])}{'...' if len(nan_cols) > 5 else ''}"
+            )
+
+        for w in warnings_list:
+            print(f"[DataLoader WARNING] {w}")
+
+        if issues:
+            raise ValueError(
+                "CreditRiskDataLoader validation failed:\n"
+                + "\n".join(f"  - {issue}" for issue in issues)
+            )
+
+        label_values = set(df_labels["credit_risk_label"].unique()) if "credit_risk_label" in df_labels.columns else {}
+        print(
+            f"[DataLoader] Validation passed: {len(overlap):,} matching users, "
+            f"label values={sorted(label_values)}"
+        )
+
     def load_static_data(self) -> Tuple[pd.DataFrame, pd.Series]:
         """Load and merge features with labels, filter non-borrowers."""
         df_features = pd.read_csv(self.features_path)
         df_summaries = pd.read_csv(self.summaries_path)
+
+        self._validate_data(df_features, df_summaries)
 
         df = df_features.merge(df_summaries, on="user_id", how="inner")
         df = df[df["credit_risk_label"] != -1].copy()

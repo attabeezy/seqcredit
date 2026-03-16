@@ -29,7 +29,7 @@ seqcredit-model/
 │   ├── credit_risk_pred.ipynb        # Replication / reference
 │   ├── data_generator.ipynb
 │   ├── ctgan_generator.ipynb
-│   └── data_analysis.ipynb           # Descriptive stats + EDA
+│   └── data_analysis.ipynb           # Descriptive statistics notebook
 ├── data/                         # Generated data
 │   ├── synthetic_params.json     # Calibration parameters
 │   ├── user_features.csv         # Aggregated user features
@@ -204,6 +204,46 @@ jupyter notebook notebooks/credit_risk_model.ipynb
 - jupyter
 
 Install: `pip install -r requirements.txt`
+
+---
+
+## Descriptive Statistics Notebook (`data_analysis.ipynb`)
+
+`notebooks/data_analysis.ipynb` provides a systematic statistical summary of the synthetic dataset. It is organized into six sections:
+
+### Section 1 — Dataset Overview
+Dimensions of each data file (features, labels, transactions), column listings, and null value counts.
+
+### Section 2 — Numerical Feature Statistics
+- Full `describe()` table for all numeric user-level features, augmented with Coefficient of Variation (CV = std / |mean|)
+- Top-15 features ranked by CV (relative variability)
+- Violin plots for balance and activity features annotated with per-archetype mean (μ) and standard deviation (σ)
+
+### Section 3 — Categorical Feature Statistics
+Frequency tables (count + percentage) for every categorical variable:
+
+| Variable | Source |
+|----------|--------|
+| `credit_archetype` | user_labels.csv |
+| `credit_risk_label` | user_labels.csv |
+| `TRANS. TYPE` | transaction sample |
+| `LOAN_PROVIDER` | CREDIT transactions only |
+| Day of week | transaction sample |
+| Hour of day | transaction sample |
+
+Each variable also has a bar chart showing its distribution.
+
+### Section 4 — Key Numerical Distributions
+- Transaction amount statistics (mean, std, CV, skew, kurtosis) and log-scale histogram
+- IQR box plots by transaction type
+- Loan disbursement and repayment summary stats separately
+
+### Section 5 — Feature Correlations
+Pearson correlation heatmap for 15 interpretable features plus the binary default target. Top-10 features ranked by absolute correlation with default are printed as a table.
+
+### Section 6 — Per-Archetype Summary
+- Mean ± std table for 8 key features across all five archetypes
+- Styled gradient table of means for easy scanning
 
 ---
 
