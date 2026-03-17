@@ -50,6 +50,9 @@ from tensorflow.keras.layers import LSTM as KerasLSTM, Dense, Dropout, Masking
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
+import joblib
+import json
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -673,6 +676,13 @@ class LogisticRegressionModel:
 
         return results
 
+    def save(self, path: str) -> None:
+        joblib.dump(self, path)
+
+    @classmethod
+    def load(cls, path: str) -> "LogisticRegressionModel":
+        return joblib.load(path)
+
 
 class XGBoostModel:
     """XGBoost classifier for credit risk prediction."""
@@ -744,6 +754,13 @@ class XGBoostModel:
             results["accuracy"].append(accuracy_score(y_val, y_pred))
 
         return results
+
+    def save(self, path: str) -> None:
+        joblib.dump(self, path)
+
+    @classmethod
+    def load(cls, path: str) -> "XGBoostModel":
+        return joblib.load(path)
 
 
 class RandomForestModel:
@@ -823,6 +840,13 @@ class RandomForestModel:
             results["accuracy"].append(accuracy_score(y_val, y_pred))
 
         return results
+
+    def save(self, path: str) -> None:
+        joblib.dump(self, path)
+
+    @classmethod
+    def load(cls, path: str) -> "RandomForestModel":
+        return joblib.load(path)
 
 
 class LightGBMModel:
@@ -909,6 +933,13 @@ class LightGBMModel:
             results["accuracy"].append(accuracy_score(y_val, y_pred))
 
         return results
+
+    def save(self, path: str) -> None:
+        joblib.dump(self, path)
+
+    @classmethod
+    def load(cls, path: str) -> "LightGBMModel":
+        return joblib.load(path)
 
 
 class LSTMModel:
@@ -1064,6 +1095,21 @@ class LSTMModel:
             print(f"  Fold {fold + 1} AUC-ROC: {results['auc_roc'][-1]:.4f}")
 
         return results
+
+    def save(self, path: str) -> None:
+        self.model.save(path)
+        config = {k: v for k, v in self.__dict__.items() if k not in ("model", "history")}
+        with open(f"{path}.json", "w") as f:
+            json.dump(config, f)
+
+    @classmethod
+    def load(cls, path: str) -> "LSTMModel":
+        with open(f"{path}.json") as f:
+            config = json.load(f)
+        instance = cls(**config)
+        instance.model = tf.keras.models.load_model(path)
+        instance.history = None
+        return instance
 
 
 class HybridLSTMModel:
@@ -1221,6 +1267,21 @@ class HybridLSTMModel:
             print(f"  Fold {fold + 1} AUC-ROC: {results['auc_roc'][-1]:.4f}")
 
         return results
+
+    def save(self, path: str) -> None:
+        self.model.save(path)
+        config = {k: v for k, v in self.__dict__.items() if k not in ("model", "history")}
+        with open(f"{path}.json", "w") as f:
+            json.dump(config, f)
+
+    @classmethod
+    def load(cls, path: str) -> "HybridLSTMModel":
+        with open(f"{path}.json") as f:
+            config = json.load(f)
+        instance = cls(**config)
+        instance.model = tf.keras.models.load_model(path)
+        instance.history = None
+        return instance
 
 
 class ModelEvaluator:

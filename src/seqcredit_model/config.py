@@ -18,3 +18,4 @@ USER_LABELS_FILE = DATA_DIR / "user_labels.csv"
 LSTM_CACHE_FILE = DATA_DIR / "lstm_sequences.npz"
 
 LEGACY_DIR = DATA_DIR / "legacy"
+MODELS_DIR = PROJECT_ROOT / "models"

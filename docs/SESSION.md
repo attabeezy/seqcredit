@@ -358,7 +358,7 @@ Scan the model implementation for bugs and fix all issues found across `credit_m
 
 ### Outstanding
 
-- [ ] Add `save()`/`load()` methods to all model classes (low priority, deferred)
+- [x] Add `save()`/`load()` methods to all model classes (resolved March 17)
 
 ---
 
@@ -420,4 +420,36 @@ The main notebook now covers all 6 models in sequence:
 - [x] Run individual model notebooks and verify they work → merged into main notebook
 - [x] Compare model performance across all 6 models → unified comparison in Section 9
 - [x] Evaluate if hybrid LSTM outperforms static models → addressed in Section 10 analysis
+
+---
+
+## March 17, 2026: Model Serialisation (save/load)
+
+### Goal
+
+Add `save()` and `load()` methods to all six model classes so trained models can be persisted and reloaded without retraining.
+
+### What Was Done
+
+**Strategy:**
+
+| Model type | Serialisation |
+|------------|---------------|
+| LR, XGBoost, RF, LightGBM | `joblib.dump(self, path)` / `joblib.load(path)` — whole instance in one `.joblib` file |
+| LSTMModel, HybridLSTMModel | Keras native `model.save(path)` for weights + architecture; companion `<path>.json` for Python-level hyperparameters |
+
+**Interface (all classes):**
+
+```python
+model.save("models/lr_model.joblib")
+lr2 = LogisticRegressionModel.load("models/lr_model.joblib")
+
+lstm.save("models/lstm_model")          # creates dir + lstm_model.json
+lstm2 = LSTMModel.load("models/lstm_model")
+```
+
+### Files Changed
+
+- `src/seqcredit_model/config.py` — Added `MODELS_DIR = PROJECT_ROOT / "models"`
+- `src/seqcredit_model/credit_model.py` — Added `import joblib`, `import json`; added `save()`/`load()` to all 6 model classes
 
