@@ -182,7 +182,7 @@ The models were training on `summary_extended.csv` which contained **stale label
 
 1. Identified that `user_summaries.csv` (output from synthetic data generator) contained **correct current labels**
 2. Renamed `user_summaries.csv` → `user_labels.csv`
-3. Moved stale `summary_extended.csv` to `data/legacy/`
+3. Deleted stale `summary_extended.csv` from the repository
 4. Updated `config.py` to use `USER_LABELS_FILE` constant
 
 ---
@@ -215,6 +215,7 @@ jupyter notebook notebooks/credit_risk_model.ipynb
 - pandas, numpy
 - scikit-learn
 - xgboost
+- lightgbm
 - tensorflow
 - matplotlib, seaborn
 - jupyter
