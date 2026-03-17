@@ -12,7 +12,8 @@ See [docs/REPORT.md](docs/REPORT.md) for full technical details.
 git clone https://github.com/attabeezy/seqcredit-model.git
 cd seqcredit-model
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
 ```
 
@@ -36,20 +37,23 @@ seqcredit-model/
 │   ├── user_transactions/        # Per-user transaction CSVs
 │   ├── user_features.csv
 │   ├── user_labels.csv
+│   └── synthetic_params.json    # Calibration parameters
 ├── src/
 │   └── seqcredit_model/
+│       ├── config.py
 │       ├── feature_engineering.py
 │       ├── synthetic_data.py
-│       └── credit_model.py       # Model classes (LR, XGB, RF, LightGBM, LSTM, HybridLSTM)
-├── tests/
-│   └── lstm_test.py
+│       └── credit_model.py      # Model classes (LR, XGB, RF, LightGBM, LSTM, HybridLSTM)
 ├── notebooks/
-│   ├── credit_risk_model.ipynb           # Primary modeling notebook (all 6 models)
-│   └── data_analysis.ipynb               # Descriptive statistics notebook
+│   ├── credit_risk_model.ipynb  # Primary modeling notebook (all 6 models)
+│   └── data_analysis.ipynb      # Descriptive statistics notebook
 ├── docs/
 │   ├── REPORT.md
 │   ├── SESSION.md
 │   └── DATACARD.md
+├── models/                      # Persisted trained models (created by model.save())
+├── AGENTS.md                    # AI coding agent guide
+├── CLAUDE.md                    # Claude Code guide
 └── requirements.txt
 ```
 

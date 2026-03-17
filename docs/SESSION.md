@@ -315,8 +315,8 @@ This addresses the poor performance of pure LSTM (AUC ~0.50) by incorporating th
 ### Lint Check
 
 ```bash
-ruff check src/          # ✅ All checks passed
-ruff format --check src/  # ✅ All files formatted
+python -m seqcredit_model.synthetic_data       # generates user_transactions/ + user_labels.csv
+python -m seqcredit_model.feature_engineering # generates user_features.csv
 ```
 
 ### Next Steps

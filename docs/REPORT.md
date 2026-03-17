@@ -25,17 +25,18 @@ seqcredit-model/
 │   ├── feature_engineering.py    # Transaction feature extraction
 │   └── credit_model.py           # Models + data loader + evaluator
 ├── notebooks/                    # Jupyter notebooks
-│   ├── credit_risk_model.ipynb       # Primary modeling notebook (all 6 models)
-│   └── data_analysis.ipynb           # Descriptive statistics notebook
+│   ├── credit_risk_model.ipynb   # Primary modeling notebook (all 6 models)
+│   └── data_analysis.ipynb      # Descriptive statistics notebook
 ├── data/                         # Generated data
-│   ├── synthetic_params.json     # Calibration parameters
-│   ├── user_features.csv         # Aggregated user features
-│   ├── user_labels.csv           # Credit risk labels
-│   └── user_transactions/        # Per-user CSVs (10,000 users, regenerable)
+│   ├── synthetic_params.json    # Calibration parameters
+│   ├── user_features.csv        # Aggregated user features
+│   ├── user_labels.csv          # Credit risk labels
+│   └── user_transactions/       # Per-user CSVs (10,000 users, regenerable)
+├── models/                       # Persisted trained models (created by model.save())
 ├── docs/
-│   ├── REPORT.md                 # This file
-│   ├── SESSION.md                # Development log
-│   └── DATACARD.md               # Data documentation
+│   ├── REPORT.md                # This file
+│   ├── SESSION.md               # Development log
+│   └── DATACARD.md              # Data documentation
 ├── AGENTS.md                     # AI coding agent guide
 ├── CLAUDE.md                     # Claude Code guide
 └── requirements.txt              # Python dependencies
@@ -102,7 +103,7 @@ results = model.cross_validate(X, y, n_splits=5)
 
 ### Logistic Regression (`LogisticRegressionModel`)
 
-- Input: Scaled user-level static features (50+ features)
+- Input: Scaled user-level static features (29 features)
 - Uses `class_weight='balanced'` for imbalance handling
 - Provides feature coefficients for interpretability
 
@@ -126,7 +127,7 @@ results = model.cross_validate(X, y, n_splits=5)
 
 ### LSTM (`LSTMModel`)
 
-- Input: Padded transaction sequences (max_len=100, 38 features per transaction)
+- Input: Padded transaction sequences (max_len=50, 38 features per transaction)
 - Architecture: Masking → LSTM(64) → Dropout → LSTM(32) → Dense(16) → Dropout → Dense(1, sigmoid)
 - Uses pre-padding so recent transactions are at sequence end
 
@@ -192,13 +193,13 @@ The models were training on `summary_extended.csv` which contained **stale label
 ### Generate Synthetic Data
 
 ```bash
-python src/seqcredit_model/synthetic_data.py
+python -m seqcredit_model.synthetic_data
 ```
 
 ### Build Features
 
 ```bash
-python src/seqcredit_model/feature_engineering.py
+python -m seqcredit_model.feature_engineering
 ```
 
 ### Run Experiments

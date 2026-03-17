@@ -20,7 +20,7 @@ Both datasets are fully synthetic and calibrated to real Ghanaian mobile money (
 ## Quick Reference
 
 | | Dataset 1A: Raw Transactions | Dataset 1B: User Labels | Dataset 2: User Features |
-|---|---|---|---|
+|---|---|---|---|---|
 | **File(s)** | `data/user_transactions/USER_*.csv` | `data/user_labels.csv` | `data/user_features.csv` |
 | **Format** | CSV (one file per user) | Single CSV | Single CSV |
 | **Rows** | 1,030,696 total transaction rows | 10,000 rows (one per user) | 10,000 rows (one per user) |
@@ -387,7 +387,7 @@ Transaction-level features are an intermediate product produced by `extract_all_
 ### 4.1 Generator
 
 **Class:** `CalibratedMoMoDataGenerator` in `src/seqcredit_model/synthetic_data.py`
-**Entry point:** `python src/seqcredit_model/synthetic_data.py`
+**Entry point:** `python -m seqcredit_model.synthetic_data`
 
 **Key generation parameters:**
 
@@ -485,8 +485,8 @@ The feature engineering pipeline and model training use `set_random_seeds(42)` (
 
 To regenerate all data locally:
 ```bash
-python src/seqcredit_model/synthetic_data.py      # generates user_transactions/ + user_labels.csv
-python src/seqcredit_model/feature_engineering.py  # generates user_features.csv
+python -m seqcredit_model.synthetic_data       # generates user_transactions/ + user_labels.csv
+python -m seqcredit_model.feature_engineering # generates user_features.csv
 ```
 
 ---
