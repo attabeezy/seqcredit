@@ -53,9 +53,9 @@ Both datasets are fully synthetic and calibrated to real Ghanaian mobile money (
 
 This dataset was created to enable credit risk model development and research without requiring access to real private financial data. It is calibrated to real Ghanaian mobile money behavioral patterns to maximize ecological validity while preserving full privacy.
 
-The dataset supports three modeling paradigms:
-- **Static classifiers** (Logistic Regression, XGBoost) — via aggregate features in Dataset 2
-- **Sequential models** (LSTM) — directly from per-user transaction sequences
+The dataset supports multiple modeling paradigms:
+- **Static classifiers** (Logistic Regression, XGBoost, Random Forest, LightGBM) — via aggregate features in Dataset 2
+- **Sequential models** (Sequential LSTM, Hybrid LSTM) — from per-user transaction sequences, optionally fused with static features
 - **Exploratory data analysis** — transaction-level behavioral analysis
 
 ### 1.2 Composition

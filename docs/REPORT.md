@@ -24,25 +24,14 @@ seqcredit-model/
 │   ├── synthetic_data.py         # Synthetic data generation
 │   ├── feature_engineering.py    # Transaction feature extraction
 │   └── credit_model.py           # Models + data loader + evaluator
-├── experiments/                  # Individual model notebooks
-│   ├── lr_model.ipynb            # Logistic Regression
-│   ├── xgb_model.ipynb           # XGBoost
-│   ├── rf_model.ipynb            # Random Forest
-│   ├── lgbm_model.ipynb           # LightGBM
-│   └── lstm_model.ipynb          # Hybrid LSTM (sequence + static)
 ├── notebooks/                    # Jupyter notebooks
-│   ├── credit_risk_model.ipynb       # Primary modeling notebook
-│   ├── credit_risk_pred.ipynb        # Replication / reference
-│   ├── data_generator.ipynb
-│   ├── ctgan_generator.ipynb
+│   ├── credit_risk_model.ipynb       # Primary modeling notebook (all 6 models)
 │   └── data_analysis.ipynb           # Descriptive statistics notebook
 ├── data/                         # Generated data
 │   ├── synthetic_params.json     # Calibration parameters
 │   ├── user_features.csv         # Aggregated user features
 │   ├── user_labels.csv           # Credit risk labels
-│   ├── user_transactions/        # Per-user CSVs (10,000 users)
-│   ├── lstm_sequences.npz        # Cached LSTM sequences
-│   └── legacy/                   # Old/unused files
+│   └── user_transactions/        # Per-user CSVs (10,000 users, regenerable)
 ├── docs/
 │   ├── REPORT.md                 # This file
 │   ├── SESSION.md                # Development log

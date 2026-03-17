@@ -360,3 +360,64 @@ Scan the model implementation for bugs and fix all issues found across `credit_m
 
 - [ ] Add `save()`/`load()` methods to all model classes (low priority, deferred)
 
+---
+
+## March 17, 2026: Project Consolidation & LSTM Robustness Fix
+
+### Goal
+
+Eliminate file bloat and redundancy, consolidate all model implementations into the main notebook, and fix the LSTM data alignment issue discovered during consolidation.
+
+### What Was Done
+
+**1. Files Deleted**
+
+| File / Directory | Size | Reason |
+|-----------------|------|--------|
+| `data/legacy/` | 15 MB | Obsolete intermediate CSVs superseded by current pipeline |
+| `data/lstm_sequences.npz` | 87 MB | Auto-generated cache; no need to persist |
+| `experiments/` (entire directory) | ~850 KB | Content merged into main notebook (see below) |
+| `notebooks/credit_risk_pred.ipynb` | 26 KB | Early reference implementation, unrelated to current work |
+| `notebooks/ctgan_generator.ipynb` | 26 KB | Outdated synthetic data approach, superseded by `synthetic_data.py` |
+| `notebooks/data_generator.ipynb` | 8 KB | Same — outdated approach |
+| `tests/label_bug_comparison.ipynb` | 368 KB | Bug investigation artifact, not an active test |
+| `.idea/` | — | PyCharm cache (not using PyCharm) |
+| `.mypy_cache/`, `.ruff_cache/` | — | Auto-regenerating tool caches |
+
+**2. Experiments Merged into `notebooks/credit_risk_model.ipynb`**
+
+The two novel experiment notebooks (`rf_model.ipynb`, `lgbm_model.ipynb`) were integrated into the main notebook. `lr_model.ipynb` and `xgb_model.ipynb` were redundant (already in main). `lstm_model.ipynb` (HybridLSTM) was also merged with a key robustness fix applied (see below).
+
+The main notebook now covers all 6 models in sequence:
+- Section 4: Logistic Regression
+- Section 5: XGBoost
+- Section 6: Random Forest
+- Section 7: LightGBM
+- Section 8a: Sequential LSTM
+- Section 8b: Hybrid LSTM
+- Section 9: Unified model comparison (all 6)
+
+**3. LSTM Data Alignment Fix**
+
+**Problem:** The original main notebook loaded sequences via `loader.load_sequences()` which produced 4,839 train / 1,210 test samples — different from the static data split of 4,761 / 1,191. This made a fair multi-model comparison impossible.
+
+**Fix:** Replaced the sequence loading approach with `build_hybrid_data()` (from `experiments/lstm_model.ipynb`) which iterates `loader._train_user_ids` / `loader._test_user_ids` directly and builds aligned `(X_seq, X_static, y)` arrays. An assertion now validates that `len(y_test_lstm) == len(static_data['y_test'])` before comparison.
+
+**Result:** All 6 models are now evaluated on the same 1,191-user test set with the same ground truth labels.
+
+### Files Changed
+
+- `notebooks/credit_risk_model.ipynb` — Major expansion (41 cells, 6 models, robust LSTM)
+- `CLAUDE.md` — Removed stale `experiments/` running instructions
+- `AGENTS.md` — Removed stale `experiments/` section and file locations tree
+- `README.md` — Removed deleted notebooks from project structure
+- `docs/REPORT.md` — Removed deleted notebooks and directories from file tree
+- `docs/DATACARD.md` — Updated model paradigms section to reflect full 6-model portfolio
+- `docs/SESSION.md` — This entry
+
+### Next Steps (from March 16 — now resolved)
+
+- [x] Run individual model notebooks and verify they work → merged into main notebook
+- [x] Compare model performance across all 6 models → unified comparison in Section 9
+- [x] Evaluate if hybrid LSTM outperforms static models → addressed in Section 10 analysis
+
