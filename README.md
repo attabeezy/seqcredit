@@ -52,8 +52,6 @@ seqcredit-model/
 │   ├── SESSION.md
 │   └── DATACARD.md
 ├── models/                      # Persisted trained models (created by model.save())
-├── AGENTS.md                    # AI coding agent guide
-├── CLAUDE.md                    # Claude Code guide
 └── requirements.txt
 ```
 
