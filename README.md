@@ -45,8 +45,9 @@ seqcredit-model/
 │       ├── synthetic_data.py
 │       └── credit_model.py      # Model classes (LR, XGB, RF, LightGBM, LSTM, HybridLSTM)
 ├── notebooks/
-│   ├── credit_risk_model.ipynb  # Primary modeling notebook (all 6 models)
-│   └── data_analysis.ipynb      # Descriptive statistics notebook
+│   ├── credit_risk_model.ipynb    # Primary modeling notebook (all 6 models, saves models/arrays)
+│   ├── credit_risk_analysis.ipynb # Research analysis: y_bad, SHAP, surrogate tree, calibration
+│   └── data_analysis.ipynb        # Descriptive statistics notebook
 ├── docs/
 │   ├── REPORT.md
 │   ├── SESSION.md

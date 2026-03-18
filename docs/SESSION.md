@@ -423,6 +423,63 @@ The main notebook now covers all 6 models in sequence:
 
 ---
 
+## March 18, 2026: Research Analysis Notebook (XAI + Calibration)
+
+### Goal
+
+Implement the full publishable research pipeline in a dedicated analysis notebook, building on the trained models from the primary notebook.
+
+### What Was Done
+
+**1. New notebook: `notebooks/credit_risk_analysis.ipynb`**
+
+A self-contained 28-cell notebook that loads saved models and implements:
+
+| Section | Content |
+|---------|---------|
+| Setup & Loading | Re-creates deterministic splits; loads all 6 models + LSTM arrays |
+| `y_bad` evaluation | Secondary target `1[label ∈ {1,2}]`; all 6 models evaluated; side-by-side AUC bar chart |
+| Permutation importance | `sklearn.inspection.permutation_importance` (n_repeats=10) for LR, XGB, RF, LGBM; top-15 feature plots with error bars |
+| SHAP — XGBoost | `TreeExplainer`; global beeswarm summary plot |
+| SHAP — LightGBM | Global beeswarm; waterfall plots for high-risk and low-risk users |
+| SHAP comparison table | Quick LightGBM retrained on `y_bad`; top-10 SHAP features compared side-by-side between tasks |
+| Surrogate tree | Fidelity curve depths 2–8; depth-3 tree plot + `export_text` rules; teacher = LightGBM |
+| Calibration | Brier score + ECE (15-bin) for all 6 models; reliability diagrams; post-hoc isotonic calibration for XGB and LGBM with before/after table |
+
+**2. Model save cells added to `notebooks/credit_risk_model.ipynb`** (Section 11)
+
+- Creates `models/` directory
+- Saves all 6 models via `model.save()`
+- Saves LSTM train/test arrays to `data/lstm_test_arrays.npz` for use in analysis notebook
+
+**3. Added `shap` to `requirements.txt`**
+
+**4. Updated documentation** (`README.md`, `docs/REPORT.md`)
+
+- Added `credit_risk_analysis.ipynb` to project structure trees
+- Added `y_bad` secondary target to Target Definition section
+- Added Research Analysis Notebook section to `REPORT.md`
+- Added `shap` to Dependencies
+- Removed "Add SHAP values" from Future Work (now done)
+
+### Workflow
+
+```
+1. Run credit_risk_model.ipynb  (trains + saves models, saves lstm_test_arrays.npz)
+2. Run credit_risk_analysis.ipynb  (loads models, runs all analysis)
+```
+
+### Files Changed
+
+- `notebooks/credit_risk_analysis.ipynb` — New notebook (28 cells)
+- `notebooks/credit_risk_model.ipynb` — Added Section 11: save models + arrays
+- `requirements.txt` — Added `shap`
+- `README.md` — Updated project structure
+- `docs/REPORT.md` — Added analysis notebook section, y_bad target, shap dependency
+- `docs/SESSION.md` — This entry
+
+---
+
 ## March 17, 2026: Model Serialisation (save/load)
 
 ### Goal

@@ -25,8 +25,9 @@ seqcredit-model/
 │   ├── feature_engineering.py    # Transaction feature extraction
 │   └── credit_model.py           # Models + data loader + evaluator
 ├── notebooks/                    # Jupyter notebooks
-│   ├── credit_risk_model.ipynb   # Primary modeling notebook (all 6 models)
-│   └── data_analysis.ipynb      # Descriptive statistics notebook
+│   ├── credit_risk_model.ipynb   # Primary modeling notebook (all 6 models, saves models/arrays)
+│   ├── credit_risk_analysis.ipynb# Research analysis: y_bad, SHAP, surrogate tree, calibration
+│   └── data_analysis.ipynb       # Descriptive statistics notebook
 ├── data/                         # Generated data
 │   ├── synthetic_params.json    # Calibration parameters
 │   ├── user_features.csv        # Aggregated user features
@@ -84,7 +85,8 @@ Output: `data/user_features.csv` (one row per user with ~50 aggregate features)
   - `0` = Good (repaid on time)
   - `1` = Late (repaid after term)
   - `2` = Default (failed to repay)
-- Binary target: `1` if default (label=2), else `0`
+- **Primary target (`y_default`):** `1` if default (label=2), else `0`
+- **Secondary target (`y_bad`):** `1` if late or default (label ∈ {1,2}), else `0`
 
 ---
 
@@ -165,6 +167,39 @@ results = model.cross_validate(X, y, n_splits=5)
 - Accuracy
 - Confusion matrices
 - Threshold analysis
+- Brier Score (probability calibration quality)
+- ECE — Expected Calibration Error (15-bin weighted mean |confidence − accuracy|)
+
+---
+
+## Research Analysis Notebook (`credit_risk_analysis.ipynb`)
+
+`notebooks/credit_risk_analysis.ipynb` implements the full publishable research pipeline on top of trained models. It requires running `credit_risk_model.ipynb` first to generate saved models and LSTM arrays.
+
+### Section 1 — Setup & Model Loading
+Re-creates the same deterministic data splits (`random_state=42`) and loads all 6 saved models from `models/`. LSTM train/test arrays are loaded from `data/lstm_test_arrays.npz`.
+
+### Section 2 — Secondary Target: `y_bad`
+Evaluates all 6 models against `y_bad = 1[label ∈ {1,2}]`. Produces a side-by-side ROC-AUC / PR-AUC bar chart comparing `y_default` and `y_bad` performance across models.
+
+### Section 3 — Permutation Importance
+`sklearn.inspection.permutation_importance` (n_repeats=10, scored by AUC-ROC) applied to all 4 static models. Top-15 features plotted per model with error bars showing variability across repeats.
+
+### Section 4 — SHAP Analysis
+- `shap.TreeExplainer` on XGBoost and LightGBM
+- Global beeswarm summary plots for `y_default` models
+- Waterfall plots for one high-risk and one low-risk test user
+- A second LightGBM is trained on `y_bad` for comparison; top-10 SHAP features are compared side-by-side between tasks
+
+### Section 5 — Surrogate Decision Tree
+- Teacher model: LightGBM (`y_default`)
+- Fidelity curve: `DecisionTreeRegressor` trained at depths 2–8; R² and MAE to teacher plotted
+- Final surrogate at depth 3: `plot_tree` visualisation + `export_text` human-readable rules
+
+### Section 6 — Model Calibration
+- Brier score and ECE (15-bin) for all 6 models
+- Reliability diagrams (calibration curves) before calibration
+- Post-hoc isotonic calibration for XGBoost and LightGBM: calibration split carved from training data, `IsotonicRegression` fitted, before/after curves and Brier/ECE improvement table
 
 ---
 
@@ -220,6 +255,7 @@ jupyter notebook notebooks/credit_risk_model.ipynb
 - tensorflow
 - matplotlib, seaborn
 - jupyter
+- shap (for SHAP analysis in `credit_risk_analysis.ipynb`)
 
 Install: `pip install -r requirements.txt`
 
@@ -269,7 +305,6 @@ Pearson correlation heatmap for 15 interpretable features plus the binary defaul
 
 - [ ] Add hyperparameter tuning (GridSearch/RandomSearch/Optuna)
 - [ ] Implement cross-validation with proper time-series splits
-- [ ] Add model interpretability (SHAP values)
 - [ ] Experiment with attention mechanisms for LSTM
 - [ ] Add unit tests
 
