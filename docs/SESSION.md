@@ -423,6 +423,32 @@ The main notebook now covers all 6 models in sequence:
 
 ---
 
+## March 18, 2026: Individual Tree Visualisations
+
+### Goal
+
+Add visualisations of actual learned decision trees from each tree-based model, showing real split conditions and thresholds rather than approximations.
+
+### What Was Done
+
+Added **Section 7** to `notebooks/credit_risk_analysis.ipynb` with three cells:
+
+| Cell | Model | Method |
+|------|-------|--------|
+| 1 | Random Forest | `sklearn.tree.plot_tree(estimators_[0], max_depth=4)` + `export_text` for threshold readout |
+| 2 | XGBoost | `xgb.plot_tree(num_trees=0, rankdir='LR')` + `get_booster().get_dump(dump_format='text')[0]` for exact splits |
+| 3 | LightGBM | `lgb.plot_tree(tree_index=0)`; graceful fallback to recursive text dump via `booster_.dump_model()` if graphviz is unavailable |
+
+Calibration was renumbered from Section 7 → Section 8.
+
+### Files Changed
+
+- `notebooks/credit_risk_analysis.ipynb` — Added Section 7 (3 cells), renumbered calibration to Section 8
+- `docs/REPORT.md` — Added Section 7 description, renumbered calibration to Section 8
+- `docs/SESSION.md` — This entry
+
+---
+
 ## March 18, 2026: Research Analysis Notebook (XAI + Calibration)
 
 ### Goal

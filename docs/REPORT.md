@@ -196,7 +196,21 @@ Evaluates all 6 models against `y_bad = 1[label ∈ {1,2}]`. Produces a side-by-
 - Fidelity curve: `DecisionTreeRegressor` trained at depths 2–8; R² and MAE to teacher plotted
 - Final surrogate at depth 3: `plot_tree` visualisation + `export_text` human-readable rules
 
-### Section 6 — Model Calibration
+### Section 6 — Surrogate Decision Tree
+- Teacher model: LightGBM (`y_default`)
+- Fidelity curve: `DecisionTreeRegressor` trained at depths 2–8; R² and MAE to teacher plotted
+- Final surrogate at depth 3: `plot_tree` visualisation + `export_text` human-readable rules
+
+### Section 7 — Individual Tree Visualisations
+Plots one representative tree from each tree-based ensemble to reveal the **actual learned split conditions and thresholds**:
+
+| Model | Method | Notes |
+|-------|--------|-------|
+| Random Forest | `sklearn.tree.plot_tree(estimators_[0], max_depth=4)` + `export_text` | One tree from the forest; depth capped for readability |
+| XGBoost | `xgb.plot_tree(num_trees=0)` + `get_dump(dump_format='text')` | First boosting tree; text dump shows exact threshold values |
+| LightGBM | `lgb.plot_tree(tree_index=0)` | First leaf-wise tree; falls back to recursive text dump if graphviz is unavailable |
+
+### Section 8 — Model Calibration
 - Brier score and ECE (15-bin) for all 6 models
 - Reliability diagrams (calibration curves) before calibration
 - Post-hoc isotonic calibration for XGBoost and LightGBM: calibration split carved from training data, `IsotonicRegression` fitted, before/after curves and Brier/ECE improvement table
