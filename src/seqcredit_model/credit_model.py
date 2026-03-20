@@ -5,56 +5,53 @@ import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 from pathlib import Path
-from typing import Tuple, Dict, List
+from typing import Dict, List, Tuple
 
 try:
     from seqcredit_model.config import (
+        LSTM_CACHE_FILE,
+        TRANSACTIONS_DIR,
         USER_FEATURES_FILE,
         USER_LABELS_FILE,
-        TRANSACTIONS_DIR,
-        LSTM_CACHE_FILE,
     )
 except ModuleNotFoundError:
     from config import (
+        LSTM_CACHE_FILE,
+        TRANSACTIONS_DIR,
         USER_FEATURES_FILE,
         USER_LABELS_FILE,
-        TRANSACTIONS_DIR,
-        LSTM_CACHE_FILE,
     )
-import numpy as np
-import pandas as pd
-
-from sklearn.model_selection import train_test_split, StratifiedKFold
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    roc_auc_score,
-    average_precision_score,
-    f1_score,
-    accuracy_score,
-    precision_score,
-    recall_score,
-    confusion_matrix,
-    roc_curve,
-    precision_recall_curve,
-    classification_report,
-)
-from sklearn.utils.class_weight import compute_class_weight
-
-import xgboost as xgb
-import lightgbm as lgb
-
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM as KerasLSTM, Dense, Dropout, Masking
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-
-import joblib
 import json
 
+import joblib
+import lightgbm as lgb
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
+import tensorflow as tf
+import xgboost as xgb
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_recall_curve,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+    roc_curve,
+)
+from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.utils.class_weight import compute_class_weight
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.layers import LSTM as KerasLSTM
+from tensorflow.keras.layers import Dense, Dropout, Masking
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 TF_ENABLE_ONEDNN_OPTS = 0
 RANDOM_SEED = 42
@@ -99,6 +96,32 @@ LSTM_FEATURE_COLUMNS = [
     "reverse_txn_number",
     "last_5_std_amount",
 ]
+
+
+def _normalize_keras_save_path(path: str) -> str:
+    """Return a Keras-compatible save path.
+
+    Keras 3 requires a filename extension (typically .keras or .h5) for
+    model.save(). Keep backward compatibility with existing notebook calls
+    that pass extensionless paths.
+    """
+    if path.endswith((".keras", ".h5", ".hdf5")):
+        return path
+    return f"{path}.keras"
+
+
+def _resolve_keras_load_path(path: str) -> str:
+    """Resolve a model path for loading across old/new save conventions."""
+    if Path(path).exists():
+        return path
+
+    for candidate in (f"{path}.keras", f"{path}.h5", f"{path}.hdf5"):
+        if Path(candidate).exists():
+            return candidate
+
+    raise FileNotFoundError(
+        f"Could not find saved model at {path} or with Keras extensions"
+    )
 
 
 def set_random_seeds(seed=RANDOM_SEED):
@@ -677,11 +700,15 @@ class LogisticRegressionModel:
         return results
 
     def save(self, path: str) -> None:
-        joblib.dump(self, path)
+        payload = {"state": self.__dict__}
+        joblib.dump(payload, path)
 
     @classmethod
     def load(cls, path: str) -> "LogisticRegressionModel":
-        return joblib.load(path)
+        payload = joblib.load(path)
+        instance = cls.__new__(cls)
+        instance.__dict__.update(payload["state"])
+        return instance
 
 
 class XGBoostModel:
@@ -756,11 +783,15 @@ class XGBoostModel:
         return results
 
     def save(self, path: str) -> None:
-        joblib.dump(self, path)
+        payload = {"state": self.__dict__}
+        joblib.dump(payload, path)
 
     @classmethod
     def load(cls, path: str) -> "XGBoostModel":
-        return joblib.load(path)
+        payload = joblib.load(path)
+        instance = cls.__new__(cls)
+        instance.__dict__.update(payload["state"])
+        return instance
 
 
 class RandomForestModel:
@@ -842,11 +873,15 @@ class RandomForestModel:
         return results
 
     def save(self, path: str) -> None:
-        joblib.dump(self, path)
+        payload = {"state": self.__dict__}
+        joblib.dump(payload, path)
 
     @classmethod
     def load(cls, path: str) -> "RandomForestModel":
-        return joblib.load(path)
+        payload = joblib.load(path)
+        instance = cls.__new__(cls)
+        instance.__dict__.update(payload["state"])
+        return instance
 
 
 class LightGBMModel:
@@ -935,11 +970,15 @@ class LightGBMModel:
         return results
 
     def save(self, path: str) -> None:
-        joblib.dump(self, path)
+        payload = {"state": self.__dict__}
+        joblib.dump(payload, path)
 
     @classmethod
     def load(cls, path: str) -> "LightGBMModel":
-        return joblib.load(path)
+        payload = joblib.load(path)
+        instance = cls.__new__(cls)
+        instance.__dict__.update(payload["state"])
+        return instance
 
 
 class LSTMModel:
@@ -1097,8 +1136,11 @@ class LSTMModel:
         return results
 
     def save(self, path: str) -> None:
-        self.model.save(path)
-        config = {k: v for k, v in self.__dict__.items() if k not in ("model", "history")}
+        model_path = _normalize_keras_save_path(path)
+        self.model.save(model_path)
+        config = {
+            k: v for k, v in self.__dict__.items() if k not in ("model", "history")
+        }
         with open(f"{path}.json", "w") as f:
             json.dump(config, f)
 
@@ -1107,7 +1149,8 @@ class LSTMModel:
         with open(f"{path}.json") as f:
             config = json.load(f)
         instance = cls(**config)
-        instance.model = tf.keras.models.load_model(path)
+        model_path = _resolve_keras_load_path(path)
+        instance.model = tf.keras.models.load_model(model_path)
         instance.history = None
         return instance
 
@@ -1222,7 +1265,14 @@ class HybridLSTMModel:
         return (self.predict_proba(X_seq, X_static) >= threshold).astype(int)
 
     def cross_validate(
-        self, X_seq, X_static, y, n_splits=5, epochs=100, batch_size=32, class_weight=None
+        self,
+        X_seq,
+        X_static,
+        y,
+        n_splits=5,
+        epochs=100,
+        batch_size=32,
+        class_weight=None,
     ) -> Dict:
         skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RANDOM_SEED)
         results = {"auc_roc": [], "auc_pr": [], "f1": [], "accuracy": []}
@@ -1269,8 +1319,11 @@ class HybridLSTMModel:
         return results
 
     def save(self, path: str) -> None:
-        self.model.save(path)
-        config = {k: v for k, v in self.__dict__.items() if k not in ("model", "history")}
+        model_path = _normalize_keras_save_path(path)
+        self.model.save(model_path)
+        config = {
+            k: v for k, v in self.__dict__.items() if k not in ("model", "history")
+        }
         with open(f"{path}.json", "w") as f:
             json.dump(config, f)
 
@@ -1279,7 +1332,8 @@ class HybridLSTMModel:
         with open(f"{path}.json") as f:
             config = json.load(f)
         instance = cls(**config)
-        instance.model = tf.keras.models.load_model(path)
+        model_path = _resolve_keras_load_path(path)
+        instance.model = tf.keras.models.load_model(model_path)
         instance.history = None
         return instance
 
@@ -1407,11 +1461,9 @@ class ModelEvaluator:
             if y_pred.sum() == 0:
                 precisions.append(0)
             else:
-                precisions.append(
-                    precision_score(self.y_test, y_pred, zero_division="0")
-                )
-            recalls.append(recall_score(self.y_test, y_pred, zero_division="0"))
-            f1s.append(f1_score(self.y_test, y_pred, zero_division="0"))
+                precisions.append(precision_score(self.y_test, y_pred, zero_division=0))
+            recalls.append(recall_score(self.y_test, y_pred, zero_division=0))
+            f1s.append(f1_score(self.y_test, y_pred, zero_division=0))
 
         ax.plot(thresholds, precisions, label="Precision")
         ax.plot(thresholds, recalls, label="Recall")
