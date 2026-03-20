@@ -115,8 +115,8 @@ This research is a **complete credit risk modeling framework** for data-constrai
 ---
 
 ## Minimal “publishable” deliverables checklist
-- [ ] Results tables for both tasks (`y_default`, `y_bad`) across all models
-- [ ] SHAP summary + global importance table (default vs bad outcome)
-- [ ] Surrogate tree rule set + fidelity vs depth plot
-- [ ] Calibration curves + Brier score (before/after calibration)
-- [ ] Clear limitations: synthetic-only + predictive-not-causal](#)
+- [x] Results tables for both tasks (`y_default`, `y_bad`) across all models
+- [x] SHAP summary + global importance table (default vs bad outcome)
+- [x] Surrogate tree rule set + fidelity vs depth plot
+- [x] Calibration curves + Brier score (before/after calibration)
+- [x] Clear limitations: synthetic-only + predictive-not-causal
