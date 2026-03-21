@@ -673,6 +673,8 @@ class LogisticRegressionModel:
         return coefs.sort_values("abs_coefficient", ascending=False)
 
     def cross_validate(self, X, y, n_splits=5) -> Dict:
+        if hasattr(X, "values"):
+            X = X.values
         skf = StratifiedKFold(
             n_splits=n_splits, shuffle=True, random_state=self.random_state
         )
@@ -681,6 +683,10 @@ class LogisticRegressionModel:
         for train_idx, val_idx in skf.split(X, y):
             X_tr, X_val = X[train_idx], X[val_idx]
             y_tr, y_val = y[train_idx], y[val_idx]
+
+            scaler = StandardScaler()
+            X_tr = scaler.fit_transform(X_tr)
+            X_val = scaler.transform(X_val)
 
             model = LogisticRegression(
                 class_weight=self.model.class_weight,
@@ -761,6 +767,8 @@ class XGBoostModel:
         return imp_df.sort_values("importance", ascending=False)
 
     def cross_validate(self, X, y, n_splits=5) -> Dict:
+        if hasattr(X, "values"):
+            X = X.values
         skf = StratifiedKFold(
             n_splits=n_splits, shuffle=True, random_state=self.random_state
         )
@@ -843,6 +851,8 @@ class RandomForestModel:
     def cross_validate(self, X, y, n_splits=5) -> Dict:
         from sklearn.ensemble import RandomForestClassifier
 
+        if hasattr(X, "values"):
+            X = X.values
         skf = StratifiedKFold(
             n_splits=n_splits, shuffle=True, random_state=self.random_state
         )
@@ -935,6 +945,8 @@ class LightGBMModel:
         return imp_df.sort_values("importance", ascending=False)
 
     def cross_validate(self, X, y, n_splits=5) -> Dict:
+        if hasattr(X, "values"):
+            X = X.values
         skf = StratifiedKFold(
             n_splits=n_splits, shuffle=True, random_state=self.random_state
         )
