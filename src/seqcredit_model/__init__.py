@@ -17,7 +17,10 @@ from .credit_model import (
     CreditRiskDataLoader,
     LogisticRegressionModel,
     XGBoostModel,
+    RandomForestModel,
+    LightGBMModel,
     LSTMModel,
+    HybridLSTMModel,
     ModelEvaluator,
     set_random_seeds,
 )
@@ -30,7 +33,10 @@ __all__ = [
     "CreditRiskDataLoader",
     "LogisticRegressionModel",
     "XGBoostModel",
+    "RandomForestModel",
+    "LightGBMModel",
     "LSTMModel",
+    "HybridLSTMModel",
     "ModelEvaluator",
     "set_random_seeds",
 ]
