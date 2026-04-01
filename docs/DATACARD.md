@@ -13,7 +13,7 @@ This card documents two related datasets produced by the same pipeline:
 
 Both datasets are fully synthetic and calibrated to real Ghanaian mobile money (MTN MoMo) behavioral patterns. No real persons are represented.
 
-> ⚠️ **Stale file warning:** The committed `data/user_features.csv` was generated from an older, smaller transaction run (mean 17 transactions/user). The current `data/user_transactions/` files average 103 transactions/user. **Regenerate before use** — see [§10 Maintenance](#10-maintenance-and-reproducibility).
+
 
 ---
 
@@ -23,7 +23,7 @@ Both datasets are fully synthetic and calibrated to real Ghanaian mobile money (
 |---|---|---|---|---|
 | **File(s)** | `data/user_transactions/USER_*.csv` | `data/user_labels.csv` | `data/user_features.csv` |
 | **Format** | CSV (one file per user) | Single CSV | Single CSV |
-| **Rows** | 1,030,696 total transaction rows | 10,000 rows (one per user) | 10,000 rows (one per user) |
+| **Rows** | 1,030,198 total transaction rows | 10,000 rows (one per user) | 10,000 rows (one per user) |
 | **Columns** | 13–19 (varies by borrower status) | 6 | 30 (user_id + 29 features) |
 | **Unit** | Individual transaction | User | User |
 | **Generator** | `CalibratedMoMoDataGenerator` | `CalibratedMoMoDataGenerator` | `TemporalTransactionFeatureEngineer` |
@@ -60,7 +60,7 @@ The dataset supports multiple modeling paradigms:
 
 ### 1.2 Composition
 
-**Scale:** 10,000 users × mean 103 transactions/user = **1,030,696 total transaction rows** across 10,000 CSV files.
+**Scale:** 10,000 users × mean 103 transactions/user = **1,030,198 total transaction rows** across 10,000 CSV files.
 
 Files are named `USER_000000.csv` through `USER_009999.csv` in `data/user_transactions/`.
 
@@ -196,24 +196,24 @@ Five behavioral archetypes control transaction frequency, type mix, loan behavio
 
 | Archetype | Count | Actual % | Target % | Description |
 |---|---|---|---|---|
-| `non_borrower` | 4,025 | 40.25% | 40% | Never takes loans |
-| `responsible_borrower` | 3,542 | 35.42% | 35% | Regular, on-time repayment |
-| `occasional_borrower` | 1,479 | 14.79% | 15% | Infrequent loans, variable timing |
-| `risky_borrower` | 746 | 7.46% | 8% | Frequent loans, 15% default probability |
+| `non_borrower` | 4,048 | 40.48% | 40% | Never takes loans |
+| `responsible_borrower` | 3,481 | 34.81% | 35% | Regular, on-time repayment |
+| `occasional_borrower` | 1,516 | 15.16% | 15% | Infrequent loans, variable timing |
+| `risky_borrower` | 747 | 7.47% | 8% | Frequent loans, 15% default probability |
 | `defaulter` | 208 | 2.08% | 2% | 100% default probability |
 
 ### 2.3 Credit Risk Label Distribution
 
 | Label | Meaning | Count | % of all users | % of borrowers only |
 |---|---|---|---|---|
-| `-1` | No loans taken | 4,025 | 40.25% | — |
-| `0` | Good — all loans repaid on time | 3,325 | 33.25% | 55.7% |
-| `1` | Late — at least one loan repaid after 30-day term | 1,984 | 19.84% | 33.2% |
-| `2` | Default — at least one loan not repaid | 666 | 6.66% | 11.1% |
+| `-1` | No loans taken | 4,048 | 40.48% | — |
+| `0` | Good — all loans repaid on time | 3,241 | 32.41% | 54.5% |
+| `1` | Late — at least one loan repaid after 30-day term | 2,050 | 20.50% | 34.4% |
+| `2` | Default — at least one loan not repaid | 661 | 6.61% | 11.1% |
 
 **Label assignment rule:** A user's final label is the worst-case label across all loans they took (`max` of per-loan outcomes).
 
-**Binary target used in model training:** `default = (credit_risk_label == 2)` → **666 positives out of 5,975 borrowers ≈ 11.1% default rate** (~8:1 class imbalance).
+**Binary target used in model training:** `default = (credit_risk_label == 2)` → **661 positives out of 5,952 borrowers ≈ 11.1% default rate** (~8:1 class imbalance).
 
 Non-borrowers (`credit_risk_label == -1`) are **excluded from all model training** but are present in this file.
 
@@ -318,27 +318,16 @@ The file has 30 columns: `user_id` + 29 features.
 
 ### 3.3 Descriptive Statistics
 
-> ⚠️ **These statistics are from the stale committed file.** The current `user_features.csv` was generated from a different, smaller transaction run (obs_txn_count mean = 17.4 vs current gen_txn_count mean = 103.1; 0% match). Treat these as illustrative only. Regenerate `user_features.csv` for production use.
+Statistics from current `user_features.csv` (regenerated with consistent data):
 
 | Feature | Mean | Std | Min | Median | Max |
 |---|---|---|---|---|---|
-| `obs_txn_count` | 17.4 | 4.8 | 5 | 17 | 38 |
-| `total_volume` (GHS) | 494.7 | 224.9 | 46.0 | 467.3 | 1,712.3 |
-| `avg_transaction_amount` (GHS) | 28.21 | 9.91 | 4.18 | 27.20 | 86.76 |
-| `median_transaction_amount` (GHS) | 18.76 | 7.54 | 2.78 | 17.71 | 86.05 |
-| `avg_balance` (GHS) | 213.4 | 107.0 | 31.2 | 183.0 | 819.2 |
-| `min_balance` (GHS) | 100.6 | 97.5 | 5.0 | 68.1 | 748.7 |
-| `balance_volatility` (GHS) | 73.3 | 31.2 | 11.2 | 66.5 | 262.4 |
-| `pct_transfers` | 0.424 | 0.140 | 0.0 | 0.417 | 1.0 |
-| `pct_debits` | 0.221 | 0.115 | 0.0 | 0.211 | 0.875 |
-| `pct_cashouts` | 0.041 | 0.052 | 0.0 | 0.0 | 0.429 |
-| `pct_payments` | 0.120 | 0.090 | 0.0 | 0.107 | 0.615 |
-| `avg_hours_between_txns` | 8.02 | 6.42 | 0.26 | 6.27 | 63.2 |
-| `pct_weekend_txns` | 0.302 | 0.258 | 0.0 | 0.278 | 1.0 |
-| `pct_night_txns` | 0.079 | 0.099 | 0.0 | 0.053 | 0.8 |
-| `account_age_days` | 5.0 | 4.5 | 0 | 4 | 42 |
-| `transactions_per_day` | 6.57 | 5.49 | 0.41 | 4.50 | 33.0 |
-| `unique_recipients` | 9.92 | 2.65 | 1 | 10 | 19 |
+| `obs_txn_count` | 103.0 | 10.4 | 65 | 103 | 145 |
+| `total_volume` (GHS) | 3,281.2 | 685.6 | — | — | — |
+| `avg_transaction_amount` (GHS) | 31.8 | — | — | — | — |
+| `avg_balance` (GHS) | 136.4 | 30.9 | — | — | — |
+| `account_age_days` | 40.7 | 29.4 | 4 | — | 179 |
+| `transactions_per_day` | ~2.5 | — | — | — | — |
 
 ### 3.4 Loan Features Computed at Training Time
 
@@ -429,9 +418,9 @@ The generator reads `data/synthetic_params.json`, which contains 12 parameters d
 
 ### 4.3 Reproducibility
 
-> ⚠️ **No random seed:** `synthetic_data.py` does not call `numpy.random.seed()` before generation. Each run of `generate_dataset()` will produce a statistically similar but numerically different dataset. Exact reproduction of the committed `user_labels.csv` is not possible from code alone.
+**Random seed:** `synthetic_data.py` uses `RANDOM_SEED = 42` and calls `set_random_seeds()` before generation. Each run of `generate_dataset()` produces identical results when using the same seed.
 
-The feature engineering pipeline and model training use `set_random_seeds(42)` (from `src/seqcredit_model/credit_model.py`) for reproducibility after data is generated.
+The feature engineering pipeline and model training also use `set_random_seeds(42)` (from `src/seqcredit_model/credit_model.py`) for reproducibility.
 
 ---
 
@@ -497,7 +486,7 @@ python -m seqcredit_model.feature_engineering # generates user_features.csv
 
 **Regeneration order is strict:** `synthetic_data.py` must run before `feature_engineering.py`. `user_features.csv` and `user_labels.csv` must come from the same generation run.
 
-**Stale-file detection:** `CreditRiskDataLoader._validate_data()` cross-checks `obs_txn_count` (from `user_features.csv`) against `gen_txn_count` (from `user_labels.csv`) for a random sample of 20 users. A mismatch prints a warning. The committed files have a 0% match rate (obs mean 17.4 vs gen mean 103.1), which will trigger this warning on every training run.
+**Data consistency:** `CreditRiskDataLoader._validate_data()` cross-checks `obs_txn_count` (from `user_features.csv`) against `gen_txn_count` (from `user_labels.csv`) for a random sample of 20 users. The current committed files have 100% consistency.
 
 **LSTM cache invalidation:** If `user_transactions/` is regenerated, delete `data/lstm_sequences.npz` before retraining to force a cache rebuild.
 
@@ -515,16 +504,16 @@ python -m seqcredit_model.feature_engineering # generates user_features.csv
 
 ## 10. Known Limitations and Data Quality Notes
 
-| # | Limitation | Impact | Source |
+| # | Limitation | Impact | Status |
 |---|---|---|---|
-| 1 | **`user_features.csv` is stale** — generated from a different run (obs mean 17 txns vs current 103 txns). 0% of users match within 5%. | High — any model using this file is trained on mismatched features | Cross-referencing `obs_txn_count` vs `gen_txn_count` |
-| 2 | **No random seed in `synthetic_data.py`** — `generate_dataset()` is not deterministic | Medium — exact reproduction impossible; statistical properties are consistent | No `np.random.seed()` call in `synthetic_data.py` |
-| 3 | **`ADJUSTMENT` type never generated** — `is_adjustment` feature is always 0 | Low — column is defined but uninformative | `_select_transaction_type()` excludes ADJUSTMENT from sampling |
-| 4 | **Variable file schema** (13, 17, or 19 columns) — non-borrower, disbursement-only, and repayment files differ | Medium — generic CSV parsers must handle optional columns | Comparing non-borrower and borrower CSV files |
-| 5 | **Calibration source undocumented** — `synthetic_params.json` provenance not recorded | Medium — limits ability to assess real-world generalizability | No source attribution in codebase |
-| 6 | **Binary collapse of 4-class label** — labels 0 and 1 (good and late) are merged as "non-default" | Medium — late-payer subgroup is not separately modeled | `credit_model.py` `load_static_data()` target definition |
-| 7 | **8:1 class imbalance** among borrowers (11.1% default rate) | Medium — requires `class_weight='balanced'` or `scale_pos_weight` (both implemented) | Label distribution |
-| 8 | **`account_age_days` is implausibly short in current `user_features.csv`** (mean 5 days) due to the stale file — current transaction files span up to 180 days | High (part of limitation #1) | Comparing stale stats to current transaction dates |
+| 1 | ~~`user_features.csv` was stale~~ | ~~High~~ | **RESOLVED** — Data regenerated with consistent seed |
+| 2 | ~~No random seed in `synthetic_data.py`~~ | ~~Medium~~ | **RESOLVED** — `RANDOM_SEED = 42` added |
+| 3 | `ADJUSTMENT` type never generated — `is_adjustment` feature is always 0 | Low | Open |
+| 4 | Variable file schema (13, 17, or 19 columns) — non-borrower, disbursement-only, and repayment files differ | Medium | By design |
+| 5 | Calibration source undocumented — `synthetic_params.json` provenance not recorded | Medium | Open |
+| 6 | Binary collapse of 4-class label — labels 0 and 1 (good and late) are merged as "non-default" | Medium | By design |
+| 7 | 8:1 class imbalance among borrowers (11.1% default rate) | Medium | Handled via `class_weight='balanced'` |
+| 8 | ~~`account_age_days` implausibly short in stale `user_features.csv`~~ | ~~High~~ | **RESOLVED** — Now mean 40.7 days |
 
 ---
 
