@@ -5,6 +5,16 @@ import json
 from pathlib import Path
 import pandas as pd
 import numpy as np
+import random
+
+RANDOM_SEED = 42
+
+
+def set_random_seeds(seed=RANDOM_SEED):
+    """Set random seeds for reproducibility."""
+    np.random.seed(seed)
+    random.seed(seed)
+
 
 try:
     from seqcredit_model.config import SYNTHETIC_PARAMS_FILE, TRANSACTIONS_DIR
@@ -83,6 +93,7 @@ class CalibratedMoMoDataGenerator:
         duration_days=180,
         output_dir=str(TRANSACTIONS_DIR),
         calibration_file=str(SYNTHETIC_PARAMS_FILE),
+        seed=None,
     ):
         """
         Initialize generator with calibration parameters.
@@ -94,7 +105,11 @@ class CalibratedMoMoDataGenerator:
             duration_days: Observation period in days
             output_dir: Directory for user CSV files
             calibration_file: JSON with real data parameters
+            seed: Random seed for reproducibility (default: RANDOM_SEED)
         """
+        if seed is not None:
+            set_random_seeds(seed)
+
         self.n_users = n_users
         self.avg_transactions_per_user = avg_transactions_per_user
         self.start_date = pd.to_datetime(start_date)
@@ -683,12 +698,15 @@ class CalibratedMoMoDataGenerator:
 
 def main():
     """Generate synthetic dataset with per-user files."""
+    set_random_seeds(RANDOM_SEED)
+
     generator = CalibratedMoMoDataGenerator(
         n_users=10000,
         avg_transactions_per_user=100,
         start_date="2024-01-01",
         duration_days=180,
         output_dir=str(TRANSACTIONS_DIR),
+        seed=RANDOM_SEED,
     )
 
     summary_df = generator.generate_dataset()

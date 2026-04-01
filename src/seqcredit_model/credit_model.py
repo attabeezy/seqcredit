@@ -140,6 +140,83 @@ def _compute_class_weights(y: np.ndarray) -> Dict[int, float]:
     return dict(zip(classes.astype(int), weights))
 
 
+def bootstrap_evaluate(
+    y_true: np.ndarray,
+    y_proba: np.ndarray,
+    n_bootstrap: int = 1000,
+    ci: float = 0.95,
+    seed: int = RANDOM_SEED,
+) -> Dict[str, Dict[str, float]]:
+    """Compute bootstrap confidence intervals for classification metrics.
+
+    Args:
+        y_true: Ground truth binary labels (0/1)
+        y_proba: Predicted probabilities for the positive class
+        n_bootstrap: Number of bootstrap iterations
+        ci: Confidence interval level (default 0.95 for 95% CI)
+        seed: Random seed for reproducibility
+
+    Returns:
+        Dictionary with format:
+        {
+            'AUC-ROC': {'mean': 0.81, 'ci_lower': 0.78, 'ci_upper': 0.84, 'std': 0.02},
+            'AUC-PR': {...},
+            ...
+        }
+    """
+    np.random.seed(seed)
+    n_samples = len(y_true)
+    alpha = (1 - ci) / 2
+
+    # Storage for bootstrap metric values
+    metrics = {
+        "AUC-ROC": [],
+        "AUC-PR": [],
+        "F1": [],
+        "Precision": [],
+        "Recall": [],
+        "Accuracy": [],
+    }
+
+    y_true = np.asarray(y_true)
+    y_proba = np.asarray(y_proba)
+
+    for _ in range(n_bootstrap):
+        # Sample with replacement
+        indices = np.random.choice(n_samples, size=n_samples, replace=True)
+        y_true_boot = y_true[indices]
+        y_proba_boot = y_proba[indices]
+        y_pred_boot = (y_proba_boot >= 0.5).astype(int)
+
+        # Skip if only one class in bootstrap sample (can't compute AUC)
+        if len(np.unique(y_true_boot)) < 2:
+            continue
+
+        metrics["AUC-ROC"].append(roc_auc_score(y_true_boot, y_proba_boot))
+        metrics["AUC-PR"].append(average_precision_score(y_true_boot, y_proba_boot))
+        metrics["F1"].append(f1_score(y_true_boot, y_pred_boot, zero_division=0))  # type: ignore[arg-type]
+        metrics["Precision"].append(
+            precision_score(y_true_boot, y_pred_boot, zero_division=0)  # type: ignore[arg-type]
+        )
+        metrics["Recall"].append(
+            recall_score(y_true_boot, y_pred_boot, zero_division=0)  # type: ignore[arg-type]
+        )
+        metrics["Accuracy"].append(accuracy_score(y_true_boot, y_pred_boot))
+
+    # Compute confidence intervals using percentile method
+    results = {}
+    for metric_name, values in metrics.items():
+        values = np.array(values)
+        results[metric_name] = {
+            "mean": float(np.mean(values)),
+            "std": float(np.std(values)),
+            "ci_lower": float(np.percentile(values, alpha * 100)),
+            "ci_upper": float(np.percentile(values, (1 - alpha) * 100)),
+        }
+
+    return results
+
+
 class CreditRiskDataLoader:
     """Load and prepare data for credit risk models."""
 
@@ -311,6 +388,8 @@ class CreditRiskDataLoader:
             "credit_archetype",
             "default",
             "gen_txn_count",
+            "final_credit_limit",  # generator metadata — not observable at prediction time
+            "loans_taken",  # generator metadata — not observable at prediction time
         ]
         feature_cols = [c for c in df.columns if c not in drop_cols]
         X = df[feature_cols].copy()
@@ -1084,6 +1163,13 @@ class LSTMModel:
                 patience=10, monitor="val_auc", mode="max", restore_best_weights=True
             )
 
+        if class_weight is None:
+            from sklearn.utils.class_weight import compute_class_weight as _cw
+
+            _classes = np.unique(y_train)
+            _weights = _cw("balanced", classes=_classes, y=y_train)
+            class_weight = dict(zip(_classes.astype(int), _weights))
+
         self.history = self.model.fit(
             X_train,
             y_train,
@@ -1256,6 +1342,13 @@ class HybridLSTMModel:
         if X_val_seq is not None and X_val_static is not None:
             validation_data = ([X_val_seq, X_val_static], y_val)
 
+        if class_weight is None:
+            from sklearn.utils.class_weight import compute_class_weight as _cw
+
+            _classes = np.unique(y_train)
+            _weights = _cw("balanced", classes=_classes, y=y_train)
+            class_weight = dict(zip(_classes.astype(int), _weights))
+
         self.history = self.model.fit(
             [X_train_seq, X_train_static],
             y_train,
@@ -1357,7 +1450,23 @@ class ModelEvaluator:
         self.y_test = y_test
         self.results = {}
 
-    def add_model(self, name: str, y_pred_proba: np.ndarray):
+    def add_model(
+        self,
+        name: str,
+        y_pred_proba: np.ndarray,
+        compute_ci: bool = False,
+        n_bootstrap: int = 1000,
+        ci: float = 0.95,
+    ):
+        """Add a model's predictions to the evaluator.
+
+        Args:
+            name: Model name for display
+            y_pred_proba: Predicted probabilities for the positive class
+            compute_ci: Whether to compute bootstrap confidence intervals
+            n_bootstrap: Number of bootstrap iterations (if compute_ci=True)
+            ci: Confidence interval level (default 0.95 for 95% CI)
+        """
         y_pred = (y_pred_proba >= 0.5).astype(int)
 
         fpr, tpr, _ = roc_curve(self.y_test, y_pred_proba)
@@ -1377,7 +1486,14 @@ class ModelEvaluator:
             "tpr": tpr,
             "precision_arr": precision_arr,
             "recall_arr": recall_arr,
+            "bootstrap_ci": None,
         }
+
+        if compute_ci:
+            print(f"  Computing bootstrap CIs for {name} ({n_bootstrap} iterations)...")
+            self.results[name]["bootstrap_ci"] = bootstrap_evaluate(
+                self.y_test, y_pred_proba, n_bootstrap=n_bootstrap, ci=ci
+            )
 
     def get_comparison_table(self) -> pd.DataFrame:
         rows = []
@@ -1393,6 +1509,98 @@ class ModelEvaluator:
                     "Accuracy": res["accuracy"],
                 }
             )
+        return pd.DataFrame(rows).set_index("Model")
+
+    def get_comparison_table_with_ci(self) -> pd.DataFrame:
+        """Get comparison table with bootstrap confidence intervals.
+
+        Returns a DataFrame with columns like 'AUC-ROC', 'AUC-ROC_CI' where
+        the CI column contains formatted strings like '(0.78, 0.84)'.
+        """
+        rows = []
+        for name, res in self.results.items():
+            row = {"Model": name}
+            ci_data = res.get("bootstrap_ci")
+
+            for metric, key in [
+                ("AUC-ROC", "auc_roc"),
+                ("AUC-PR", "auc_pr"),
+                ("F1", "f1"),
+                ("Precision", "precision"),
+                ("Recall", "recall"),
+                ("Accuracy", "accuracy"),
+            ]:
+                row[metric] = res[key]
+                if ci_data and metric in ci_data:
+                    ci_lower = ci_data[metric]["ci_lower"]
+                    ci_upper = ci_data[metric]["ci_upper"]
+                    row[f"{metric}_CI"] = f"({ci_lower:.3f}, {ci_upper:.3f})"
+                else:
+                    row[f"{metric}_CI"] = None
+
+            rows.append(row)
+
+        return pd.DataFrame(rows).set_index("Model")
+
+    def get_comparison_csv_with_ci(self) -> pd.DataFrame:
+        """Get comparison table with separate CI columns for CSV export.
+
+        Returns a DataFrame with columns like 'AUC-ROC', 'AUC-ROC_lower', 'AUC-ROC_upper'.
+        """
+        rows = []
+        for name, res in self.results.items():
+            row = {"Model": name}
+            ci_data = res.get("bootstrap_ci")
+
+            for metric, key in [
+                ("AUC-ROC", "auc_roc"),
+                ("AUC-PR", "auc_pr"),
+                ("F1", "f1"),
+                ("Precision", "precision"),
+                ("Recall", "recall"),
+                ("Accuracy", "accuracy"),
+            ]:
+                row[metric] = res[key]
+                if ci_data and metric in ci_data:
+                    row[f"{metric}_lower"] = ci_data[metric]["ci_lower"]
+                    row[f"{metric}_upper"] = ci_data[metric]["ci_upper"]
+                else:
+                    row[f"{metric}_lower"] = None
+                    row[f"{metric}_upper"] = None
+
+            rows.append(row)
+
+        return pd.DataFrame(rows).set_index("Model")
+
+    def format_results_with_ci(self, decimals: int = 3) -> pd.DataFrame:
+        """Format results table with inline confidence intervals for display.
+
+        Returns a DataFrame with values formatted as 'mean (lower, upper)'.
+        """
+        rows = []
+        for name, res in self.results.items():
+            row = {"Model": name}
+            ci_data = res.get("bootstrap_ci")
+
+            for metric, key in [
+                ("AUC-ROC", "auc_roc"),
+                ("AUC-PR", "auc_pr"),
+                ("F1", "f1"),
+                ("Precision", "precision"),
+                ("Recall", "recall"),
+            ]:
+                val = res[key]
+                if ci_data and metric in ci_data:
+                    ci_lower = ci_data[metric]["ci_lower"]
+                    ci_upper = ci_data[metric]["ci_upper"]
+                    row[metric] = (
+                        f"{val:.{decimals}f} ({ci_lower:.{decimals}f}, {ci_upper:.{decimals}f})"
+                    )
+                else:
+                    row[metric] = f"{val:.{decimals}f}"
+
+            rows.append(row)
+
         return pd.DataFrame(rows).set_index("Model")
 
     def plot_roc_curves(self, ax=None, figsize=(8, 6)):

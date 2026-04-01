@@ -23,6 +23,7 @@ from .credit_model import (
     HybridLSTMModel,
     ModelEvaluator,
     set_random_seeds,
+    bootstrap_evaluate,
 )
 
 __version__ = "0.1.0"
@@ -39,4 +40,5 @@ __all__ = [
     "HybridLSTMModel",
     "ModelEvaluator",
     "set_random_seeds",
+    "bootstrap_evaluate",
 ]
