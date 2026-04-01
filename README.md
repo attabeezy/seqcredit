@@ -2,7 +2,7 @@
 
 Temporal feature engineering and sequential deep learning for credit risk prediction using mobile money transaction data.
 
-See [docs/REPORT.md](docs/REPORT.md) for full technical details.
+See [docs/PROJECT.md](docs/PROJECT.md) for full technical details.
 
 ---
 
@@ -37,22 +37,25 @@ seqcredit-model/
 │   ├── user_transactions/        # Per-user transaction CSVs
 │   ├── user_features.csv
 │   ├── user_labels.csv
-│   └── synthetic_params.json    # Calibration parameters
+│   ├── model_comparison.csv      # Latest model results
+│   └── synthetic_params.json     # Calibration parameters
 ├── src/
 │   └── seqcredit_model/
 │       ├── config.py
 │       ├── feature_engineering.py
 │       ├── synthetic_data.py
-│       └── credit_model.py      # Model classes (LR, XGB, RF, LightGBM, LSTM, HybridLSTM)
+│       └── credit_model.py       # Model classes (LR, XGB, RF, LightGBM, LSTM, HybridLSTM)
 ├── notebooks/
-│   ├── credit_risk_model.ipynb    # Primary modeling notebook (all 6 models, saves models/arrays)
-│   ├── credit_risk_analysis.ipynb # Research analysis: y_bad, SHAP, surrogate tree, calibration
-│   └── data_analysis.ipynb        # Descriptive statistics notebook
+│   ├── credit_risk_model.ipynb         # Primary modeling notebook (all 6 models)
+│   ├── credit_risk_analysis.ipynb      # Research analysis: SHAP, surrogate tree, calibration
+│   ├── data_analysis.ipynb             # Descriptive statistics notebook
+│   ├── credit_risk_model_gcolab.ipynb  # Google Colab variant
+│   ├── credit_risk_analysis_gcolab.ipynb
+│   └── data_analysis_gcolab.ipynb
 ├── docs/
-│   ├── REPORT.md
-│   ├── SESSION.md
-│   └── DATACARD.md
-├── models/                      # Persisted trained models (created by model.save())
+│   ├── PROJECT.md           # Consolidated project documentation
+│   └── DATACARD.md          # Dataset documentation
+├── models/                  # Persisted trained models
 └── requirements.txt
 ```
 
