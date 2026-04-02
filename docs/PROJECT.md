@@ -2,7 +2,7 @@
 
 **Project:** Sequential Deep Learning for Credit Risk Modeling in Data-Constrained Environments  
 **Author:** Attabra Benjamin Ekow  
-**Last Updated:** April 2026
+**Last Updated:** April 2, 2026
 
 This document consolidates all project documentation: overview, research framework, development history, and publication plan.
 
@@ -20,9 +20,10 @@ This document consolidates all project documentation: overview, research framewo
 8. [Research Analysis Notebook](#research-analysis-notebook)
 9. [Development History](#development-history)
 10. [Publication Plan](#publication-plan)
-11. [Usage](#usage)
-12. [Dependencies](#dependencies)
-13. [Future Work](#future-work)
+11. [Open Questions](#open-questions)
+12. [Usage](#usage)
+13. [Dependencies](#dependencies)
+14. [Future Work](#future-work)
 
 ---
 
@@ -30,19 +31,29 @@ This document consolidates all project documentation: overview, research framewo
 
 This project develops a credit risk prediction system using mobile money transaction data. It implements both traditional static models (Logistic Regression, XGBoost, Random Forest, LightGBM) and sequential deep learning models (LSTM, Hybrid LSTM) to predict loan default risk. A key feature is the synthetic data generator calibrated to real Ghanaian mobile money patterns, enabling model development without privacy concerns.
 
-**Key Finding:** Hybrid LSTM achieves 53% higher ROC-AUC than the best static model (0.81 vs 0.53), demonstrating that transaction sequences contain predictive signal lost in aggregation.
+**Primary Results (5-Fold CV, `y_default`):** Under proper cross-validation, static tree models (RandomForest: 0.832, LogisticRegression: 0.831) and HybridLSTM (0.813) are statistically indistinguishable in AUC-ROC. Static models have significantly better calibration (ECE ≈0.04 vs 0.22 for HybridLSTM). Standalone LSTM (0.530) collapses without static features — confirming that transaction-level sequences alone carry insufficient signal for default prediction.
+
+**Revised Narrative:** The paper contribution shifts from "sequential beats static" to: (1) well-engineered static features recover most predictive signal; (2) the Hybrid model maintains comparable AUC at the cost of worse calibration; (3) the synthetic data framework + feature engineering pipeline is the primary reusable artifact.
 
 ---
 
 ## Current Results
 
-Model performance metrics are stored in `data/model_comparison.csv` and include 95% bootstrap confidence intervals. Results are generated with `RANDOM_SEED = 42`.
+All benchmark results are stored in the data files below. `RANDOM_SEED = 42` throughout.
 
-**Key Finding:** Hybrid LSTM achieves 53% higher ROC-AUC than the best static model (0.81 vs 0.53), demonstrating that transaction sequences contain predictive signal lost in aggregation.
+| File | Contents |
+|------|----------|
+| `data/cv_results_y_default.csv` | 5-fold CV — all 6 models, `y_default` target |
+| `data/cv_results_y_bad.csv` | 5-fold CV — all 6 models, `y_bad` target |
+| `data/significance_tests.csv` | Pairwise bootstrap significance tests |
+| `data/ablation_features.csv` | Feature group ablation — drop-one + single-group conditions |
+| `data/tuning_results.csv` | Hyperparameter tuning results (RF, XGBoost, LightGBM) |
 
-To regenerate results with bootstrap CIs:
+Generated with:
 ```bash
-python src/seqcredit_model/compute_bootstrap_ci.py
+python src/seqcredit_model/run_cv_benchmark.py       # primary benchmark
+python src/seqcredit_model/run_ablation_study.py     # ablation study
+python src/seqcredit_model/run_hyperparameter_tuning.py  # tuning
 ```
 
 ### Dataset Statistics
@@ -159,7 +170,7 @@ model = ModelClass.load("models/model_name")
 
 | Model | Description |
 |-------|-------------|
-| `LSTMModel` | Padded sequences (max_len=50, 38 features), stacked LSTM layers |
+| `LSTMModel` | Padded sequences (max_len=50, 38 features), stacked LSTM (32→16 units), dropout=0.4, L2 reg |
 | `HybridLSTMModel` | Dual-branch: LSTM (sequences) + Dense (static) -> Concatenate -> sigmoid |
 
 ### Key Classes
@@ -256,9 +267,16 @@ model = ModelClass.load("models/model_name")
 ### April 2026: Documentation Consolidation
 
 - Updated all documentation to reflect current project state
-- Created consolidated `docs/MAIN.md` (this file)
+- Created consolidated `docs/PROJECT.md` (this file)
 - Added Google Colab notebook variants
 - Ensured data consistency (100% match between features and labels)
+
+### April 2026: CV Benchmark + Bug Fixes
+
+- Implemented `run_cv_benchmark.py`: 5-fold stratified CV for all 6 models, both targets, with bootstrap significance tests and OOF predictions
+- **Bug fix — double-scaling:** `run_cv_benchmark.py` was passing pre-scaled `X_train_scaled` from the data loader to CV functions that scaled again per-fold. Fixed to pass raw `X_train` so each fold's scaler is the only scaler applied.
+- **Bug fix — LSTM overfitting:** Standalone LSTM (val AUC ≈0.53) was severely overfitting due to excess capacity (64→32 units) relative to available signal. Reduced to 32→16 units, increased dropout to 0.4, added L2 kernel regularization (1e-4) and higher recurrent_dropout (0.3). Awaiting re-run.
+- **Investigation resolved:** The single-split results (static ~0.53 AUC) that contradicted CV results (static ~0.83 AUC) were traced to a class-imbalance handling bug in earlier runs. CV results are authoritative.
 
 ---
 
@@ -266,8 +284,11 @@ model = ModelClass.load("models/model_name")
 
 **Goal:** Complete the project to publication-ready quality with reproducible experiments, robust validation, and finalized manuscript artifacts.
 
-**Target:** ML Conference (NeurIPS/ICML/ICLR/AISTATS)  
-**Core Contribution:** Sequential models (LSTM/Hybrid LSTM) outperform static models for credit risk prediction from mobile money transaction sequences.
+**Targets:**
+- **Deep Learning Indaba 2026** — abstract deadline April 15, 2026 (Lagos, Nigeria, August 2–7)
+- **IEEE ICAST 2026** — abstract deadline ~April 30, 2026 (AI track or Digital Innovation track)
+
+**Core Contribution (revised):** A calibrated synthetic mobile money dataset + temporal feature engineering framework for African fintech credit risk research. The Hybrid LSTM achieves comparable AUC to static tree models (0.81 vs 0.83) while demonstrating that sequences alone are insufficient — static user-level features carry most predictive signal.
 
 ### Success Criteria
 
@@ -280,70 +301,100 @@ model = ModelClass.load("models/model_name")
 
 ### Phase 1 - Validation Core (Publication-blocking)
 
-**Timeline:** Week 1
+**Timeline:** Week 1  
+**Status:** Completed (with unexpected findings requiring investigation)
 
 #### 1.1 Implement 5-Fold Stratified CV
 
-- [ ] Add CV pipeline for `LogisticRegressionModel`, `XGBoostModel`, `RandomForestModel`, `LightGBMModel`, `LSTMModel`, and `HybridLSTMModel`
-- [ ] Run CV on both targets: `y_default` and `y_bad`
-- [ ] Track fold-level metrics: ROC-AUC, PR-AUC, F1, Precision, Recall, Brier, ECE
-- [ ] Persist fold results and aggregate means/std/CIs
-- [ ] Output `data/cv_results_default.csv`
-- [ ] Output `data/cv_results_bad.csv`
+- [x] Add CV pipeline for `LogisticRegressionModel`, `XGBoostModel`, `RandomForestModel`, `LightGBMModel`, `LSTMModel`, and `HybridLSTMModel`
+- [x] Run CV on both targets: `y_default` and `y_bad`
+- [x] Track fold-level metrics: ROC-AUC, PR-AUC, F1, Precision, Recall, Brier, ECE
+- [x] Persist fold results and aggregate means/std/CIs
+- [x] Output `data/cv_results_y_default.csv`
+- [x] Output `data/cv_results_y_bad.csv`
+
+**CV Results:** See `data/cv_results_y_default.csv`.
 
 #### 1.2 Statistical Comparison Layer
 
-- [ ] Add pairwise tests for core claims (best static vs LSTM, best static vs HybridLSTM)
-- [ ] Use bootstrap/permutation delta testing for ROC-AUC and PR-AUC
-- [ ] Report effect sizes with p-values and/or confidence intervals
-- [ ] Output `data/significance_tests.csv`
+- [x] Add pairwise tests for core claims (best static vs LSTM, best static vs HybridLSTM)
+- [x] Use bootstrap/permutation delta testing for ROC-AUC and PR-AUC
+- [x] Report effect sizes with p-values and/or confidence intervals
+- [x] Output `data/significance_tests.csv`
+
+**Note:** No statistically significant differences found between top models (RandomForest, LogisticRegression, HybridLSTM) in CV results.
 
 #### 1.3 Reproducibility Guardrails
 
-- [ ] Standardize seed handling (`RANDOM_SEED = 42`) across scripts/notebooks
-- [ ] Ensure deterministic split logic and cache behavior are documented
-- [ ] Add a single run path to regenerate final benchmark artifacts
-- [ ] Output `scripts/run_full_benchmark.py` (or equivalent documented notebook flow)
+- [x] Standardize seed handling (`RANDOM_SEED = 42`) across scripts/notebooks
+- [x] Ensure deterministic split logic and cache behavior are documented
+- [x] Add a single run path to regenerate final benchmark artifacts
+- [x] Output `src/seqcredit_model/run_cv_benchmark.py`
+- [x] Output `data/cv_manifest.json` (reproducibility params + timings)
+
+#### 1.4 Investigation (Resolved)
+
+- [x] Investigate discrepancy between CV and single-split results
+- [x] Determine root cause: class-imbalance handling bug in pre-fix runs caused static models to predict all-negative → artificially low AUC
+- [x] Fix double-scaling bug in `run_cv_benchmark.py`
+- [x] Re-evaluate thesis — revised to: static models competitive with Hybrid LSTM; sequences alone insufficient
+- [x] Update documentation and paper claims
 
 ### Phase 2 - Strengthening Experiments
 
 **Timeline:** Week 2
+**Status:** Unblocked — Phase 1.4 resolved
 
 #### 2.1 Hyperparameter Tuning
 
-- [ ] Run bounded-budget tuning (Optuna/GridSearch) for static models
-- [ ] Run constrained tuning for sequence models (units, dropout, learning rate, sequence length)
-- [ ] Keep validation protocol consistent with Phase 1
-- [ ] Output `data/tuning_results.csv`
+- [x] Script: `src/seqcredit_model/run_hyperparameter_tuning.py` (40 trials RandomizedSearchCV, 3-fold search → 5-fold final, RF/XGBoost/LightGBM)
+- [x] Output `data/tuning_results.csv`
+
+**Tuning Results (y_default):** XGBoost tuned is marginally best (0.8303 AUC-ROC vs default 0.8183). Tuned RF (0.8271) performs slightly *worse* than default RF (0.8319) — likely due to reduced depth (max_depth=5 vs default 10). LightGBM tuned (0.8227) also below default (0.8123→0.8227). HybridLSTM excluded from tuning (compute cost). Conclusion: default hyperparameters are near-optimal for this dataset; gains from tuning are marginal.
 
 #### 2.2 Ablation Studies
 
-- [ ] Run feature ablations: loan-only, temporal-only, behavioral-only, full feature set
-- [ ] Run sequence length sensitivity analysis (e.g., max_len in {20, 50, 100})
-- [ ] Output `data/ablation_features.csv`
-- [ ] Output `data/ablation_sequence_length.csv`
+- [x] Drop-one-group ablations: 8 feature groups, RandomForest, 5-fold CV each
+- [x] Single-group-only ablations: standalone signal of each group
+- [x] Script: `src/seqcredit_model/run_ablation_study.py`
+- [x] Output `data/ablation_features.csv`
+
+**Key ablation findings (y_default, RandomForest):**
+- `behavioural_diversity` (unique_recipients, recipient_concentration, unique_txn_types) is the dominant group: dropping it cuts AUC-ROC from 0.832 → 0.697 (−0.135). Alone it achieves AUC 0.777.
+- `loan_history` is second most important: dropping it costs −0.045 AUC-ROC.
+- All other groups (amount_stats, balance_dynamics, fee_behaviour, temporal_patterns, txn_type_mix, activity_intensity) have negligible individual impact (delta ≤ 0.005); some marginally improve performance when dropped.
+- Implication: behavioral diversity and loan history encode most of the default signal; the other 6 feature groups add robustness but not discriminative power.
 
 #### 2.3 Transformer Baseline
 
 - [ ] Implement a lightweight Transformer/attention baseline
-- [ ] Train/evaluate under the same splits and metrics stack
+- [ ] Train/evaluate under the same splits and metrics stack (5-fold CV)
 - [ ] Compare against LSTM/Hybrid and best static model
 - [ ] Output `data/transformer_results.csv`
 
+#### 2.4 Single-Split Diagnosis (NEW)
+
+- [ ] Re-run single train/test split with identical preprocessing to CV
+- [ ] Compare feature distributions between train/test in single-split vs CV folds
+- [ ] Check for potential data leakage in notebook-based single-split approach
+- [ ] Document findings in `docs/METHODOLOGY.md`
+
 ### Phase 3 - Paper and Artifact Finalization
 
-**Timeline:** Week 3
+**Timeline:** Week 3  
+**Status:** Pending
 
 #### 3.1 Manuscript Draft Completion
 
 - [ ] Write full draft: Introduction, Related Work, Data, Methods, Results, Interpretability, Calibration, Ablations, Discussion, Conclusion
 - [ ] Include predictive-not-causal boundary statement
 - [ ] Include synthetic-data and external validity limitations
+- [ ] **Revise core claims based on CV findings** (sequential vs static comparison)
 - [ ] Output `paper/draft_v1.md` (or LaTeX equivalent)
 
 #### 3.2 Figure/Table Freeze
 
-- [ ] Freeze benchmark tables with CIs and significance results
+- [ ] Freeze benchmark tables with CIs and significance results (use CV results as primary)
 - [ ] Freeze SHAP/permutation/surrogate/calibration/ablation/Transformer figures
 - [ ] Output `paper/figures/*` and `paper/tables/*`
 - [ ] Add reproducibility manifest (`paper/repro_manifest.md`)
@@ -351,7 +402,8 @@ model = ModelClass.load("models/model_name")
 #### 3.3 Documentation Sync
 
 - [ ] Update `docs/PROJECT.md`, `docs/DATACARD.md`, and `README.md` after final rerun
-- [ ] Confirm all reported metrics match `data/model_comparison.csv`
+- [ ] Confirm all reported metrics match `data/cv_results_y_default.csv` (CV as primary)
+- [ ] Reconcile single-split vs CV results in documentation
 
 ### Phase 4 - Engineering Quality (Parallel, Recommended)
 
@@ -371,21 +423,25 @@ model = ModelClass.load("models/model_name")
 
 ### Week-by-Week Snapshot
 
-#### Week 1
+#### Week 1 (Completed)
 
-- [ ] CV complete for all models and both targets
-- [ ] Significance tests complete
-- [ ] Reproducibility run path validated
+- [x] CV complete for all models and both targets
+- [x] Significance tests complete (no significant differences found between top models)
+- [x] Reproducibility run path validated
+- [x] CV vs single-split discrepancy investigated and resolved
+- [x] Double-scaling bug fixed
+- [x] LSTM regularization applied (re-run pending)
 
 #### Week 2
 
-- [ ] Hyperparameter tuning complete
-- [ ] Ablation studies complete
-- [ ] Transformer baseline complete
+- [x] Re-run CV benchmark after LSTM fix — LSTM still 0.5231 AUC-ROC on y_default even after regularization (32→16 units, dropout 0.4, L2, recurrent_dropout 0.3). Confirms: sequences alone carry insufficient default-predictive signal. This is the publishable finding.
+- [x] Ablation study complete (`data/ablation_features.csv`)
+- [x] Hyperparameter tuning complete (`data/tuning_results.csv`)
+- [ ] Transformer baseline
 
 #### Week 3
 
-- [ ] Manuscript draft complete
+- [ ] Manuscript draft complete (with revised claims if needed)
 - [ ] Final figures/tables frozen
 - [ ] Documentation synchronized and release-ready
 
@@ -404,6 +460,36 @@ model = ModelClass.load("models/model_name")
 
 ---
 
+## Open Questions
+
+### 1. ~~Why do static models perform much better in CV vs single-split?~~ (Resolved)
+
+**Root cause:** Class-imbalance handling bug in early runs caused static models to predict all-negative, yielding artificially low AUC (~0.53). The "post-imbalance fix" commit corrected `class_weight='balanced'` and `scale_pos_weight` settings. CV results (static ~0.83) are the true performance.
+
+### 2. Is the "sequential models beat static models" thesis still valid? (Resolved — revised)
+
+**Conclusion:** No. With proper imbalance handling and CV evaluation:
+- Top static models (RF 0.832, LR 0.831) match HybridLSTM (0.813) in AUC-ROC
+- Static models are significantly better calibrated (ECE 0.04 vs 0.22)
+- No statistically significant pairwise differences between any top-5 models
+- **Revised framing:** The Hybrid provides comparable discriminative performance to static models, but static tree models should be preferred when calibration matters (e.g., loan pricing, risk scoring)
+
+### 3. ~~Single-split notebook consistency~~ (Superseded)
+
+Single-split results from the notebook are no longer used as a primary benchmark. CV results from `run_cv_benchmark.py` are authoritative.
+
+### 4. Why does standalone LSTM collapse in CV? (Resolved)
+
+**Root cause identified:** Model too large (64→32 units) relative to available positive examples (~529 defaults in training). Train AUC reaches 0.95 while val AUC stagnates at 0.50–0.57 — classic overfitting.
+
+**Fix applied:** Reduced to 32→16 units, dropout 0.4, L2 kernel regularization (1e-4), recurrent_dropout 0.3. Re-run completed.
+
+**Outcome:** LSTM still scores 0.5231 AUC-ROC on y_default after regularization (y_bad: 0.5071) — essentially random. This confirms the finding is not a capacity/overfitting artifact but a data property: transaction sequences alone lack sufficient signal to predict default.
+
+**Conclusion (publishable):** *Well-engineered static user-level features capture the relevant predictive signal; the temporal order of individual transactions adds negligible marginal value for default prediction. The Hybrid model's 0.813 AUC is entirely attributable to its static feature branch.*
+
+---
+
 ## Usage
 
 ### Generate Synthetic Data
@@ -418,7 +504,25 @@ python -m seqcredit_model.synthetic_data
 python -m seqcredit_model.feature_engineering
 ```
 
-### Run Experiments
+### Run CV Benchmark (primary evaluation)
+
+```bash
+python src/seqcredit_model/run_cv_benchmark.py
+```
+
+### Run Ablation Study
+
+```bash
+python src/seqcredit_model/run_ablation_study.py
+```
+
+### Run Hyperparameter Tuning
+
+```bash
+python src/seqcredit_model/run_hyperparameter_tuning.py
+```
+
+### Run Notebook Experiments
 
 ```bash
 jupyter notebook notebooks/credit_risk_model.ipynb
@@ -450,11 +554,10 @@ Install: `pip install -r requirements.txt`
 
 ## Future Work
 
-- [ ] Add hyperparameter tuning (GridSearch/RandomSearch/Optuna)
-- [ ] Implement cross-validation with proper time-series splits
-- [ ] Experiment with attention mechanisms (Transformer)
+- [ ] Transformer/attention baseline (`data/transformer_results.csv`)
+- [ ] Update SHAP analysis on CV-trained models (currently single-split trained)
 - [ ] Add unit tests
-- [ ] Validate on real mobile money data (with appropriate permissions)
+- [ ] Validate on real mobile money data (Telecel Ghana — pending data access)
 
 ---
 

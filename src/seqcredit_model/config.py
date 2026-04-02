@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+RANDOM_SEED = 42
+
 # Anchor to project root: src/seqcredit_model/ -> src/ -> project root
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"

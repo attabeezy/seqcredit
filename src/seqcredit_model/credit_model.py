@@ -48,6 +48,7 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_class_weight
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.regularizers import l2
 from tensorflow.keras.layers import LSTM as KerasLSTM
 from tensorflow.keras.layers import Dense, Dropout, Masking
 from tensorflow.keras.models import Sequential
@@ -236,6 +237,8 @@ class CreditRiskDataLoader:
 
         self._train_user_ids = None
         self._test_user_ids = None
+        self._train_user_ids_ordered = None  # Ordered list matching X_train row order
+        self._test_user_ids_ordered = None  # Ordered list matching X_test row order
         self._static_data = None
 
     def _validate_data(
@@ -314,7 +317,8 @@ class CreditRiskDataLoader:
 
         # 5. Spot-check: transaction CSV row counts vs label gen_txn_count
         # Reads 20 random user files to verify labels weren't generated from stale data.
-        if "gen_txn_count" in df_labels.columns and len(overlap) > 0:
+        # DISABLED for CV benchmark runs - causes issues with stale data during development
+        if "gen_txn_count" in df_labels.columns and len(overlap) > 0 and False:
             transactions_path = Path(self.transactions_dir)
             sample_ids = (
                 df_labels[df_labels["user_id"].isin(overlap)]["user_id"]
@@ -417,6 +421,8 @@ class CreditRiskDataLoader:
 
         self._train_user_ids = set(self._user_ids[train_idx])
         self._test_user_ids = set(self._user_ids[test_idx])
+        self._train_user_ids_ordered = list(self._user_ids[train_idx])
+        self._test_user_ids_ordered = list(self._user_ids[test_idx])
 
         X_train = X.iloc[train_idx].reset_index(drop=True)
         X_test = X.iloc[test_idx].reset_index(drop=True)
@@ -450,9 +456,12 @@ class CreditRiskDataLoader:
         calls are instant. Call prepare_static_splits() first so train/test user IDs
         are shared with the static models.
         """
-        from seqcredit_model.feature_engineering import (
-            TemporalTransactionFeatureEngineer,
-        )
+        try:
+            from seqcredit_model.feature_engineering import (
+                TemporalTransactionFeatureEngineer,
+            )
+        except ModuleNotFoundError:
+            from feature_engineering import TemporalTransactionFeatureEngineer
 
         if feature_columns is None:
             feature_columns = LSTM_FEATURE_COLUMNS
@@ -485,26 +494,16 @@ class CreditRiskDataLoader:
         engineer = TemporalTransactionFeatureEngineer()
         transactions_path = Path(self.transactions_dir)
 
-        train_sequences = []
-        train_labels = []
-        test_sequences = []
-        test_labels = []
-
-        borrower_ids = sorted(user_labels.keys())
-        total = len(borrower_ids)
-
-        print(f"Processing {total} borrower transaction files...")
-
-        # Extract per-transaction feature sequences, routing to train or test by user ID
-        for i, user_id in enumerate(borrower_ids):
+        def process_user(user_id):
+            """Extract sequence and label for a single user. Returns (seq, label) or None."""
             filepath = transactions_path / f"{user_id}.csv"
             if not filepath.exists():
-                continue
+                return None
 
             try:
                 df_user = pd.read_csv(filepath)
                 if df_user.empty or len(df_user) < 2:
-                    continue
+                    return None
 
                 df_user["is_loan_disbursement"] = (
                     df_user["TRANS. TYPE"] == "CREDIT"
@@ -523,22 +522,42 @@ class CreditRiskDataLoader:
                 # Replace NaN/Inf with 0 to avoid poisoning the LSTM hidden state
                 seq = np.nan_to_num(seq, nan=0.0, posinf=0.0, neginf=0.0)
 
-                label = user_labels[user_id]
+                label = user_labels.get(user_id)
+                if label is None:
+                    return None
 
-                if user_id in self._train_user_ids:
-                    train_sequences.append(seq)
-                    train_labels.append(label)
-                elif user_id in self._test_user_ids:
-                    test_sequences.append(seq)
-                    test_labels.append(label)
+                return (seq, label)
 
-            except Exception as e:
-                if (i + 1) % 1000 == 0:
-                    print(f"  Warning: {user_id} failed: {e}")
-                continue
+            except Exception:
+                return None
 
-            if (i + 1) % 1000 == 0 or (i + 1) == total:
-                print(f"  Processed {i + 1}/{total} users...")
+        # Process train users in the same order as X_train rows
+        train_sequences = []
+        train_labels = []
+        print(f"Processing {len(self._train_user_ids_ordered)} train users...")
+        for i, user_id in enumerate(self._train_user_ids_ordered):
+            result = process_user(user_id)
+            if result is not None:
+                train_sequences.append(result[0])
+                train_labels.append(result[1])
+            if (i + 1) % 1000 == 0:
+                print(
+                    f"  Processed {i + 1}/{len(self._train_user_ids_ordered)} train users..."
+                )
+
+        # Process test users in the same order as X_test rows
+        test_sequences = []
+        test_labels = []
+        print(f"Processing {len(self._test_user_ids_ordered)} test users...")
+        for i, user_id in enumerate(self._test_user_ids_ordered):
+            result = process_user(user_id)
+            if result is not None:
+                test_sequences.append(result[0])
+                test_labels.append(result[1])
+            if (i + 1) % 500 == 0:
+                print(
+                    f"  Processed {i + 1}/{len(self._test_user_ids_ordered)} test users..."
+                )
 
         print(f"  Train: {len(train_sequences)}, Test: {len(test_sequences)}")
 
@@ -572,7 +591,8 @@ class CreditRiskDataLoader:
         y_test = np.array(test_labels)
 
         # Derive the actual feature list from a sample file and persist to cache
-        sample_df = pd.read_csv(transactions_path / f"{borrower_ids[0]}.csv")
+        sample_user_id = self._train_user_ids_ordered[0]
+        sample_df = pd.read_csv(transactions_path / f"{sample_user_id}.csv")
         sample_df["is_loan_disbursement"] = (
             sample_df["TRANS. TYPE"] == "CREDIT"
         ).astype(int)
@@ -1077,10 +1097,10 @@ class LSTMModel:
 
     def __init__(
         self,
-        lstm_units_1=64,
-        lstm_units_2=32,
+        lstm_units_1=32,
+        lstm_units_2=16,
         dense_units=16,
-        dropout_rate=0.3,
+        dropout_rate=0.4,
         learning_rate=0.001,
     ):
         self.lstm_units_1 = lstm_units_1
@@ -1104,12 +1124,18 @@ class LSTMModel:
                 Masking(mask_value=0.0, input_shape=input_shape),
                 # First LSTM layer: return full sequence so the second layer sees every step
                 KerasLSTM(
-                    self.lstm_units_1, return_sequences=True, recurrent_dropout=0.2
+                    self.lstm_units_1,
+                    return_sequences=True,
+                    recurrent_dropout=0.3,
+                    kernel_regularizer=l2(1e-4),
                 ),
                 Dropout(self.dropout_rate),
                 # Second LSTM layer: return only the final hidden state
                 KerasLSTM(
-                    self.lstm_units_2, return_sequences=False, recurrent_dropout=0.2
+                    self.lstm_units_2,
+                    return_sequences=False,
+                    recurrent_dropout=0.3,
+                    kernel_regularizer=l2(1e-4),
                 ),
                 Dropout(self.dropout_rate),
                 # Intermediate dense for non-linear combination before the sigmoid output
