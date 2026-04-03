@@ -1,8 +1,14 @@
 # Sequential Deep Learning for Credit Risk Modeling
 
-Temporal feature engineering and sequential deep learning for credit risk prediction using mobile money transaction data.
+A **preliminary investigation and proof-of-concept framework** for credit risk modeling in African fintech contexts using mobile money transaction data.
 
-See [docs/PROJECT.md](docs/PROJECT.md) for full technical details.
+**Primary contributions:**
+1. **Open synthetic benchmark** — calibrated Ghanaian mobile money dataset (10,000 users, 5 credit archetypes) for privacy-safe credit risk research
+2. **Temporal feature engineering framework** — 8 feature groups, 38 features extracted from transaction sequences; reusable pipeline for African fintech
+
+Preliminary evaluation on this benchmark compares six models under 5-fold CV. Key finding: well-engineered static features recover most default-predictive signal (RF: 0.832 AUC-ROC); standalone LSTM collapses (0.523); Hybrid LSTM is comparable in discrimination but worse in calibration. Results are scoped to the synthetic benchmark — real-data validation (Paper B, Telecel Ghana) is ongoing.
+
+See [docs/PROJECT.md](docs/PROJECT.md) for full technical details and limitations.
 
 ---
 
@@ -21,7 +27,9 @@ See [docs/PROJECT.md](docs/PROJECT.md) for full technical details.
 | HybridLSTM | 0.813 | 0.606 | 0.524 | 0.219 |
 | LSTM | 0.523 | 0.121 | 0.182 | 0.372 |
 
-No statistically significant pairwise differences between the top-5 models. Static tree models preferred when calibration matters (ECE ≈0.04–0.12 vs 0.22 for HybridLSTM). Standalone LSTM collapses even after regularization — sequences alone carry insufficient default-predictive signal.
+No statistically significant pairwise differences between the top-5 models. Static tree models preferred when calibration matters (ECE ≈0.04–0.12 vs 0.22 for HybridLSTM). Standalone LSTM collapses even after regularization — sequences alone carry insufficient default-predictive signal on this synthetic benchmark.
+
+> **Scope note:** These are preliminary findings on a controlled synthetic dataset calibrated to Ghanaian mobile money patterns. They motivate but do not substitute for real-data validation. See [Limitations](docs/PROJECT.md#limitations) in PROJECT.md.
 
 ### Secondary target: `y_bad` (late+default vs good)
 

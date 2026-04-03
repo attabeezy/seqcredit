@@ -23,17 +23,22 @@ This document consolidates all project documentation: overview, research framewo
 11. [Open Questions](#open-questions)
 12. [Usage](#usage)
 13. [Dependencies](#dependencies)
-14. [Future Work](#future-work)
+14. [Limitations](#limitations)
+15. [Future Work](#future-work)
 
 ---
 
 ## Executive Summary
 
-This project develops a credit risk prediction system using mobile money transaction data. It implements both traditional static models (Logistic Regression, XGBoost, Random Forest, LightGBM) and sequential deep learning models (LSTM, Hybrid LSTM) to predict loan default risk. A key feature is the synthetic data generator calibrated to real Ghanaian mobile money patterns, enabling model development without privacy concerns.
+This project is a **preliminary investigation and proof-of-concept framework paper** for credit risk modeling in African fintech contexts. It makes two primary contributions:
 
-**Primary Results (5-Fold CV, `y_default`):** Under proper cross-validation, static tree models (RandomForest: 0.832, LogisticRegression: 0.831) and HybridLSTM (0.813) are statistically indistinguishable in AUC-ROC. Static models have significantly better calibration (ECE ≈0.04 vs 0.22 for HybridLSTM). Standalone LSTM (0.530) collapses without static features — confirming that transaction-level sequences alone carry insufficient signal for default prediction.
+1. **Open synthetic benchmark** — `CalibratedMoMoDataGenerator` produces a 10,000-user mobile money dataset calibrated to real Ghanaian patterns (MTN MoMo / QwikLoan), providing a privacy-safe, reproducible testbed for African credit risk research where real data is scarce or inaccessible.
 
-**Revised Narrative:** The paper contribution shifts from "sequential beats static" to: (1) well-engineered static features recover most predictive signal; (2) the Hybrid model maintains comparable AUC at the cost of worse calibration; (3) the synthetic data framework + feature engineering pipeline is the primary reusable artifact.
+2. **Temporal feature engineering framework** — `TemporalTransactionFeatureEngineer` formalizes 8 feature groups (38 features) extracted from transaction sequences, offering a reusable pipeline for practitioners and researchers.
+
+Preliminary evaluation on this benchmark compares six models (Logistic Regression, XGBoost, Random Forest, LightGBM, LSTM, Hybrid LSTM) under rigorous 5-fold cross-validation. The central finding is that **well-engineered static user-level features capture most of the available default signal** (RF: 0.832 AUC-ROC); the Hybrid LSTM is comparable in discrimination (0.813) but significantly worse in calibration (ECE 0.22 vs 0.04); and the standalone LSTM collapses (0.523), confirming that transaction sequences alone carry insufficient signal.
+
+**Scope:** These are preliminary findings on a controlled synthetic benchmark. External validity on real-world mobile money data is the subject of Paper B (pending Telecel Ghana data access). This paper does not claim universal generalizability — it establishes a framework, an open benchmark, and motivating results for the larger study.
 
 ---
 
@@ -200,7 +205,7 @@ model = ModelClass.load("models/model_name")
 
 ## Research Framework
 
-**Research Question:** *In a data-constrained, fully synthetic mobile money setting, can sequential credit risk models outperform strong static baselines **and** produce outputs that are interpretable, auditable, and reliable enough for decision-making?*
+**Research Question:** *Can a calibrated synthetic mobile money dataset and a temporal feature engineering framework serve as a reusable open benchmark for African fintech credit risk research? And on this controlled benchmark, what does a comparative preliminary evaluation reveal about the relative value of sequential deep learning versus well-engineered static features for default prediction?*
 
 ### The Five-Part Pipeline
 
@@ -288,7 +293,13 @@ model = ModelClass.load("models/model_name")
 - **Deep Learning Indaba 2026** — abstract deadline April 15, 2026 (Lagos, Nigeria, August 2–7)
 - **IEEE ICAST 2026** — abstract deadline ~April 30, 2026 (AI track or Digital Innovation track)
 
-**Core Contribution (revised):** A calibrated synthetic mobile money dataset + temporal feature engineering framework for African fintech credit risk research. The Hybrid LSTM achieves comparable AUC to static tree models (0.81 vs 0.83) while demonstrating that sequences alone are insufficient — static user-level features carry most predictive signal.
+**Framing:** Preliminary Investigation / Novel Framework + Open Benchmark. This paper does not claim to present production-ready or universally generalizable results. It contributes a reusable framework and synthetic benchmark, and provides preliminary motivating findings that justify a larger real-data study (Paper B).
+
+**Core Contributions:**
+1. Calibrated synthetic Ghanaian mobile money dataset (open benchmark, 10k users, 5 archetypes)
+2. Temporal feature engineering framework (8 groups, 38 features) — reusable pipeline for African fintech
+3. Preliminary comparative evaluation: static features dominate sequences on this benchmark; LSTM alone is insufficient; Hybrid LSTM is comparable in AUC but worse in calibration
+4. Ablation evidence: `behavioural_diversity` and `loan_history` carry most default signal (drop-one: −0.135 and −0.045 AUC respectively)
 
 ### Success Criteria
 
@@ -552,12 +563,30 @@ Install: `pip install -r requirements.txt`
 
 ---
 
+## Limitations
+
+This work is an explicitly scoped **preliminary investigation**. Reviewers and readers should note:
+
+1. **Synthetic data only.** All results are on a calibrated synthetic dataset. While the generator is calibrated to real Ghanaian MoMo patterns, it cannot capture the full complexity of real transaction behavior. Findings may not transfer directly to live credit portfolios.
+
+2. **Single geography and product type.** The synthetic parameters are tuned for Ghanaian mobile money (MTN QwikLoan structure). Generalizability to other markets or products is untested.
+
+3. **No prospective or deployment validation.** Models are evaluated on a held-out test split within the synthetic dataset. No live A/B test or shadow deployment has been conducted.
+
+4. **Binary default framing.** The primary target (`y_default`) collapses late payment and default into non-default. Real credit risk applications typically require probability calibration and decision thresholds tuned to deployment costs — partially addressed by calibration analysis but not fully resolved.
+
+5. **Sequences may carry more signal in real data.** The finding that standalone LSTM collapses (0.523 AUC) reflects a property of the synthetic dataset's generation process, where credit outcomes are partly determined by user archetype labels rather than purely by transaction sequence dynamics. This motivates — but does not substitute for — real-data validation.
+
+**Paper B** (Hybrid LSTM on real Telecel Ghana data, pending data access) addresses limitations 1–3 directly and is the intended real-world validation of this framework.
+
+---
+
 ## Future Work
 
 - [ ] Transformer/attention baseline (`data/transformer_results.csv`)
 - [ ] Update SHAP analysis on CV-trained models (currently single-split trained)
 - [ ] Add unit tests
-- [ ] Validate on real mobile money data (Telecel Ghana — pending data access)
+- [ ] **Paper B:** Validate framework on real Telecel Ghana mobile money data (pending data access)
 
 ---
 

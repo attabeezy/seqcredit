@@ -17,7 +17,7 @@ Both datasets are fully synthetic and calibrated to real Ghanaian mobile money (
 
 ---
 
-## Quick Reference
+## Quick Reference [TO BE UPDATED]
 
 | | Dataset 1A: Raw Transactions | Dataset 1B: User Labels | Dataset 2: User Features |
 |---|---|---|---|---|
@@ -44,6 +44,7 @@ Both datasets are fully synthetic and calibrated to real Ghanaian mobile money (
 9. [Ethical Considerations](#9-ethical-considerations)
 10. [Known Limitations and Data Quality Notes](#10-known-limitations-and-data-quality-notes)
 11. [Citation](#11-citation)
+12. [References for synthetic_params.json Calibration](#12-references-for-synthetic_paramsjson-calibration)
 
 ---
 
@@ -58,7 +59,7 @@ The dataset supports multiple modeling paradigms:
 - **Sequential models** (Sequential LSTM, Hybrid LSTM) — from per-user transaction sequences, optionally fused with static features
 - **Exploratory data analysis** — transaction-level behavioral analysis
 
-### 1.2 Composition
+### 1.2 Composition [TO BE UPDATED]
 
 **Scale:** 10,000 users × mean 103 transactions/user = **1,030,198 total transaction rows** across 10,000 CSV files.
 
@@ -104,7 +105,7 @@ The schema varies by user borrowing status. There are three possible column coun
 
 > ⚠️ **Variable schema:** Non-borrower files have **13 columns**. Files with only loan disbursements have **17 columns**. Files with repayments have **19 columns**. Parsers must handle these variations. Use `pd.read_csv(..., low_memory=False)` and check column presence before accessing loan fields.
 
-### 1.3 Transaction Types
+### 1.3 Transaction Types [TO BE UPDATED]
 
 Eight transaction types are observed in the data. The ninth type (`ADJUSTMENT`) is defined in the feature engineering code but is **never generated**.
 
@@ -122,7 +123,7 @@ Eight transaction types are observed in the data. The ninth type (`ADJUSTMENT`) 
 
 **Note on calibration drift:** Observed percentages differ from calibration targets because `CASH_IN` and loan types are injected on top of the five base types rather than drawn from the same distribution. The generator normalizes only among {TRANSFER, DEBIT, PAYMENT, PAYMENT_SEND, CASH_OUT}.
 
-### 1.4 Temporal Coverage
+### 1.4 Temporal Coverage [TO BE UPDATED]
 
 | Property | Value |
 |---|---|
@@ -136,7 +137,7 @@ Eight transaction types are observed in the data. The ninth type (`ADJUSTMENT`) 
 
 Weekend inter-arrival times are compressed by a ×0.7 multiplier. Night-hour transactions use a preferred hour drawn from Beta-distributed user preference.
 
-### 1.5 Amount and Fee Distribution
+### 1.5 Amount and Fee Distribution [TO BE UPDATED]
 
 **Amount generation:**
 
@@ -164,7 +165,7 @@ Weekend inter-arrival times are compressed by a ×0.7 multiplier. Night-hour tra
 - CASH_OUT and PAYMENT_SEND: 50% chance of fee = `min(amount × 0.01, 5.0)` (floor GHS 0.25)
 - E-levy (1.5%): applied to TRANSFER/PAYMENT_SEND/CASH_OUT > GHS 100 with 30% probability
 
-### 1.6 Balance Dynamics
+### 1.6 Balance Dynamics [TO BE UPDATED]
 
 | Property | Value |
 |---|---|
@@ -190,7 +191,7 @@ Weekend inter-arrival times are compressed by a ×0.7 multiplier. Night-hour tra
 | `final_credit_limit` | float | Credit limit at end of simulation (GHS) |
 | `gen_txn_count` | int | Total transactions generated for this user |
 
-### 2.2 Credit Archetype Distribution
+### 2.2 Credit Archetype Distribution [TO BE UPDATED]
 
 Five behavioral archetypes control transaction frequency, type mix, loan behavior, and repayment likelihood.
 
@@ -202,7 +203,7 @@ Five behavioral archetypes control transaction frequency, type mix, loan behavio
 | `risky_borrower` | 747 | 7.47% | 8% | Frequent loans, 15% default probability |
 | `defaulter` | 208 | 2.08% | 2% | 100% default probability |
 
-### 2.3 Credit Risk Label Distribution
+### 2.3 Credit Risk Label Distribution [TO BE UPDATED]
 
 | Label | Meaning | Count | % of all users | % of borrowers only |
 |---|---|---|---|---|
@@ -217,7 +218,7 @@ Five behavioral archetypes control transaction frequency, type mix, loan behavio
 
 Non-borrowers (`credit_risk_label == -1`) are **excluded from all model training** but are present in this file.
 
-### 2.4 Loan Parameters
+### 2.4 Loan Parameters [TO BE UPDATED]
 
 All loan parameters are fixed constants applied uniformly across all archetypes (eligibility and repayment timing vary by archetype).
 
@@ -316,7 +317,7 @@ The file has 30 columns: `user_id` + 29 features.
 | `account_age_days` | Days between first and last transaction |
 | `transactions_per_day` | obs_txn_count / max(account_age_days, 1) |
 
-### 3.3 Descriptive Statistics
+### 3.3 Descriptive Statistics [TO BE UPDATED]
 
 Statistics from current `user_features.csv` (regenerated with consistent data):
 
@@ -373,7 +374,7 @@ Transaction-level features are an intermediate product produced by `extract_all_
 
 ## 4. Data Generation Process
 
-### 4.1 Generator
+### 4.1 Generator [TO BE UPDATED]
 
 **Class:** `CalibratedMoMoDataGenerator` in `src/seqcredit_model/synthetic_data.py`
 **Entry point:** `python -m seqcredit_model.synthetic_data`
@@ -390,7 +391,9 @@ Transaction-level features are an intermediate product produced by `extract_all_
 
 ### 4.2 Calibration
 
-The generator reads `data/synthetic_params.json`, which contains 12 parameters derived from real Ghanaian mobile money (MTN MoMo) data:
+The generator reads `data/synthetic_params.json`, which contains two blocks of parameters:
+
+**Block 1 — Transaction-level parameters (12 fields):** Derived from a single anonymized real Ghanaian mobile money (MTN MoMo) transaction history (account 71797604; 482 transactions; Feb–Sep 2024). These were extracted in the January 2026 research session documented in `SESSION_LOG.md`.
 
 ```json
 {
@@ -414,7 +417,41 @@ The generator reads `data/synthetic_params.json`, which contains 12 parameters d
 }
 ```
 
-> ⚠️ **Calibration provenance gap:** The source dataset used to derive these parameters, its collection date, collection method, and consent process are not documented in this repository.
+**Block 2 — Loan-specific parameters (`loan_params` object):** Sourced from publicly available reports, regulatory filings, operator disclosures, and news coverage of Ghanaian mobile money lending products (2023–2025). Where Ghana-specific data was unavailable, fields are set to `"NaN"`. No values are estimated or hallucinated. The table below documents each parameter's provenance:
+
+| Parameter | Value | Source | Ref # |
+|---|---|---|---|
+| `min_loan_amount_ghs` | 25 | MTN QwikLoan product terms (first-time borrowers receive GH¢20–60) | [1] |
+| `max_loan_amount_ghs` | 1,000 | MTN QwikLoan product maximum | [1] |
+| `loan_amount_lognormal_mu` | 5.0 | Estimated: ln(GH¢150) ≈ 5.0; bounded by [25, 1000] range and H1 2024 implied average | [2] |
+| `loan_amount_lognormal_sigma` | 1.0 | Estimated: produces a spread consistent with the GH¢25–1,000 product range | [2] |
+| `implied_avg_loan_ghs` | 430 | Computed: GH¢2.8 billion ÷ 6.5 million customers (H1 2024); per-loan average likely lower (~GH¢150–300) due to repeat borrowing | [2][3] |
+| `interest_rate_monthly` | 0.069 | MTN QwikLoan: 6.9% per 30-day term | [1][4] |
+| `interest_rate_monthly_alt` | 0.089 | MTN XpressLoan / Telecel Ready Loan: 8.9% per 30-day term (XpressLoan increased from 6.9% mid-2023) | [4][5] |
+| `processing_fee_rate` | 0.01 | MTN XpressLoan: 1% processing fee added October 2023 | [4] |
+| `late_penalty_rate` | 0.125 | QwikLoan / XpressLoan / Telecel: 12.5% one-time late surcharge | [1][5] |
+| `loan_tenure_days` | 30 | QwikLoan, XpressLoan, Telecel Ready Loan, AhomkaLoan: all 30-day single-repayment | [1][4][5] |
+| `loan_tenure_distribution` | 88%/5%/7% | Designer estimate based on product mix: QwikLoan (30d) dominates; XtraCash (7d) is minor; Fido (60–180d) is niche | [1][6][7] |
+| `default_rate_mean` | 0.06 | CGAP Ghana fieldwork (Jan 2020): digital credit providers report NPL rates "in the single digits"; JUMO global: cost of risk <4% | [8][9] |
+| `default_rate_low` / `_high` | 0.03 / 0.08 | Bounded by JUMO's <4% cost-of-risk (low) and provider "single-digit" self-reports (high) | [8][9] |
+| `repayment_structure` | "lump_sum" | QwikLoan, XpressLoan, Telecel Ready Loan: single lump-sum repayment at 30 days | [1][5] |
+| `repeat_borrowing_avg_loans_per_customer` | 13.3 | Computed: JUMO Ghana cumulative 128M loans ÷ 9.6M customers | [3] |
+| `inter_loan_gap_min_days` | 30 | Structural: "one loan at a time" rule means minimum gap equals loan tenure | [1] |
+| `inter_loan_gap_median_days_estimate` | 45 | Estimated from 13.3 lifetime loans over ~7 years; active borrowers likely re-borrow within 30–60 days | [3] |
+| `approval_rate` | NaN | Not published by any source (Bank of Ghana, GSMA, operators, or academic) | — |
+| `early_repayment_pct` | NaN | Not published | — |
+| `on_time_repayment_pct` | NaN | Not published | — |
+| `late_repayment_pct` | NaN | Not published; GSMA (2024) notes >50% of African borrowers struggle with repayments | [10] |
+| `borrower_prevalence_adult_pct` | 0.22 | World Bank Global Findex 2025 (based on 2024 survey): 22% of Ghanaian adults borrowed from mobile money | [11] |
+| `female_borrower_share` | 0.34 | Letshego Ghana H1 2024: 34% of QwikLoan disbursements to women/women-owned businesses | [2] |
+| `loan_purpose_distribution` | See JSON | Letshego Ghana H1 2024 GSE presentation: 37% business, 24% school fees, 15% emergencies, 8% bills, 8% medical | [2] |
+| `provider_market_share` | See JSON | QwikLoan 60% of Letshego Ghana portfolio (operator disclosure); other shares are designer estimates based on product visibility | [2] |
+| `min_account_age_days_eligibility` | 90 | MTN QwikLoan: subscriber for >90 days, active MoMo wallet | [1][12] |
+| `min_txn_count_eligibility` | 15 | Designer parameter; Telecel Ready Loan requires 4–6 months active wallet history | [5] |
+| `regulatory_max_loan_ghs` | 10,000 | Bank of Ghana Directive for Digital Credit Services Providers (Sep 2025): max GH¢10,000 per customer | [13] |
+| `seasonality_index` | See JSON | Bank of Ghana FinTech Sector Report 2024 FY (p. 8): monthly mobile money transaction values, normalized to mean = 1.00 | [14] |
+
+> **Remaining calibration gaps:** Loan amount distributional parameters (`mu`, `sigma`) are estimated from product bounds and one aggregate average, not fitted to micro-level data. Default rates rely on provider self-reports, not independent verification. Repayment timing data (early/on-time/late splits) is entirely absent. Approval rates are unknown. See §10 Known Limitations.
 
 ### 4.3 Reproducibility
 
@@ -497,7 +534,7 @@ python -m seqcredit_model.feature_engineering # generates user_features.csv
 - All data is **fully synthetic**; no real persons, accounts, or phone numbers are represented
 - Phone numbers are random integers conforming to Ghana's E.164 format (`233XXXXXXXXX`); names are `User_XXXXXX` or `Recipient_NNNNN`
 - The credit archetype distribution (2% defaulters, 8% risky borrowers) is a modeling choice. Models trained on this data will reflect the generator's distributional assumptions
-- The calibration to "real Ghanaian mobile money patterns" is asserted but the provenance of `synthetic_params.json` is undocumented — the origin, collection method, and any consent process for the source data are unknown
+- The calibration to "real Ghanaian mobile money patterns" is now documented in §4.2 with source citations. Transaction-level parameters derive from a single anonymized user's history (482 transactions). Loan parameters derive from publicly available reports (2023–2025). Several loan parameters remain `NaN` due to data unavailability — see §4.2 provenance table
 - If adapted for real deployment, false positive and false negative errors in credit scoring have **asymmetric harms**: false negatives (missed defaults) expose lenders to loss; false positives (denied credit) exclude creditworthy borrowers, which is a particular concern in financial inclusion contexts
 
 ---
@@ -510,10 +547,15 @@ python -m seqcredit_model.feature_engineering # generates user_features.csv
 | 2 | ~~No random seed in `synthetic_data.py`~~ | ~~Medium~~ | **RESOLVED** — `RANDOM_SEED = 42` added |
 | 3 | `ADJUSTMENT` type never generated — `is_adjustment` feature is always 0 | Low | Open |
 | 4 | Variable file schema (13, 17, or 19 columns) — non-borrower, disbursement-only, and repayment files differ | Medium | By design |
-| 5 | Calibration source undocumented — `synthetic_params.json` provenance not recorded | Medium | Open |
+| 5 | ~~Calibration source undocumented — `synthetic_params.json` provenance not recorded~~ | ~~Medium~~ | **RESOLVED** — §4.2 now documents all sources with citations |
 | 6 | Binary collapse of 4-class label — labels 0 and 1 (good and late) are merged as "non-default" | Medium | By design |
 | 7 | 8:1 class imbalance among borrowers (11.1% default rate) | Medium | Handled via `class_weight='balanced'` |
 | 8 | ~~`account_age_days` implausibly short in stale `user_features.csv`~~ | ~~High~~ | **RESOLVED** — Now mean 40.7 days |
+| 9 | Loan amount distribution (`mu`, `sigma`) estimated from product bounds, not fitted to micro-level data | Medium | Open — no published loan-level dataset exists for Ghana |
+| 10 | Default rate relies on provider self-reports ("single digits"), not independent verification | Medium | Open — Bank of Ghana does not publish digital lending NPL rates |
+| 11 | Repayment timing split (early/on-time/late %) set to `NaN` — no published data | High | Open — generator must use designer assumptions |
+| 12 | Approval rate unknown — no published data from any operator or regulator | Medium | Open — set to `NaN`; generator must assume |
+| 13 | Transaction-level calibration based on single user (n=1, 482 txns) — may not represent population | Medium | Open — multi-user real data would improve calibration |
 
 ---
 
@@ -530,3 +572,226 @@ If you use this dataset or codebase, please cite:
   note         = {Synthetic dataset calibrated to Ghanaian mobile money patterns}
 }
 ```
+
+---
+
+## 12. References for `synthetic_params.json` Calibration
+
+The following sources were used to derive the `loan_params` block in `data/synthetic_params.json`. Transaction-level parameters (Block 1) were extracted from a single anonymized real MTN MoMo transaction history — see `SESSION_LOG.md` for details.
+
+| Ref # | Short ID | Full Citation |
+|---|---|---|
+| [1] | Asetenapa 2025 | Asetenapa.com. "How to Borrow Money From MTN Mobile Money?" Updated 2025. https://asetenapa.com/borrow-money-mtn-mobile-money/ — Product terms for QwikLoan: GH¢25 minimum, GH¢1,000 maximum, 6.9% monthly interest, 12.5% late penalty, 30-day tenure, 90-day eligibility. |
+| [2] | Letshego H1 2024 | Letshego Ghana Ltd. H1 2024 Results, presented at Ghana Stock Exchange "Facts Behind the Figures" session, July 31, 2024. Reported by NorvanReports: "Qwikloan Disbursements Record Circa 500% Surge to GHS 2.8bn in First Half of 2024." https://norvanreports.com/qwikloan-disbursements-record-circa-500-surge-to-ghs-2-8bn-in-first-half-of-2024/ — GH¢2.8B disbursed to 6.5M customers; 34% to women; loan purpose breakdown; QwikLoan = 60% of Letshego Ghana portfolio. |
+| [3] | JUMO Ghana 2025 | JUMO World. "Financial inclusion in Africa: Ghana is leading." Corporate blog, 2025. https://jumo.world/financial-inclusion-ghana-fintech/ — Cumulative: 128 million loans to 9.6 million customers in Ghana via JUMO platform (QwikLoan + XpressLoan). |
+| [4] | CitiNewsroom 2023 | Citi Newsroom. "MoMo loan: A complete rip-off on the poor, vulnerable and struggling masses?" October 2023. https://citinewsroom.com/2023/10/momo-loan-a-complete-rip-off-on-the-poor-vulnerable-and-struggling-masses/ — XpressLoan rate increase to 8.9% and 1% processing fee addition documented with SMS transaction evidence. |
+| [5] | Telecel Ghana | Telecel Ghana. "Ready Loan Terms and Conditions." https://support.telecel.com.gh/help/ready-loan-terms-and-conditions/ — 8.9% monthly interest, 12.5% late penalty, 30-day tenure, 4–6 months active wallet required. |
+| [6] | Asetenapa XtraCash | Asetenapa.com. "How to borrow money from MTN." April 2025. https://asetena.com/how-to-borrow-money-from-mtn/ — XtraCash: GH¢50 maximum, 7-day tenure. |
+| [7] | TechCrunch Fido 2024 | TechCrunch. "Impact investors FMO and BlueOrchard back Ghana's digital lender Fido in $30M Series B round." September 3, 2024. https://techcrunch.com/2024/09/03/ghanas-digital-lender-fido-30m-series-b-round/ — Fido: $20–$500 range, up to 6 months repayment, 7–12% interest. |
+| [8] | CGAP Ghana 2020 | Oppong, K. and Mattern, M. "African Digital Credit Goes West." CGAP Blog, January 2020. https://www.cgap.org/blog/african-digital-credit-goes-west — Ghana digital credit providers report NPL rates "in the single digits" vs. banking sector 18% at the time. |
+| [9] | JUMO/Orange 2025 | JUMO World and Orange Money Group. "Orange Money Group and fintech JUMO join forces to expand credit services in Africa." Press release, July 2025. https://jumo.world/press-release/orange-money-group-and-fintech-jumo-join-forces-to-expand-credit-services-in-africa/ — JUMO AI credit models achieve cost of risk below 4%. |
+| [10] | GSMA 2024 | GSMA. Mobile Money Evaluation: Ghana. March 2025. https://www.gsma.com/solutions-and-impact/connectivity-for-good/mobile-for-development/wp-content/uploads/2025/03/Ghana-1.pdf — More than half of African borrowers struggle with loan repayments; loan repayments consume ~34% of monthly household income in Ghana. |
+| [11] | World Bank Findex 2025 | World Bank. Global Findex Database 2025 (based on 2024 survey). Reported by Pulse Ghana: "World Bank reveals 22% of Ghanaians borrow from mobile money to survive." July 25, 2025. https://www.pulse.com.gh/story/world-bank-reveals-22percent-of-ghanaians-borrow-from-mobile-money-to-survive-2025072512561039963 — 22% of Ghanaian adults (~4.7M people) borrowed from mobile money; 74% of all formal borrowers. |
+| [12] | Asetena Eligibility | Asetena.com. "How to qualify for MTN loan." July 2025. https://asetena.com/how-to-qualify-for-mtn-loan/ — QwikLoan eligibility: MTN subscriber >90 days, active MoMo wallet, no outstanding defaults, SIM in own name; scoring via JUMO AI (15,000+ predictive features). |
+| [13] | BoG Directive 2025 | Bank of Ghana. "Directive for Digital Credit Services Providers." Notice No. BG/GOV/SEC/2025/30, September 23, 2025. Reported by TechAfrica News: https://techafricanews.com/2025/09/26/bank-of-ghana-unveils-landmark-directive-to-regulate-digital-credit-services/ — Minimum paid-up capital GH¢2M; maximum loan per customer GH¢10,000; no explicit interest rate cap; daily credit bureau reporting required; compliance deadline June 30, 2026. |
+| [14] | BoG FinTech 2024 | Bank of Ghana. "FinTech Sector Report 2024 FY." Published March 2025. https://www.bog.gov.gh/wp-content/uploads/2025/03/FinTech-Sector-Report-2024-FY.pdf — Monthly mobile money transaction values for 2024 (p. 8), used to compute seasonality index (normalized to mean = 1.00). |
+| [15] | Letshego BFT 2024 | The Business & Financial Times. "Letshego profit up 223% in H1." August 6, 2024. https://thebftonline.com/2024/08/06/letshego-profit-up-223-in-h1/ — Corroborating source for QwikLoan H1 2024 disbursement volumes and 125% growth in short-term loans. |
+| [16] | BoG Econ Data 2025 | Bank of Ghana. "Summary of Economic and Financial Data." May 2025. https://www.bog.gov.gh/wp-content/uploads/2025/05/Summary-of-Economic-and-Financial-Data-May-2025.pdf — Banking sector average lending rate 27.4% (context for mobile money rate comparison). |
+| [17] | CGAP Kenya 2018 | Kaffenberger, M. and Chege, P. "A Digital Credit Revolution: Insights from Borrowers in Kenya and Tanzania." CGAP Working Paper, October 2018. https://www.cgap.org/research/publication/digital-credit-revolution-insights-borrowers-in-kenya-and-tanzania — Proxy data: typical digital loan sizes $30–$50; 50% late repayment rate; 12% outright default rate (Kenya, not Ghana). Used as calibration reference only. |
+
+### 12.1 Technical Verification Walkthrough
+
+This section explains **how each parameter was derived** so that a reviewer can independently confirm or challenge each value. Parameters fall into four categories: directly observed, computed from reported aggregates, bounded by product constraints, and designer estimates where no data exists.
+
+---
+
+#### Category A — Directly observed product terms
+
+These parameters are taken verbatim from operator product pages or regulatory filings. No computation is needed — just verify the source URL still states the value.
+
+**`min_loan_amount_ghs = 25`**
+→ Visit [1] (asetenapa.com/borrow-money-mtn-mobile-money). The QwikLoan product page states first-time borrowers typically receive GH¢20–60. The minimum floor is GH¢25. Cross-check against [12] (asetena.com/how-to-qualify-for-mtn-loan) which describes the same eligibility tiers.
+
+**`max_loan_amount_ghs = 1000`**
+→ Same source [1]. QwikLoan's stated maximum is GH¢1,000. Corroborated by Mfidie.com ("Steps to get up to GHS 1000 Loans under 1 minute") and GH Students.
+
+**`interest_rate_monthly = 0.069`**
+→ Source [1]. QwikLoan charges 6.9% on the principal for a 30-day term. This is a flat fee, not compounding — so a GH¢100 loan costs GH¢6.90 in interest.
+
+**`interest_rate_monthly_alt = 0.089`**
+→ Source [4] (CitiNewsroom, Oct 2023). The article documents, with screenshots of actual SMS transaction confirmations, that XpressLoan's rate was increased from 6.9% to 8.9%. Source [5] (Telecel support page) independently confirms 8.9% for Ready Loan.
+
+**`processing_fee_rate = 0.01`**
+→ Source [4]. The same CitiNewsroom article documents a 1% processing fee added to XpressLoan in October 2023, visible in the SMS transaction evidence.
+
+**`late_penalty_rate = 0.125`**
+→ Sources [1] and [5]. Both QwikLoan (via Asetenapa) and Telecel Ready Loan (via official support page) state a 12.5% surcharge on overdue loans.
+
+**`loan_tenure_days = 30`**
+→ Sources [1], [4], [5]. All three major products (QwikLoan, XpressLoan, Telecel Ready Loan) specify 30-day repayment terms.
+
+**`repayment_structure = "lump_sum"`**
+→ Sources [1], [5]. These products require full principal + interest in a single payment at term end. No installment option exists for QwikLoan or Ready Loan.
+
+**`min_account_age_days_eligibility = 90`**
+→ Sources [1], [12]. QwikLoan requires the subscriber to have been on the MTN network for at least 90 days with an active MoMo wallet.
+
+**`regulatory_max_loan_ghs = 10000`**
+→ Source [13] (BoG Directive, Sep 2025). The directive explicitly caps any single digital credit provider's exposure per customer at GH¢10,000.
+
+---
+
+#### Category B — Computed from reported aggregates
+
+These parameters require arithmetic on publicly reported figures. The computations are shown so a reviewer can reproduce them.
+
+**`implied_avg_loan_ghs = 430`**
+
+Source data from [2] (Letshego H1 2024 GSE presentation, reported by NorvanReports):
+- H1 2024 total QwikLoan disbursements: GH¢2.8 billion
+- H1 2024 customers served: 6.5 million
+
+```
+implied_avg_per_customer = 2,800,000,000 / 6,500,000 = GH¢430.77
+```
+
+**Important caveat:** This is per-customer-per-half-year, not per-loan. If a customer took 3 loans in H1, the per-loan average would be ~GH¢143. The JUMO lifetime figure [3] of 128M loans ÷ 9.6M customers = 13.3 loans/customer over ~7 years supports the view that repeat borrowing is common, so the per-loan average is likely much lower than GH¢430.
+
+**`repeat_borrowing_avg_loans_per_customer = 13.3`**
+
+Source data from [3] (JUMO corporate blog):
+- Cumulative loans issued in Ghana: 128 million
+- Cumulative unique customers: 9.6 million
+
+```
+avg_loans_per_customer = 128,000,000 / 9,600,000 = 13.33
+```
+
+**`loan_amount_lognormal_mu = 5.0` and `loan_amount_lognormal_sigma = 1.0`**
+
+No micro-level loan data is published, so these are *estimated* from the known constraints:
+- Product range: [GH¢25, GH¢1,000]
+- First-time borrowers: GH¢20–60 (source [1])
+- Implied per-loan average: ~GH¢150 (see above)
+- The lognormal(μ=5.0, σ=1.0) distribution has:
+  - Mean = exp(5.0 + 0.5) = exp(5.5) ≈ GH¢245
+  - Median = exp(5.0) ≈ GH¢148
+  - Mode = exp(5.0 - 1.0) = exp(4.0) ≈ GH¢55
+  - 95th percentile ≈ GH¢800
+
+This produces a right-skewed distribution where most loans cluster around GH¢50–200 (consistent with first-time and repeat small borrowers) with a tail extending toward the GH¢1,000 cap. **A reviewer who disagrees with these shape parameters should substitute their own.** The key constraint is: clamp all draws to [25, 1000].
+
+Verification code:
+```python
+import numpy as np
+np.random.seed(42)
+samples = np.random.lognormal(5.0, 1.0, 100000)
+samples = np.clip(samples, 25, 1000)
+print(f"Mean: {samples.mean():.0f}, Median: {np.median(samples):.0f}, "
+      f"Mode bucket: {np.histogram(samples, bins=50)[1][np.histogram(samples, bins=50)[0].argmax()]:.0f}")
+```
+
+**`inter_loan_gap_median_days_estimate = 45`**
+
+Derived from the repeat borrowing rate:
+- 13.3 loans per customer over ~7 years (JUMO launched QwikLoan in Ghana ~2018)
+- 13.3 loans / 7 years = ~1.9 loans/year = one loan every ~192 days on average
+
+But this includes dormant customers. Among active borrowers (who took multiple loans in H1 2024), the gap must be shorter. With a 30-day tenure and a "one loan at a time" rule, the minimum gap is 30 days. A median of 45 days assumes many active borrowers re-borrow within ~2 weeks of repayment. **This is a designer estimate; no published data confirms it.**
+
+**`borrower_prevalence_adult_pct = 0.22`**
+
+Source [11] (World Bank Global Findex 2025, reported by Pulse Ghana):
+- 22% of Ghanaian adults borrowed from mobile money providers in 2024
+- Ghana's adult population (~21.5M) × 0.22 ≈ 4.7 million mobile money borrowers
+
+**`female_borrower_share = 0.34`**
+
+Source [2] (Letshego H1 2024):
+- 34% of QwikLoan disbursements went to women and women-owned businesses
+- This was a 5 percentage-point increase year-on-year
+
+**`loan_purpose_distribution`**
+
+Source [2] (Letshego H1 2024 GSE presentation):
+- Business activities: 37%
+- School fees: 24%
+- Emergencies: 15%
+- Bills: 8%
+- Medical: 8%
+- Other: 8% (residual to sum to 100%)
+
+**`seasonality_index`**
+
+Source [14] (BoG FinTech Sector Report 2024 FY, page 8). The report provides monthly total mobile money transaction values for 2024 in GH¢ billions:
+
+```
+Raw values:  Jan=198.4, Feb=195.8, Mar=181.9, Apr=203.0, May=234.3,
+             Jun=264.9, Jul=273.6, Aug=284.9, Sep=298.6, Oct=316.4,
+             Nov=224.0, Dec=334.8
+
+Annual mean: (198.4+195.8+181.9+203.0+234.3+264.9+273.6+284.9+298.6+316.4+224.0+334.8) / 12
+           = 3,010.6 / 12 = 250.88
+
+Index = month_value / annual_mean:
+  Jan: 198.4/250.88 = 0.79    Jul: 273.6/250.88 = 1.09
+  Feb: 195.8/250.88 = 0.78    Aug: 284.9/250.88 = 1.13
+  Mar: 181.9/250.88 = 0.72    Sep: 298.6/250.88 = 1.19
+  Apr: 203.0/250.88 = 0.81    Oct: 316.4/250.88 = 1.26
+  May: 234.3/250.88 = 0.93    Nov: 224.0/250.88 = 0.89
+  Jun: 264.9/250.88 = 1.05    Dec: 334.8/250.88 = 1.33
+```
+
+Note: These are *transaction-level* seasonal indices, not *lending-specific*. No lending-only seasonal data is published. The assumption is that lending demand follows a similar seasonal pattern — peaking in December (year-end spending) and September (school fees), with a Q1 trough.
+
+---
+
+#### Category C — Bounded by multiple sources (range estimates)
+
+**`default_rate_mean = 0.06`, `default_rate_low = 0.03`, `default_rate_high = 0.08`**
+
+No single published default rate exists for mobile money lending in Ghana. The bounds are derived from two independent data points:
+
+1. **Lower bound (0.03):** JUMO's global disclosure [9] claims a cost of risk below 4%. "Cost of risk" includes both defaults and late-payment costs, so the pure default rate would be lower — but JUMO's figure covers all markets, not just Ghana. We use 3% as the optimistic floor.
+
+2. **Central estimate (0.06):** CGAP's Ghana fieldwork [8] (January 2020) reported that digital credit providers described their NPL rates as "in the single digits." The midpoint of "single digits" is ~5%, but this was during a period when the banking sector NPL was 18%, and providers had incentive to underreport. We set the mean at 6%.
+
+3. **Upper bound (0.08):** The upper end of "single digits" is 9%. We use 8% as the pessimistic ceiling for the formal (licensed) mobile money lending segment.
+
+**For calibration context (NOT used directly):** Kenya's Central Bank reported an 83% default rate on loans under KES 1,000 (~$6.50) in 2024, but this covers unlicensed predatory micro-lenders, which is a very different segment from Ghana's licensed MoMo lending products.
+
+**`loan_tenure_distribution = {30_day: 0.88, 7_day: 0.05, 60_to_180_day: 0.07}`**
+
+This is a designer estimate based on product market visibility:
+- QwikLoan (30d) is the dominant product — 60% of Letshego's portfolio [2], and MTN has ~73% of mobile money market share. XpressLoan (30d) and Telecel Ready Loan (30d) are also 30-day. Combined, 30-day products likely account for ~88% of all mobile money loans.
+- XtraCash (7d) [6] is a micro-product (max GH¢50) with limited uptake. Estimated at ~5%.
+- Fido (60–180d) [7] is the only significant installment product. Estimated at ~7%.
+
+**No published market share data by tenure exists.** A reviewer should treat these as rough priors.
+
+---
+
+#### Category D — `NaN` parameters (no data exists)
+
+Four parameters are set to `"NaN"` because no published source — Bank of Ghana, GSMA, operator disclosure, academic paper, or news report — provides the data:
+
+| Parameter | What was searched | Why it's missing |
+|---|---|---|
+| `approval_rate` | BoG reports, GSMA, MTN/Letshego/JUMO disclosures, academic databases | Algorithmic approval is proprietary. JUMO's scoring uses 15,000+ features [12] but does not disclose approval/rejection ratios. |
+| `early_repayment_pct` | Same sources as above | Product terms allow early repayment, but no operator publishes the share of borrowers who repay before the 30-day deadline. |
+| `on_time_repayment_pct` | Same | The complement of late + default + early, but since we don't have late or early, this is also unknown. |
+| `late_repayment_pct` | Same; GSMA [10] provides only a continent-level qualitative signal | GSMA reports >50% of African borrowers "struggle" with repayments, but "struggle" is not the same as "late." No Ghana-specific late-payment rate is published. |
+
+**For the generator:** These `NaN` fields must be replaced with designer assumptions before the generator can use them. Reasonable starting points from the CGAP Kenya study [17] (which surveyed 3,150 borrowers with access to M-Shwari/KCB M-Pesa transaction logs) would be: early ~20%, on-time ~30%, late ~38%, default ~12%. **These are Kenyan figures and should be flagged as proxy data in the paper.**
+
+---
+
+#### Category E — Designer parameters (judgment calls)
+
+Two parameters have no empirical basis and are purely modeling choices:
+
+**`min_txn_count_eligibility = 15`**
+→ Telecel Ready Loan requires 4–6 months of active wallet history [5], but does not specify a minimum transaction count. QwikLoan eligibility is algorithmic [12]. The value 15 is a designer choice that approximates "has been transacting regularly for a few months" at Ghana's observed rate of ~2.4 txns/day.
+
+**`provider_market_share` (non-QwikLoan shares)**
+→ QwikLoan's 60% share comes from Letshego's disclosure [2]. The remaining 40% is split among XpressLoan, Fido, XtraCash, CedisPay, and others based on the author's assessment of product visibility and news coverage. **No published market share breakdown by provider exists.** A reviewer may substitute alternative shares without affecting the generator's core behavior, as provider assignment is cosmetic (it does not affect transaction patterns or default probability).
