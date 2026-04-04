@@ -12,40 +12,6 @@ See [docs/PROJECT.md](docs/PROJECT.md) for full technical details and limitation
 
 ---
 
-## Results
-
-5-fold stratified CV on 5,952 borrowers (11.1% default rate), `RANDOM_SEED = 42`.
-
-### Primary target: `y_default` (default vs non-default)
-
-| Model | AUC-ROC | AUC-PR | F1 | ECE |
-|---|---|---|---|---|
-| RandomForest | **0.832** | **0.679** | **0.676** | 0.115 |
-| LogisticRegression | 0.831 | 0.598 | 0.514 | 0.229 |
-| XGBoost | 0.818 | 0.677 | 0.684 | 0.040 |
-| LightGBM | 0.812 | 0.673 | 0.669 | 0.049 |
-| HybridLSTM | 0.813 | 0.606 | 0.524 | 0.219 |
-| LSTM | 0.523 | 0.121 | 0.182 | 0.372 |
-
-No statistically significant pairwise differences between the top-5 models. Static tree models preferred when calibration matters (ECE ≈0.04–0.12 vs 0.22 for HybridLSTM). Standalone LSTM collapses even after regularization — sequences alone carry insufficient default-predictive signal on this synthetic benchmark.
-
-> **Scope note:** These are preliminary findings on a controlled synthetic dataset calibrated to Ghanaian mobile money patterns. They motivate but do not substitute for real-data validation. See [Limitations](docs/PROJECT.md#limitations) in PROJECT.md.
-
-### Secondary target: `y_bad` (late+default vs good)
-
-| Model | AUC-ROC | AUC-PR | F1 |
-|---|---|---|---|
-| LogisticRegression | **0.636** | 0.611 | 0.539 |
-| RandomForest | 0.635 | **0.640** | 0.492 |
-| XGBoost | 0.616 | 0.626 | **0.607** |
-| LightGBM | 0.614 | 0.629 | 0.508 |
-| HybridLSTM | 0.601 | 0.589 | 0.545 |
-| LSTM | 0.507 | 0.464 | 0.461 |
-
-Full results in `data/cv_results_y_default.csv` and `data/cv_results_y_bad.csv`. See [docs/PROJECT.md](docs/PROJECT.md) for ablation, tuning, and significance test details.
-
----
-
 ## Setup
 
 ```bash
