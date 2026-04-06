@@ -1,11 +1,15 @@
 """Synthetic mobile money transaction data generator with credit behavior."""
 
-from datetime import timedelta
 import json
-from pathlib import Path
-import pandas as pd
-import numpy as np
 import random
+import sys
+from datetime import timedelta
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 RANDOM_SEED = 42
 

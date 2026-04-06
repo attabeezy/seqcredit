@@ -1,12 +1,15 @@
 """5-fold stratified cross-validation benchmark with statistical significance tests."""
 
 import json
+import sys
 import time
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
     from seqcredit_model.config import (
@@ -442,7 +445,9 @@ def main():
             model_start = time.time()
             print(f"    {model_name}...", end=" ", flush=True)
             params = static_model_params[model_name]
-            fold_df, summary, oof = run_static_model_cv(model_class, params, X_unscaled.values, y)
+            fold_df, summary, oof = run_static_model_cv(
+                model_class, params, X_unscaled.values, y
+            )
             elapsed = time.time() - model_start
             model_timings[f"{model_name}_{target_name}"] = elapsed
             print(f"done ({elapsed:.1f}s, AUC-ROC={summary['auc_roc']:.4f})")

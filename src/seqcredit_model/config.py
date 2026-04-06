@@ -9,10 +9,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 
 # Synthetic data generation inputs/outputs
-SYNTHETIC_PARAMS_FILE = DATA_DIR / "synthetic_params.json"
+SYNTHETIC_PARAMS_FILE = PROJECT_ROOT / "src" / "synthetic_params.json"
 TRANSACTIONS_DIR = DATA_DIR / "user_transactions"
 
-# Pre-built user-level feature and label tables (written by feature_engineering.py)
+# Pre-built user-level feature and label tables (written by pipeline.py)
 USER_FEATURES_FILE = DATA_DIR / "user_features.csv"
 USER_LABELS_FILE = DATA_DIR / "user_labels.csv"
 

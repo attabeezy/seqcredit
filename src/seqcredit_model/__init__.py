@@ -5,14 +5,14 @@ This package contains the core modules for the Sequential Deep Learning
 for Credit Risk Modeling in Data-Constrained Environments project.
 
 Modules:
-    - feature_engineering: Temporal feature extraction from transaction data
-    - synthetic_data: Calibrated synthetic data generation
+    - pipeline: Temporal feature extraction from transaction data
+    - synthesize: Calibrated synthetic data generation
     - models: Credit risk prediction models (LR, XGBoost, LSTM)
 """
 
 from . import config
-from .feature_engineering import TemporalTransactionFeatureEngineer
-from .synthetic_data import CalibratedMoMoDataGenerator
+from .pipeline import TemporalTransactionFeatureEngineer
+from .synthesize import CalibratedMoMoDataGenerator
 from .credit_model import (
     CreditRiskDataLoader,
     LogisticRegressionModel,

@@ -21,17 +21,32 @@ python -m venv .venv
 .venv\Scripts\activate        # Windows
 # source .venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
+pip install -e .              # install package in editable mode
 ```
 
 ---
 
 ## Usage
 
-Open the main notebook:
+### Quick Start (full rebuild from scratch)
 
 ```bash
-jupyter notebook notebooks/credit_risk_model.ipynb
+python -m seqcredit_model.synthesize       # 1. Generate synthetic transaction data (~few min)
+python -m seqcredit_model.pipeline         # 2. Build user-level features
+jupyter notebook notebooks/model.ipynb     # 3. Train all 6 models
+jupyter notebook notebooks/analysis.ipynb  # 4. Research analysis (SHAP, calibration)
+jupyter notebook notebooks/data.ipynb      # 5. Descriptive statistics
 ```
+
+### Benchmark Scripts
+
+```bash
+python src/seqcredit_model/run_cv_benchmark.py          # 5-fold CV (~75 min)
+python src/seqcredit_model/run_ablation_study.py        # Feature group ablation (~30 min)
+python src/seqcredit_model/run_hyperparameter_tuning.py # Tuning: RF, XGB, LGBM (~45 min)
+```
+
+> **Note:** The `pip install -e .` step is required — it makes the `seqcredit_model` package importable from anywhere in the virtual environment. Without it, `python -m` commands and notebook imports will fail with `ModuleNotFoundError`.
 
 ---
 
@@ -39,11 +54,12 @@ jupyter notebook notebooks/credit_risk_model.ipynb
 
 ```
 seqcredit-model/
+├── src/
+│   └── synthetic_params.json        # Calibration parameters
 ├── data/
 │   ├── user_transactions/           # Per-user transaction CSVs
 │   ├── user_features.csv
 │   ├── user_labels.csv
-│   ├── synthetic_params.json        # Calibration parameters
 │   ├── cv_results_y_default.csv     # 5-fold CV results (primary benchmark)
 │   ├── cv_results_y_bad.csv         # 5-fold CV results (secondary target)
 │   ├── significance_tests.csv       # Pairwise bootstrap significance tests
@@ -52,23 +68,24 @@ seqcredit-model/
 ├── src/
 │   └── seqcredit_model/
 │       ├── config.py
-│       ├── feature_engineering.py
-│       ├── synthetic_data.py
+│       ├── pipeline.py
+│       ├── synthesize.py
 │       ├── credit_model.py              # Model classes (LR, XGB, RF, LightGBM, LSTM, HybridLSTM)
 │       ├── run_cv_benchmark.py          # 5-fold CV benchmark (primary evaluation)
 │       ├── run_ablation_study.py        # Feature group ablation study
 │       └── run_hyperparameter_tuning.py # Bounded-budget tuning (RF, XGBoost, LightGBM)
 ├── notebooks/
-│   ├── credit_risk_model.ipynb          # Primary modeling notebook (all 6 models)
-│   ├── credit_risk_analysis.ipynb       # Research analysis: SHAP, surrogate tree, calibration
-│   ├── data_analysis.ipynb              # Descriptive statistics notebook
-│   ├── credit_risk_model_gcolab.ipynb   # Google Colab variant
-│   ├── credit_risk_analysis_gcolab.ipynb
-│   └── data_analysis_gcolab.ipynb
+│   ├── model.ipynb                      # Primary modeling notebook (all 6 models)
+│   ├── analysis.ipynb                   # Research analysis: SHAP, surrogate tree, calibration
+│   ├── data.ipynb                       # Descriptive statistics notebook
+│   ├── model_gcolab.ipynb               # Google Colab variant
+│   ├── analysis_gcolab.ipynb
+│   └── data_gcolab.ipynb
 ├── docs/
 │   ├── PROJECT.md           # Consolidated project documentation
 │   └── DATACARD.md          # Dataset documentation
 ├── models/                  # Persisted trained models
+├── pyproject.toml           # Package metadata (enables pip install -e .)
 └── requirements.txt
 ```
 

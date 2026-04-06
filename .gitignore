@@ -233,10 +233,13 @@ CLAUDE.md
 # Agent coding assistants
 AGENTS.md
 
-# Generated synthetic data (can be regenerated with src/synthetic_data.py)
+# Generated synthetic data (can be regenerated with src/synthesize.py)
 data/user_transactions/
 data/test_user_transactions/
 data/legacy/
+
+# Paper/draft files
+paper/
 
 # IDE folders
 .idea/

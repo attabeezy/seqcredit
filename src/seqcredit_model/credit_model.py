@@ -1,11 +1,13 @@
 """Credit risk prediction models for mobile money data."""
 
 import os
+import sys
+from pathlib import Path
+from typing import Dict, List, Tuple
 
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
-from pathlib import Path
-from typing import Dict, List, Tuple
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
     from seqcredit_model.config import (
@@ -342,7 +344,7 @@ class CreditRiskDataLoader:
                     f"Transaction file row counts don't match gen_txn_count "
                     f"for {len(bad_files)} of {len(sample_ids)} sampled users. "
                     f"Example: {example[0]} has {example[1]} rows but label says {example[2]}. "
-                    f"Labels may be stale — regenerate with synthetic_data.py."
+                    f"Labels may be stale — regenerate with synthesize.py."
                 )
 
         # 6. NaN check in numeric features (warning only)
@@ -457,11 +459,11 @@ class CreditRiskDataLoader:
         are shared with the static models.
         """
         try:
-            from seqcredit_model.feature_engineering import (
+            from seqcredit_model.pipeline import (
                 TemporalTransactionFeatureEngineer,
             )
         except ModuleNotFoundError:
-            from feature_engineering import TemporalTransactionFeatureEngineer
+            from pipeline import TemporalTransactionFeatureEngineer
 
         if feature_columns is None:
             feature_columns = LSTM_FEATURE_COLUMNS

@@ -77,16 +77,17 @@ seqcredit-model/
 ├── src/seqcredit_model/          # Source package
 │   ├── __init__.py               # Package exports
 │   ├── config.py                 # Path constants
-│   ├── synthetic_data.py         # Synthetic data generation
-│   ├── feature_engineering.py    # Transaction feature extraction
+│   ├── synthesize.py             # Synthetic data generation
+│   ├── pipeline.py               # Transaction feature extraction
 │   └── credit_model.py           # Models + data loader + evaluator
 ├── notebooks/                    # Jupyter notebooks
-│   ├── credit_risk_model.ipynb   # Primary modeling notebook (all 6 models)
-│   ├── credit_risk_analysis.ipynb# Research analysis: SHAP, surrogate tree, calibration
-│   ├── data_analysis.ipynb       # Descriptive statistics notebook
+│   ├── model.ipynb               # Primary modeling notebook (all 6 models)
+│   ├── analysis.ipynb            # Research analysis: SHAP, surrogate tree, calibration
+│   ├── data.ipynb                # Descriptive statistics notebook
 │   └── *_gcolab.ipynb            # Google Colab variants (3 files)
+├── src/
+│   └── synthetic_params.json     # Calibration parameters
 ├── data/                         # Generated data
-│   ├── synthetic_params.json     # Calibration parameters
 │   ├── user_features.csv         # Aggregated user features
 │   ├── user_labels.csv           # Credit risk labels
 │   ├── model_comparison.csv      # Latest model results
@@ -182,8 +183,8 @@ model = ModelClass.load("models/model_name")
 
 | Class | Location | Purpose |
 |-------|----------|---------|
-| `CalibratedMoMoDataGenerator` | `synthetic_data.py` | Generate realistic transaction data |
-| `TemporalTransactionFeatureEngineer` | `feature_engineering.py` | Extract features from transactions |
+| `CalibratedMoMoDataGenerator` | `synthesize.py` | Generate realistic transaction data |
+| `TemporalTransactionFeatureEngineer` | `pipeline.py` | Extract features from transactions |
 | `CreditRiskDataLoader` | `credit_model.py` | Load/merge/split data for models |
 | `ModelEvaluator` | `credit_model.py` | Compare models, generate plots |
 
@@ -227,7 +228,7 @@ model = ModelClass.load("models/model_name")
 
 ## Research Analysis Notebook
 
-`notebooks/credit_risk_analysis.ipynb` implements the full publishable research pipeline on top of trained models. It requires running `credit_risk_model.ipynb` first to generate saved models and LSTM arrays.
+`notebooks/analysis.ipynb` implements the full publishable research pipeline on top of trained models. It requires running `model.ipynb` first to generate saved models and LSTM arrays.
 
 ### Sections
 
@@ -264,7 +265,7 @@ model = ModelClass.load("models/model_name")
 
 ### March 2026: Research Analysis
 
-- Created `credit_risk_analysis.ipynb` with full XAI pipeline
+- Created `analysis.ipynb` with full XAI pipeline
 - Added SHAP analysis for XGBoost and LightGBM
 - Implemented surrogate decision tree with fidelity analysis
 - Added calibration analysis (Brier, ECE, isotonic correction)
@@ -503,47 +504,39 @@ Single-split results from the notebook are no longer used as a primary benchmark
 
 ## Usage
 
-### Generate Synthetic Data
+### Setup
 
 ```bash
-python -m seqcredit_model.synthetic_data
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # macOS/Linux
+pip install -r requirements.txt
+pip install -e .              # editable install — required for all commands below
 ```
 
-### Build Features
+> **Important:** The `pip install -e .` step registers `seqcredit_model` as an importable package. Without it, `python -m` invocations and notebook imports will fail with `ModuleNotFoundError`. Source edits take effect immediately (no reinstall needed).
+
+### Full Rebuild (from scratch)
 
 ```bash
-python -m seqcredit_model.feature_engineering
+python -m seqcredit_model.synthesize       # 1. Generate synthetic data (~few min)
+python -m seqcredit_model.pipeline         # 2. Build user-level features
+jupyter notebook notebooks/model.ipynb     # 3. Train all 6 models
+jupyter notebook notebooks/analysis.ipynb  # 4. Research analysis (SHAP, calibration)
+jupyter notebook notebooks/data.ipynb      # 5. Descriptive statistics
 ```
 
-### Run CV Benchmark (primary evaluation)
+### Benchmark Scripts
 
 ```bash
-python src/seqcredit_model/run_cv_benchmark.py
+python src/seqcredit_model/run_cv_benchmark.py          # 5-fold CV (~75 min)
+python src/seqcredit_model/run_ablation_study.py        # Feature group ablation (~30 min)
+python src/seqcredit_model/run_hyperparameter_tuning.py # Tuning: RF, XGB, LGBM (~45 min)
 ```
 
-### Run Ablation Study
+### Google Colab
 
-```bash
-python src/seqcredit_model/run_ablation_study.py
-```
-
-### Run Hyperparameter Tuning
-
-```bash
-python src/seqcredit_model/run_hyperparameter_tuning.py
-```
-
-### Run Notebook Experiments
-
-```bash
-jupyter notebook notebooks/credit_risk_model.ipynb
-```
-
-### Run Analysis
-
-```bash
-jupyter notebook notebooks/credit_risk_analysis.ipynb
-```
+The `*_gcolab.ipynb` notebooks are self-contained — they install dependencies and generate data automatically. No local setup needed.
 
 ---
 
@@ -559,7 +552,7 @@ jupyter notebook notebooks/credit_risk_analysis.ipynb
 - jupyter
 - shap
 
-Install: `pip install -r requirements.txt`
+Install: `pip install -r requirements.txt && pip install -e .`
 
 ---
 

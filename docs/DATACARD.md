@@ -143,7 +143,7 @@ Weekend inter-arrival times are compressed by a ×0.7 multiplier. Night-hour tra
 
 | Parameter | Value | Source |
 |---|---|---|
-| Base distribution | Lognormal(μ=2.84, σ=1.00) | `data/synthetic_params.json` |
+| Base distribution | Lognormal(μ=2.84, σ=1.00) | `src/synthetic_params.json` |
 | Mean amount (GHS) | 32.80 | `synthetic_params.json` |
 | Median amount (GHS) | 18.50 | `synthetic_params.json` |
 | Per-user μ perturbation | Normal(2.84, 0.2) | `generate_user_profile()` |
@@ -376,8 +376,8 @@ Transaction-level features are an intermediate product produced by `extract_all_
 
 ### 4.1 Generator [TO BE UPDATED]
 
-**Class:** `CalibratedMoMoDataGenerator` in `src/seqcredit_model/synthetic_data.py`
-**Entry point:** `python -m seqcredit_model.synthetic_data`
+**Class:** `CalibratedMoMoDataGenerator` in `src/seqcredit_model/synthesize.py`
+**Entry point:** `python -m seqcredit_model.synthesize`
 
 **Key generation parameters:**
 
@@ -391,9 +391,9 @@ Transaction-level features are an intermediate product produced by `extract_all_
 
 ### 4.2 Calibration
 
-The generator reads `data/synthetic_params.json`, which contains two blocks of parameters:
+The generator reads `src/synthetic_params.json`, which contains two blocks of parameters:
 
-**Block 1 — Transaction-level parameters (12 fields):** Derived from a single anonymized real Ghanaian mobile money (MTN MoMo) transaction history (account 71797604; 482 transactions; Feb–Sep 2024). These were extracted in the January 2026 research session documented in `SESSION_LOG.md`.
+**Block 1 — Transaction-level parameters (12 fields):** Derived from a single anonymized real Ghanaian mobile money (MTN MoMo) transaction history (account 71797604; 482 transactions; Feb–Sep 2024). These were extracted in a January 2026 research session.
 
 ```json
 {
@@ -455,7 +455,7 @@ The generator reads `data/synthetic_params.json`, which contains two blocks of p
 
 ### 4.3 Reproducibility
 
-**Random seed:** `synthetic_data.py` uses `RANDOM_SEED = 42` and calls `set_random_seeds()` before generation. Each run of `generate_dataset()` produces identical results when using the same seed.
+**Random seed:** `synthesize.py` uses `RANDOM_SEED = 42` and calls `set_random_seeds()` before generation. Each run of `generate_dataset()` produces identical results when using the same seed.
 
 The feature engineering pipeline and model training also use `set_random_seeds(42)` (from `src/seqcredit_model/credit_model.py`) for reproducibility.
 
@@ -506,13 +506,13 @@ The feature engineering pipeline and model training also use `set_random_seeds(4
 
 - **License:** MIT — Copyright 2025 Benjamin Attabra
 - **Repository:** https://github.com/attabeezy/seqcredit-model
-- **Git-tracked files:** `data/user_labels.csv`, `data/user_features.csv`, `data/synthetic_params.json`
+- **Git-tracked files:** `src/synthetic_params.json`, `data/user_labels.csv`, `data/user_features.csv`
 - **Gitignored (regenerate locally):** `data/user_transactions/` — excluded by `.gitignore`
 
 To regenerate all data locally:
 ```bash
-python -m seqcredit_model.synthetic_data       # generates user_transactions/ + user_labels.csv
-python -m seqcredit_model.feature_engineering # generates user_features.csv
+python -m seqcredit_model.synthesize            # generates user_transactions/ + user_labels.csv
+python -m seqcredit_model.pipeline              # generates user_features.csv
 ```
 
 ---
@@ -521,7 +521,7 @@ python -m seqcredit_model.feature_engineering # generates user_features.csv
 
 **Maintained by:** Benjamin Ekow Attabra (`attabeezy` on GitHub)
 
-**Regeneration order is strict:** `synthetic_data.py` must run before `feature_engineering.py`. `user_features.csv` and `user_labels.csv` must come from the same generation run.
+**Regeneration order is strict:** `synthesize.py` must run before `pipeline.py`. `user_features.csv` and `user_labels.csv` must come from the same generation run.
 
 **Data consistency:** `CreditRiskDataLoader._validate_data()` cross-checks `obs_txn_count` (from `user_features.csv`) against `gen_txn_count` (from `user_labels.csv`) for a random sample of 20 users. The current committed files have 100% consistency.
 
@@ -544,7 +544,7 @@ python -m seqcredit_model.feature_engineering # generates user_features.csv
 | # | Limitation | Impact | Status |
 |---|---|---|---|
 | 1 | ~~`user_features.csv` was stale~~ | ~~High~~ | **RESOLVED** — Data regenerated with consistent seed |
-| 2 | ~~No random seed in `synthetic_data.py`~~ | ~~Medium~~ | **RESOLVED** — `RANDOM_SEED = 42` added |
+| 2 | ~~No random seed in `synthesize.py`~~ | ~~Medium~~ | **RESOLVED** — `RANDOM_SEED = 42` added |
 | 3 | `ADJUSTMENT` type never generated — `is_adjustment` feature is always 0 | Low | Open |
 | 4 | Variable file schema (13, 17, or 19 columns) — non-borrower, disbursement-only, and repayment files differ | Medium | By design |
 | 5 | ~~Calibration source undocumented — `synthetic_params.json` provenance not recorded~~ | ~~Medium~~ | **RESOLVED** — §4.2 now documents all sources with citations |
@@ -577,7 +577,7 @@ If you use this dataset or codebase, please cite:
 
 ## 12. References for `synthetic_params.json` Calibration
 
-The following sources were used to derive the `loan_params` block in `data/synthetic_params.json`. Transaction-level parameters (Block 1) were extracted from a single anonymized real MTN MoMo transaction history — see `SESSION_LOG.md` for details.
+The following sources were used to derive the `loan_params` block in `src/synthetic_params.json`. Transaction-level parameters (Block 1) were extracted from a single anonymized real MTN MoMo transaction history (account 71797604; 482 transactions; Feb–Sep 2024).
 
 | Ref # | Short ID | Full Citation |
 |---|---|---|

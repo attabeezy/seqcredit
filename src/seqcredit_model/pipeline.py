@@ -1,13 +1,15 @@
 """Temporal feature extraction from mobile money transaction data."""
 
-import pandas as pd
+import sys
+from pathlib import Path
+
 import numpy as np
+import pandas as pd
 import warnings
 
-try:
-    from seqcredit_model.config import TRANSACTIONS_DIR, USER_FEATURES_FILE
-except ModuleNotFoundError:
-    from config import TRANSACTIONS_DIR, USER_FEATURES_FILE
+sys.path.insert(0, str(Path(__file__).parent))
+
+from config import TRANSACTIONS_DIR, USER_FEATURES_FILE
 
 warnings.filterwarnings("ignore")
 

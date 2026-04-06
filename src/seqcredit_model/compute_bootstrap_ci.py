@@ -58,7 +58,7 @@ def main():
     lstm_arrays_path = DATA_DIR / "lstm_test_arrays.npz"
     if not lstm_arrays_path.exists():
         print(f"[ERROR] LSTM test arrays not found at {lstm_arrays_path}")
-        print("  Run the credit_risk_model.ipynb notebook first to generate them.")
+        print("  Run the model.ipynb notebook first to generate them.")
         return 1
 
     lstm_data = np.load(lstm_arrays_path)
@@ -83,7 +83,7 @@ def main():
     except Exception as e:
         print(f"[ERROR] Failed to load models: {e}")
         print(
-            "  Run the credit_risk_model.ipynb notebook first to train and save models."
+            "  Run the model.ipynb notebook first to train and save models."
         )
         return 1
     print()
