@@ -35,6 +35,8 @@ MANIFEST
 *.npz
 *.keras
 *.pkl
+models/*.pkl
+models/*.keras
 
 # Common ML artifacts
 checkpoints/
