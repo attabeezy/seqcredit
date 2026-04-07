@@ -1,0 +1,33 @@
+{
+  "random_seed": 42,
+  "n_splits": 5,
+  "n_bootstrap": 1000,
+  "ci_level": 0.95,
+  "models": [
+    "LogisticRegression",
+    "XGBoost",
+    "RandomForest",
+    "LightGBM",
+    "LSTM",
+    "HybridLSTM"
+  ],
+  "targets": [
+    "y_default",
+    "y_bad"
+  ],
+  "timings_seconds": {
+    "LogisticRegression_y_default": 1.4584071636199951,
+    "XGBoost_y_default": 293.51856660842896,
+    "RandomForest_y_default": 11.079869270324707,
+    "LightGBM_y_default": 14.832122325897217,
+    "LSTM_y_default": 2755.805072069168,
+    "HybridLSTM_y_default": 2791.535313129425,
+    "LogisticRegression_y_bad": 0.5271604061126709,
+    "XGBoost_y_bad": 5.860973358154297,
+    "RandomForest_y_bad": 8.415635347366333,
+    "LightGBM_y_bad": 2.5780558586120605,
+    "LSTM_y_bad": 1697.5142748355865,
+    "HybridLSTM_y_bad": 1964.7190072536469
+  },
+  "total_time_minutes": 159.13365613222123
+}
