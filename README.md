@@ -107,4 +107,4 @@ seqcredit-model/
 
 ## License
 
-MIT License. Copyright 2025 Benjamin Ekow Attabra.
+MIT License. Copyright 2026 Benjamin Ekow Attabra.
