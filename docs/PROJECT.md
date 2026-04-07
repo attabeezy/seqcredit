@@ -377,19 +377,14 @@ model = ModelClass.load("models/model_name")
 - All other groups (amount_stats, balance_dynamics, fee_behaviour, temporal_patterns, txn_type_mix, activity_intensity) have negligible individual impact (delta ≤ 0.005); some marginally improve performance when dropped.
 - Implication: behavioral diversity and loan history encode most of the default signal; the other 6 feature groups add robustness but not discriminative power.
 
-#### 2.3 Transformer Baseline
+#### 2.3 Transformer/Attention Baseline (CRITICAL)
+- [ ] Implement a lightweight Transformer/attention baseline (e.g., 2-layer encoder + global pooling)
+- [ ] Train/evaluate under the same 5-fold CV stack as LSTM/static models
+- [ ] **Goal:** Determine if the "sequence collapse" (0.52 AUC) is an LSTM limitation or a data property.
 
-- [ ] Implement a lightweight Transformer/attention baseline
-- [ ] Train/evaluate under the same splits and metrics stack (5-fold CV)
-- [ ] Compare against LSTM/Hybrid and best static model
-- [ ] Output `data/transformer_results.csv`
-
-#### 2.4 Single-Split Diagnosis (NEW)
-
-- [ ] Re-run single train/test split with identical preprocessing to CV
-- [ ] Compare feature distributions between train/test in single-split vs CV folds
-- [ ] Check for potential data leakage in notebook-based single-split approach
-- [ ] Document findings in `docs/METHODOLOGY.md`
+#### 2.4 Formalized Reproducibility Script
+- [ ] Create `run_full_experiment_suite.py` that executes: synthesize → pipeline → cv_benchmark → ablation → tuning → transformer.
+- [ ] Ensure it generates a final `benchmark_summary_report.md` for easy copy-pasting into the paper draft.
 
 ### Phase 3 - Paper and Artifact Finalization
 
@@ -397,15 +392,11 @@ model = ModelClass.load("models/model_name")
 **Status:** Pending
 
 #### 3.1 Manuscript Draft Completion
-
 - [ ] Write full draft: Introduction, Related Work, Data, Methods, Results, Interpretability, Calibration, Ablations, Discussion, Conclusion
-- [ ] Include predictive-not-causal boundary statement
-- [ ] Include synthetic-data and external validity limitations
-- [ ] **Revise core claims based on CV findings** (sequential vs static comparison)
+- [ ] **Revise core claims based on CV findings:** Static features dominate MoMo sequences for default prediction.
 - [ ] Output `paper/draft_v1.md` (or LaTeX equivalent)
 
 #### 3.2 Figure/Table Freeze
-
 - [ ] Freeze benchmark tables with CIs and significance results (use CV results as primary)
 - [ ] Freeze SHAP/permutation/surrogate/calibration/ablation/Transformer figures
 - [ ] Output `paper/figures/*` and `paper/tables/*`
@@ -576,10 +567,10 @@ This work is an explicitly scoped **preliminary investigation**. Reviewers and r
 
 ## Future Work
 
-- [ ] Transformer/attention baseline (`data/transformer_results.csv`)
-- [ ] Update SHAP analysis on CV-trained models (currently single-split trained)
-- [ ] Add unit tests
-- [ ] **Paper B:** Validate framework on real Telecel Ghana mobile money data (pending data access)
+- [ ] **Transformer/Attention Baseline:** Evaluate if attention mechanisms can extract more signal from sequences than LSTM (Critical).
+- [ ] **One-Command Reproducibility:** Create `run_full_experiment_suite.py` for "push-button" result generation (High).
+- [ ] **Unit Tests:** Add integrity checks for data processing and label alignment (Moderate).
+- [ ] **Paper B:** Validate framework on real Telecel Ghana mobile money data (Separate Project).
 
 ---
 

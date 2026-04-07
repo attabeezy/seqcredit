@@ -3,7 +3,7 @@
 **Author:** Benjamin Ekow Attabra
 **Repository:** https://github.com/attabeezy/seqcredit-model
 **Version:** 1.0
-**Date:** March 2026
+**Date:** April 2026
 **Framework:** Datasheets for Datasets (Gebru et al., 2021)
 
 This card documents two related datasets produced by the same pipeline:
@@ -393,7 +393,7 @@ Transaction-level features are an intermediate product produced by `extract_all_
 
 The generator reads `src/synthetic_params.json`, which contains two blocks of parameters:
 
-**Block 1 — Transaction-level parameters (12 fields):** Derived from a single anonymized real Ghanaian mobile money (MTN MoMo) transaction history (account 71797604; 482 transactions; Feb–Sep 2024). These were extracted in a January 2026 research session.
+**Block 1 — Transaction-level parameters (12 fields):** Derived from publicly available data on Ghanaian mobile money (MTN MoMo) behavioral patterns, including Bank of Ghana reports, GSMA publications, and operator disclosures (2023–2025).
 
 ```json
 {
@@ -504,7 +504,7 @@ The feature engineering pipeline and model training also use `set_random_seeds(4
 
 ## 7. Distribution and License
 
-- **License:** MIT — Copyright 2025 Benjamin Attabra
+- **License:** MIT — Copyright 2026 Benjamin Ekow Attabra
 - **Repository:** https://github.com/attabeezy/seqcredit-model
 - **Git-tracked files:** `src/synthetic_params.json`, `data/user_labels.csv`, `data/user_features.csv`
 - **Gitignored (regenerate locally):** `data/user_transactions/` — excluded by `.gitignore`
@@ -534,7 +534,7 @@ python -m seqcredit_model.pipeline              # generates user_features.csv
 - All data is **fully synthetic**; no real persons, accounts, or phone numbers are represented
 - Phone numbers are random integers conforming to Ghana's E.164 format (`233XXXXXXXXX`); names are `User_XXXXXX` or `Recipient_NNNNN`
 - The credit archetype distribution (2% defaulters, 8% risky borrowers) is a modeling choice. Models trained on this data will reflect the generator's distributional assumptions
-- The calibration to "real Ghanaian mobile money patterns" is now documented in §4.2 with source citations. Transaction-level parameters derive from a single anonymized user's history (482 transactions). Loan parameters derive from publicly available reports (2023–2025). Several loan parameters remain `NaN` due to data unavailability — see §4.2 provenance table
+- The calibration to "real Ghanaian mobile money patterns" is now documented in §4.2 with source citations. All parameters — both transaction-level and loan-specific — derive from publicly available reports, regulatory filings, and operator disclosures (2023–2025). Several loan parameters remain `NaN` due to data unavailability — see §4.2 provenance table
 - If adapted for real deployment, false positive and false negative errors in credit scoring have **asymmetric harms**: false negatives (missed defaults) expose lenders to loss; false positives (denied credit) exclude creditworthy borrowers, which is a particular concern in financial inclusion contexts
 
 ---
@@ -555,7 +555,7 @@ python -m seqcredit_model.pipeline              # generates user_features.csv
 | 10 | Default rate relies on provider self-reports ("single digits"), not independent verification | Medium | Open — Bank of Ghana does not publish digital lending NPL rates |
 | 11 | Repayment timing split (early/on-time/late %) set to `NaN` — no published data | High | Open — generator must use designer assumptions |
 | 12 | Approval rate unknown — no published data from any operator or regulator | Medium | Open — set to `NaN`; generator must assume |
-| 13 | Transaction-level calibration based on single user (n=1, 482 txns) — may not represent population | Medium | Open — multi-user real data would improve calibration |
+| 13 | Transaction-level calibration based on aggregate public data — no micro-level transaction-level validation against real user populations | Medium | Open — micro-level real data would improve calibration |
 
 ---
 
@@ -577,7 +577,7 @@ If you use this dataset or codebase, please cite:
 
 ## 12. References for `synthetic_params.json` Calibration
 
-The following sources were used to derive the `loan_params` block in `src/synthetic_params.json`. Transaction-level parameters (Block 1) were extracted from a single anonymized real MTN MoMo transaction history (account 71797604; 482 transactions; Feb–Sep 2024).
+The following sources were used to derive the parameters in `src/synthetic_params.json`. Both transaction-level (Block 1) and loan-specific (Block 2) parameters were sourced from publicly available reports, regulatory filings, and operator disclosures on Ghanaian mobile money lending (2023–2025).
 
 | Ref # | Short ID | Full Citation |
 |---|---|---|
