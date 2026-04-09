@@ -6,7 +6,7 @@ A **preliminary investigation and proof-of-concept framework** for credit risk m
 1. **Open synthetic benchmark** — calibrated Ghanaian mobile money dataset (10,000 users, 5 credit archetypes) for privacy-safe credit risk research
 2. **Temporal feature engineering framework** — 8 feature groups, 38 features extracted from transaction sequences; reusable pipeline for African fintech
 
-Preliminary evaluation on this benchmark compares six models under 5-fold CV. Key finding: well-engineered static features recover most default-predictive signal (RF: 0.832 AUC-ROC); standalone LSTM collapses (0.523); Hybrid LSTM is comparable in discrimination but worse in calibration. Results are scoped to the synthetic benchmark — real-data validation (Paper B, Telecel Ghana) is ongoing.
+Preliminary evaluation on this benchmark compares six models under 5-fold CV. Key finding: well-engineered static features recover most default-predictive signal; standalone LSTM collapses to near-random; Hybrid LSTM is comparable in discrimination but worse in calibration. Current results: [`data/cv_results_y_default.csv`](data/cv_results_y_default.csv). Results are scoped to the synthetic benchmark — real-data validation (Paper B, Telecel Ghana) is ongoing.
 
 See [docs/PROJECT.md](docs/PROJECT.md) for full technical details and limitations.
 

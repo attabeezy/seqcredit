@@ -36,7 +36,7 @@ This project is a **preliminary investigation and proof-of-concept framework pap
 
 2. **Temporal feature engineering framework** — `TemporalTransactionFeatureEngineer` formalizes 8 feature groups (38 features) extracted from transaction sequences, offering a reusable pipeline for practitioners and researchers.
 
-Preliminary evaluation on this benchmark compares six models (Logistic Regression, XGBoost, Random Forest, LightGBM, LSTM, Hybrid LSTM) under rigorous 5-fold cross-validation. The central finding is that **well-engineered static user-level features capture most of the available default signal** (RF: 0.832 AUC-ROC); the Hybrid LSTM is comparable in discrimination (0.813) but significantly worse in calibration (ECE 0.22 vs 0.04); and the standalone LSTM collapses (0.523), confirming that transaction sequences alone carry insufficient signal.
+Preliminary evaluation on this benchmark compares six models (Logistic Regression, XGBoost, Random Forest, LightGBM, LSTM, Hybrid LSTM) under rigorous 5-fold cross-validation. The central finding is that **well-engineered static user-level features capture most of the available default signal**; the Hybrid LSTM is comparable in discrimination but significantly worse in calibration; and the standalone LSTM collapses to near-random, confirming that transaction sequences alone carry insufficient signal. Current benchmark results: `data/cv_results_y_default.csv`, `data/cv_results_y_bad.csv`.
 
 **Scope:** These are preliminary findings on a controlled synthetic benchmark. External validity on real-world mobile money data is the subject of Paper B (pending Telecel Ghana data access). This paper does not claim universal generalizability — it establishes a framework, an open benchmark, and motivating results for the larger study.
 
@@ -300,7 +300,7 @@ model = ModelClass.load("models/model_name")
 1. Calibrated synthetic Ghanaian mobile money dataset (open benchmark, 10k users, 5 archetypes)
 2. Temporal feature engineering framework (8 groups, 38 features) — reusable pipeline for African fintech
 3. Preliminary comparative evaluation: static features dominate sequences on this benchmark; LSTM alone is insufficient; Hybrid LSTM is comparable in AUC but worse in calibration
-4. Ablation evidence: `behavioural_diversity` and `loan_history` carry most default signal (drop-one: −0.135 and −0.045 AUC respectively)
+4. Ablation evidence: `behavioural_diversity` and `loan_history` carry most default signal — see `data/ablation_features.csv`
 
 ### Success Criteria
 
@@ -362,7 +362,7 @@ model = ModelClass.load("models/model_name")
 - [x] Script: `src/seqcredit_model/run_hyperparameter_tuning.py` (40 trials RandomizedSearchCV, 3-fold search → 5-fold final, RF/XGBoost/LightGBM)
 - [x] Output `data/tuning_results.csv`
 
-**Tuning Results (y_default):** XGBoost tuned is marginally best (0.8303 AUC-ROC vs default 0.8183). Tuned RF (0.8271) performs slightly *worse* than default RF (0.8319) — likely due to reduced depth (max_depth=5 vs default 10). LightGBM tuned (0.8227) also below default (0.8123→0.8227). HybridLSTM excluded from tuning (compute cost). Conclusion: default hyperparameters are near-optimal for this dataset; gains from tuning are marginal.
+**Tuning Results (y_default):** XGBoost tuned is marginally best; tuned RF performs slightly *worse* than default RF — likely due to reduced depth (max_depth=5 vs default 10); LightGBM tuned is also below its default. HybridLSTM excluded from tuning (compute cost). Conclusion: default hyperparameters are near-optimal for this dataset; gains from tuning are marginal. See `data/tuning_results.csv` for model-by-model values.
 
 #### 2.2 Ablation Studies
 
@@ -371,13 +371,18 @@ model = ModelClass.load("models/model_name")
 - [x] Script: `src/seqcredit_model/run_ablation_study.py`
 - [x] Output `data/ablation_features.csv`
 
-**Key ablation findings (y_default, RandomForest):**
-- `behavioural_diversity` (unique_recipients, recipient_concentration, unique_txn_types) is the dominant group: dropping it cuts AUC-ROC from 0.832 → 0.697 (−0.135). Alone it achieves AUC 0.777.
-- `loan_history` is second most important: dropping it costs −0.045 AUC-ROC.
-- All other groups (amount_stats, balance_dynamics, fee_behaviour, temporal_patterns, txn_type_mix, activity_intensity) have negligible individual impact (delta ≤ 0.005); some marginally improve performance when dropped.
+**Key ablation findings (y_default, RandomForest):** See `data/ablation_features.csv` for per-group AUC values (drop-one and single-group conditions).
+- `behavioural_diversity` (unique_recipients, recipient_concentration, unique_txn_types) is the dominant group: dropping it causes the largest AUC-ROC drop; alone it is the strongest single group.
+- `loan_history` is second most important.
+- All other groups (amount_stats, balance_dynamics, fee_behaviour, temporal_patterns, txn_type_mix, activity_intensity) have negligible individual impact; some marginally improve performance when dropped.
 - Implication: behavioral diversity and loan history encode most of the default signal; the other 6 feature groups add robustness but not discriminative power.
 
-#### 2.3 Transformer/Attention Baseline (CRITICAL)
+#### 2.3 Generalization & Leakage Investigation (CRITICAL)
+- [ ] Investigate 0.50 AUC collapse in `compute_bootstrap_ci.py` (Likely Scaling mismatch).
+- [ ] Audit `_engineer_loan_features` for data leakage (Lookahead bias: using all loans instead of just pre-target history).
+- [ ] Fix: Ensure static features and sequence models share a consistent, leakage-free "prediction point."
+
+#### 2.4 Transformer/Attention Baseline (CRITICAL)
 - [ ] Implement a lightweight Transformer/attention baseline (e.g., 2-layer encoder + global pooling)
 - [ ] Train/evaluate under the same 5-fold CV stack as LSTM/static models
 - [ ] **Goal:** Determine if the "sequence collapse" (0.52 AUC) is an LSTM limitation or a data property.
@@ -487,9 +492,9 @@ Single-split results from the notebook are no longer used as a primary benchmark
 
 **Fix applied:** Reduced to 32→16 units, dropout 0.4, L2 kernel regularization (1e-4), recurrent_dropout 0.3. Re-run completed.
 
-**Outcome:** LSTM still scores 0.5231 AUC-ROC on y_default after regularization (y_bad: 0.5071) — essentially random. This confirms the finding is not a capacity/overfitting artifact but a data property: transaction sequences alone lack sufficient signal to predict default.
+**Outcome:** LSTM remains near-random on both targets after regularization — essentially unchanged. This confirms the finding is not a capacity/overfitting artifact but a data property: transaction sequences alone lack sufficient signal to predict default. See `data/cv_results_y_default.csv` and `data/cv_results_y_bad.csv` for current values.
 
-**Conclusion (publishable):** *Well-engineered static user-level features capture the relevant predictive signal; the temporal order of individual transactions adds negligible marginal value for default prediction. The Hybrid model's 0.813 AUC is entirely attributable to its static feature branch.*
+**Conclusion (publishable):** *Well-engineered static user-level features capture the relevant predictive signal; the temporal order of individual transactions adds negligible marginal value for default prediction. The Hybrid model's performance is attributable to its static feature branch.*
 
 ---
 
@@ -559,7 +564,7 @@ This work is an explicitly scoped **preliminary investigation**. Reviewers and r
 
 4. **Binary default framing.** The primary target (`y_default`) collapses late payment and default into non-default. Real credit risk applications typically require probability calibration and decision thresholds tuned to deployment costs — partially addressed by calibration analysis but not fully resolved.
 
-5. **Sequences may carry more signal in real data.** The finding that standalone LSTM collapses (0.523 AUC) reflects a property of the synthetic dataset's generation process, where credit outcomes are partly determined by user archetype labels rather than purely by transaction sequence dynamics. This motivates — but does not substitute for — real-data validation.
+5. **Sequences may carry more signal in real data.** The finding that standalone LSTM collapses to near-random (see `data/cv_results_y_default.csv`) reflects a property of the synthetic dataset's generation process, where credit outcomes are partly determined by user archetype labels rather than purely by transaction sequence dynamics. This motivates — but does not substitute for — real-data validation.
 
 **Paper B** (Hybrid LSTM on real Telecel Ghana data, pending data access) addresses limitations 1–3 directly and is the intended real-world validation of this framework.
 
