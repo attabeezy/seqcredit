@@ -66,6 +66,11 @@ N_SPLITS = 5
 N_BOOTSTRAP = 1000
 CI_LEVEL = 0.95
 
+# Sequential models require per-user transaction CSV files in TRANSACTIONS_DIR.
+# When running on real data (produced by real_data_pipeline.py) those files do
+# not exist, so LSTM and HybridLSTM are skipped automatically.
+HAS_SEQUENCES = TRANSACTIONS_DIR.exists() and any(TRANSACTIONS_DIR.glob("*.csv"))
+
 
 def compute_brier_score(y_true: np.ndarray, y_proba: np.ndarray) -> float:
     """Compute Brier score for probabilistic predictions."""
@@ -387,21 +392,20 @@ def main():
     assert len(y_default) == len(y_bad), "y_default and y_bad length mismatch!"
     assert len(X) == len(y_bad), "X and y_bad length mismatch!"
 
-    print("\n[2/6] Loading LSTM sequences...")
-    seq_data = loader.load_sequences()
-    X_seq = seq_data["X_train_seq"]
-    y_seq_default = seq_data["y_train"]
-
-    # y_seq_bad uses same ordering as y_bad (sequences are built from same train users)
-    y_seq_bad = y_bad.copy()
-
-    print(f"  Sequence shape: {X_seq.shape}")
-
-    # Validate sequence alignment
-    assert len(X_seq) == len(y_seq_bad), "X_seq and y_seq_bad length mismatch!"
-    assert np.array_equal(y_default, y_seq_default), (
-        "y_default and y_seq_default mismatch!"
-    )
+    if HAS_SEQUENCES:
+        print("\n[2/6] Loading LSTM sequences...")
+        seq_data = loader.load_sequences()
+        X_seq = seq_data["X_train_seq"]
+        y_seq_default = seq_data["y_train"]
+        y_seq_bad = y_bad.copy()
+        print(f"  Sequence shape: {X_seq.shape}")
+        assert len(X_seq) == len(y_seq_bad), "X_seq and y_seq_bad length mismatch!"
+        assert np.array_equal(y_default, y_seq_default), (
+            "y_default and y_seq_default mismatch!"
+        )
+    else:
+        print("\n[2/6] Skipping LSTM sequences (no per-user transaction files found).")
+        X_seq = y_seq_default = y_seq_bad = None
 
     print("\n[3/6] Running CV for all models...")
 
@@ -432,8 +436,8 @@ def main():
     total_start = time.time()
 
     for target_name, y, X_seq_curr in [
-        ("y_default", y_default, X_seq),
-        ("y_bad", y_bad, X_seq),
+        ("y_default", y_default, X_seq if HAS_SEQUENCES else None),
+        ("y_bad",     y_bad,     X_seq if HAS_SEQUENCES else None),
     ]:
         print(f"\n  === Target: {target_name} ===")
 
@@ -474,61 +478,55 @@ def main():
             else:
                 oof_preds_bad[model_name] = oof
 
-        # --- LSTM ---
-        model_start = time.time()
-        print(f"    LSTM...")
-        fold_df, summary, oof = run_lstm_cv(lstm_params, X_seq_curr, y)
-        elapsed = time.time() - model_start
-        model_timings[f"LSTM_{target_name}"] = elapsed
-        print(f"      done ({elapsed:.1f}s, AUC-ROC={summary['auc_roc']:.4f})")
+        # --- LSTM + HybridLSTM (skipped when no per-user transaction files) ---
+        if HAS_SEQUENCES:
+            model_start = time.time()
+            print(f"    LSTM...")
+            fold_df, summary, oof = run_lstm_cv(lstm_params, X_seq_curr, y)
+            elapsed = time.time() - model_start
+            model_timings[f"LSTM_{target_name}"] = elapsed
+            print(f"      done ({elapsed:.1f}s, AUC-ROC={summary['auc_roc']:.4f})")
 
-        for _, row in fold_df.iterrows():
-            all_results.append(
-                {
-                    "model": "LSTM",
-                    "target": target_name,
-                    "fold": row["fold"],
-                    **{
-                        k: v
-                        for k, v in row.items()
-                        if k not in ["model", "target", "fold"]
-                    },
-                }
+            for _, row in fold_df.iterrows():
+                all_results.append(
+                    {
+                        "model": "LSTM",
+                        "target": target_name,
+                        "fold": row["fold"],
+                        **{k: v for k, v in row.items() if k not in ["model", "target", "fold"]},
+                    }
+                )
+
+            if target_name == "y_default":
+                oof_preds_default["LSTM"] = oof
+            else:
+                oof_preds_bad["LSTM"] = oof
+
+            model_start = time.time()
+            print(f"    HybridLSTM...")
+            fold_df, summary, oof = run_hybrid_cv(
+                lstm_params, X_seq_curr, static_X.values, y
             )
+            elapsed = time.time() - model_start
+            model_timings[f"HybridLSTM_{target_name}"] = elapsed
+            print(f"      done ({elapsed:.1f}s, AUC-ROC={summary['auc_roc']:.4f})")
 
-        if target_name == "y_default":
-            oof_preds_default["LSTM"] = oof
+            for _, row in fold_df.iterrows():
+                all_results.append(
+                    {
+                        "model": "HybridLSTM",
+                        "target": target_name,
+                        "fold": row["fold"],
+                        **{k: v for k, v in row.items() if k not in ["model", "target", "fold"]},
+                    }
+                )
+
+            if target_name == "y_default":
+                oof_preds_default["HybridLSTM"] = oof
+            else:
+                oof_preds_bad["HybridLSTM"] = oof
         else:
-            oof_preds_bad["LSTM"] = oof
-
-        # --- HybridLSTM ---
-        model_start = time.time()
-        print(f"    HybridLSTM...")
-        fold_df, summary, oof = run_hybrid_cv(
-            lstm_params, X_seq_curr, static_X.values, y
-        )
-        elapsed = time.time() - model_start
-        model_timings[f"HybridLSTM_{target_name}"] = elapsed
-        print(f"      done ({elapsed:.1f}s, AUC-ROC={summary['auc_roc']:.4f})")
-
-        for _, row in fold_df.iterrows():
-            all_results.append(
-                {
-                    "model": "HybridLSTM",
-                    "target": target_name,
-                    "fold": row["fold"],
-                    **{
-                        k: v
-                        for k, v in row.items()
-                        if k not in ["model", "target", "fold"]
-                    },
-                }
-            )
-
-        if target_name == "y_default":
-            oof_preds_default["HybridLSTM"] = oof
-        else:
-            oof_preds_bad["HybridLSTM"] = oof
+            print("    LSTM / HybridLSTM — skipped (no sequence files)")
 
         # Intermediate save after each target
         results_df = pd.DataFrame(all_results)
@@ -555,7 +553,7 @@ def main():
     print("\n[5/6] Running significance tests...")
 
     static_models = ["LogisticRegression", "XGBoost", "RandomForest", "LightGBM"]
-    seq_models = ["LSTM", "HybridLSTM"]
+    seq_models = ["LSTM", "HybridLSTM"] if HAS_SEQUENCES else []
     all_models = static_models + seq_models
 
     best_static = None

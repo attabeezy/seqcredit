@@ -637,7 +637,14 @@ class CreditRiskDataLoader:
         These features are not available in user_features.csv because they depend
         on the CREDIT / LOAN_REPAYMENT transaction types, which are only visible in
         the per-user transaction files.
+
+        When real_data_pipeline.py is used, these features are pre-computed during
+        the Spark aggregation step and already present in user_features.csv.
+        In that case this method is a no-op.
         """
+        if "total_loan_volume" in df.columns:
+            return df
+
         transactions_path = Path(self.transactions_dir)
         loan_features_list = []
 
