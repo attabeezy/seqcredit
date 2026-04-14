@@ -158,8 +158,9 @@ def run_lstm_cv(
     y: np.ndarray,
     n_splits: int = N_SPLITS,
     seed: int = RANDOM_SEED,
+    model_class=None,
 ) -> Tuple[pd.DataFrame, Dict, np.ndarray]:
-    """Run 5-fold CV for LSTM model with OOF predictions."""
+    """Run 5-fold CV for LSTM-compatible sequential model with OOF predictions."""
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
     fold_results = []
     oof_predictions = np.zeros(len(y))
@@ -171,7 +172,8 @@ def run_lstm_cv(
         X_tr, X_val = X_seq[train_idx], X_seq[val_idx]
         y_tr, y_val = y[train_idx], y[val_idx]
 
-        model = LSTMModel(**model_params)
+        _cls = model_class if model_class is not None else LSTMModel
+        model = _cls(**model_params)
         model.build_model(input_shape)
         model.fit(X_tr, y_tr, X_val=X_val, y_val=y_val, epochs=50, batch_size=32)
 

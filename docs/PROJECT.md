@@ -306,7 +306,7 @@ model = ModelClass.load("models/model_name")
 
 - [ ] 5-fold stratified CV results completed for all key models and both targets (`y_default`, `y_bad`)
 - [ ] Final benchmark tables include 95% CIs and significance comparisons
-- [ ] Medium-priority experiments (tuning, ablations, Transformer baseline) completed and documented
+- [ ] Medium-priority experiments (tuning, ablations) completed and documented
 - [ ] Paper draft completed end-to-end with final figures/tables
 - [ ] Metrics synchronized across `data/model_comparison.csv`, `docs/PROJECT.md`, `docs/DATACARD.md`, and `README.md`
 - [ ] Reproducibility verified with `RANDOM_SEED = 42` and a scripted run path
@@ -382,13 +382,8 @@ model = ModelClass.load("models/model_name")
 - [ ] Audit `_engineer_loan_features` for data leakage (Lookahead bias: using all loans instead of just pre-target history).
 - [ ] Fix: Ensure static features and sequence models share a consistent, leakage-free "prediction point."
 
-#### 2.4 Transformer/Attention Baseline (CRITICAL)
-- [ ] Implement a lightweight Transformer/attention baseline (e.g., 2-layer encoder + global pooling)
-- [ ] Train/evaluate under the same 5-fold CV stack as LSTM/static models
-- [ ] **Goal:** Determine if the "sequence collapse" (0.52 AUC) is an LSTM limitation or a data property.
-
 #### 2.4 Formalized Reproducibility Script
-- [ ] Create `run_full_experiment_suite.py` that executes: synthesize → pipeline → cv_benchmark → ablation → tuning → transformer.
+- [ ] Create `run_full_experiment_suite.py` that executes: synthesize → pipeline → cv_benchmark → ablation → tuning.
 - [ ] Ensure it generates a final `benchmark_summary_report.md` for easy copy-pasting into the paper draft.
 
 ### Phase 3 - Paper and Artifact Finalization
@@ -403,7 +398,7 @@ model = ModelClass.load("models/model_name")
 
 #### 3.2 Figure/Table Freeze
 - [ ] Freeze benchmark tables with CIs and significance results (use CV results as primary)
-- [ ] Freeze SHAP/permutation/surrogate/calibration/ablation/Transformer figures
+- [ ] Freeze SHAP/permutation/surrogate/calibration/ablation figures
 - [ ] Output `paper/figures/*` and `paper/tables/*`
 - [ ] Add reproducibility manifest (`paper/repro_manifest.md`)
 
@@ -445,7 +440,6 @@ model = ModelClass.load("models/model_name")
 - [x] Re-run CV benchmark after LSTM fix — LSTM still 0.5231 AUC-ROC on y_default even after regularization (32→16 units, dropout 0.4, L2, recurrent_dropout 0.3). Confirms: sequences alone carry insufficient default-predictive signal. This is the publishable finding.
 - [x] Ablation study complete (`data/ablation_features.csv`)
 - [x] Hyperparameter tuning complete (`data/tuning_results.csv`)
-- [ ] Transformer baseline
 
 #### Week 3
 
@@ -572,7 +566,6 @@ This work is an explicitly scoped **preliminary investigation**. Reviewers and r
 
 ## Future Work
 
-- [ ] **Transformer/Attention Baseline:** Evaluate if attention mechanisms can extract more signal from sequences than LSTM (Critical).
 - [ ] **One-Command Reproducibility:** Create `run_full_experiment_suite.py` for "push-button" result generation (High).
 - [ ] **Unit Tests:** Add integrity checks for data processing and label alignment (Moderate).
 - [ ] **Paper B:** Validate framework on real Telecel Ghana mobile money data (Separate Project).

@@ -16,18 +16,18 @@
     "y_bad"
   ],
   "timings_seconds": {
-    "LogisticRegression_y_default": 1.4584071636199951,
-    "XGBoost_y_default": 293.51856660842896,
-    "RandomForest_y_default": 11.079869270324707,
-    "LightGBM_y_default": 14.832122325897217,
-    "LSTM_y_default": 2755.805072069168,
-    "HybridLSTM_y_default": 2791.535313129425,
-    "LogisticRegression_y_bad": 0.5271604061126709,
-    "XGBoost_y_bad": 5.860973358154297,
-    "RandomForest_y_bad": 8.415635347366333,
-    "LightGBM_y_bad": 2.5780558586120605,
-    "LSTM_y_bad": 1697.5142748355865,
-    "HybridLSTM_y_bad": 1964.7190072536469
+    "LogisticRegression_y_default": 0.8230381011962891,
+    "XGBoost_y_default": 5.503424406051636,
+    "RandomForest_y_default": 11.25864291191101,
+    "LightGBM_y_default": 7.230294466018677,
+    "LSTM_y_default": 4147.479667425156,
+    "HybridLSTM_y_default": 3209.8620269298553,
+    "LogisticRegression_y_bad": 0.5590465068817139,
+    "XGBoost_y_bad": 5.628297328948975,
+    "RandomForest_y_bad": 9.470890760421753,
+    "LightGBM_y_bad": 2.876591682434082,
+    "LSTM_y_bad": 2011.352650642395,
+    "HybridLSTM_y_bad": 2494.0646574497223
   },
-  "total_time_minutes": 159.13365613222123
+  "total_time_minutes": 408.6632824420929
 }

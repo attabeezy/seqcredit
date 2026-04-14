@@ -55,6 +55,12 @@ from tensorflow.keras.layers import LSTM as KerasLSTM
 from tensorflow.keras.layers import Dense, Dropout, Masking
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.layers import (
+    LayerNormalization,
+    MultiHeadAttention,
+    GlobalAveragePooling1D,
+)
+from tensorflow.keras import Input as KerasInput, Model as KerasModel
 
 TF_ENABLE_ONEDNN_OPTS = 0
 RANDOM_SEED = 42
