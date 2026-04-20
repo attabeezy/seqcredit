@@ -1,10 +1,11 @@
-pandas
-matplotlib
 numpy
+pandas
 scikit-learn
-xgboost
 lightgbm
+xgboost
 tensorflow
+matplotlib
 seaborn
-jupyter
+joblib
 shap
+ipykernel

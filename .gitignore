@@ -240,6 +240,7 @@ data/legacy/
 
 # Paper/draft files
 paper/
+paper-Copy/
 
 # IDE folders
 .idea/
