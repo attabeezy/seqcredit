@@ -564,11 +564,71 @@ This work is an explicitly scoped **preliminary investigation**. Reviewers and r
 
 ---
 
+## Real Data Pipeline — Paper B (Telecel Ghana)
+
+**Status as of April 23, 2026**
+
+Data received from Telecel Ghana. Running on Azure Blob + Databricks. All iteration happens via `Analysis Notebook.ipynb` — clone → install → run — on the `real-data` branch.
+
+### Data
+
+- Table: `melodatabricks616.default.yara_dump_table`
+- 374,295,424 rows, 12 columns
+- All IDs anonymised/hashed
+- Timestamps: Oracle format `DD-MON-YY HH.MI.SS.FFFFFFFFF`
+- Date range: ~Sep–Nov 2025 (~90 days of data)
+- Lender ID: `E7C89F8C4A27F173`
+- 474,312 borrowers identified
+
+### Temporal design (leakage-free)
+
+Each borrower's *index loan* = their most recent loan disbursement (`last_loan_ts`).
+- **Features**: all transactions strictly BEFORE `last_loan_ts`
+- **Labels**: repayment/penalty events strictly AFTER `last_loan_ts`
+
+This was introduced after the first run produced AUC = 1.0 (repayment features directly encoded the label).
+
+### Current CV results (April 23, 2026 — post leakage fix)
+
+**y_default** (never repaid after index loan):
+
+| Model | AUC-ROC | AUC-PR | F1 | ECE |
+|-------|---------|--------|----|-----|
+| LightGBM | 0.9464 | 0.9462 | 0.8926 | 0.0058 |
+| XGBoost | 0.9462 | 0.9460 | 0.8926 | 0.0060 |
+| RandomForest | 0.9370 | 0.9346 | 0.8909 | 0.0568 |
+| LogisticRegression | 0.9290 | 0.9246 | 0.8675 | 0.0830 |
+
+**y_bad** (risky or default):
+
+| Model | AUC-ROC | AUC-PR | F1 | ECE |
+|-------|---------|--------|----|-----|
+| LightGBM | 0.8069 | 0.9291 | 0.7816 | 0.1833 |
+| XGBoost | 0.8069 | 0.9289 | 0.8683 | 0.0063 |
+| RandomForest | 0.7905 | 0.9223 | 0.7672 | 0.1982 |
+| LogisticRegression | 0.6996 | 0.8732 | 0.7595 | 0.2337 |
+
+No statistically significant pairwise differences between models (all bootstrap p > 0.05).
+
+### Known issues / next steps
+
+- [ ] **Observation window truncation bias (PRIORITY)** — current default rate is 50.9%, which is inflated. Borrowers who took their last loan near the end of the window (~Nov 2025) have no time to repay, so they're labelled "default" incorrectly. Fix: add `min_obs_days` filter to `build_pipeline` — only include borrowers whose `last_loan_ts` is at least N days (suggest 30) before the latest timestamp in the dataset. Re-run pipeline and CV after fix.
+
+- [ ] **463 users with no pre-loan transactions** — dropped silently by the data loader. These are first-time borrowers with zero transaction history before their loan. Acceptable to drop; document in paper.
+
+- [ ] **Ablation study on real data** — run `run_ablation_study.py` after label fix to see which feature groups matter on real data vs synthetic.
+
+- [ ] **Feature comparison synthetic vs real** — compare feature importance rankings between Paper A and Paper B results.
+
+- [ ] **LSTM / HybridLSTM on real data** — not yet run (no per-user transaction CSVs). Requires writing per-user CSVs from the Spark table. Decide if this is in scope for Paper B.
+
+---
+
 ## Future Work
 
 - [ ] **One-Command Reproducibility:** Create `run_full_experiment_suite.py` for "push-button" result generation (High).
 - [ ] **Unit Tests:** Add integrity checks for data processing and label alignment (Moderate).
-- [ ] **Paper B:** Validate framework on real Telecel Ghana mobile money data (Separate Project).
+- [ ] **Paper B:** Validate framework on real Telecel Ghana mobile money data — in progress, see section above.
 
 ---
 
