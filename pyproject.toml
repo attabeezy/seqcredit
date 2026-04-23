@@ -6,6 +6,21 @@ build-backend = "setuptools.build_meta"
 name = "seqcredit-model"
 version = "0.1.0"
 requires-python = ">=3.10"
+dependencies = [
+    "pandas",
+    "matplotlib",
+    "numpy",
+    "scikit-learn",
+    "xgboost",
+    "lightgbm",
+    "tensorflow",
+    "seaborn",
+    "jupyter",
+    "shap",
+    "pyspark",
+    "joblib",
+    "ipykernel",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

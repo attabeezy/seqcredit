@@ -6,6 +6,14 @@ loan lifecycle signals, engineers user-level aggregate features, and writes
 user_features.csv + user_labels.csv that are directly compatible with
 CreditRiskDataLoader in credit_model.py.
 
+Temporal design
+---------------
+For each borrower, the *index loan* is their most recent loan disbursement.
+Labels are derived from repayment/penalty events that occur AFTER the index
+loan date.  Features are computed from all transactions BEFORE the index loan
+date.  This eliminates data leakage: repayment behaviour on the target loan
+cannot be used as a predictor of that same loan's outcome.
+
 Usage (Databricks notebook):
     from seqcredit_model.real_data_pipeline import build_pipeline
     df = spark.sql("SELECT * FROM melodatabricks616.default.yara_dump_table")
@@ -33,15 +41,42 @@ CUSTOMER_ACCOUNT_TYPE       = "M-Pesa Account For Customer"
 def _parse_timestamp(df):
     """Parse Oracle-style 'DD-MON-YY HH.MI.SS.FFFFFFFFF' → Spark timestamp.
 
-    Takes the first 17 characters, e.g. '21-SEP-25 23.01.03', and parses with
-    the format 'dd-MMM-yy HH.mm.ss'. Nanoseconds are truncated (not needed).
+    Handles variable-length seconds (1 or 2 digits) with a coalesce over two
+    format patterns so that all rows are parsed correctly.
     """
     return df.withColumn(
         "ts",
-        F.to_timestamp(
-            F.substring(F.col("TRANSACTION_TIMESTAMP"), 1, 17),
-            "dd-MMM-yy HH.mm.ss",
-        ),
+        F.expr("""
+            coalesce(
+                try_to_timestamp(substring(TRANSACTION_TIMESTAMP, 1, 18), 'dd-MMM-yy HH.mm.ss'),
+                try_to_timestamp(substring(TRANSACTION_TIMESTAMP, 1, 17), 'dd-MMM-yy HH.mm.s')
+            )
+        """),
+    )
+
+
+def _derive_loan_cutoffs(df):
+    """Return a Spark DataFrame (user_id, last_loan_ts) for every borrower.
+
+    ``last_loan_ts`` is the timestamp of the borrower's most recent loan
+    disbursement — the *index loan*.  Features are computed from transactions
+    strictly before this date; labels are derived from events after it.
+
+    Parameters
+    ----------
+    df : Spark DataFrame
+        Raw transaction table with the ``ts`` column already added by
+        ``_parse_timestamp``.
+    """
+    return (
+        df.filter(
+            (F.col("TRANSACTION_TYPE") == LOAN_DISBURSEMENT_TYPE)
+            & (F.col("DEBIT_PARTY_ID") == LENDER_ID)
+            & (F.col("CREDIT_PARTY_TYPE") == "Customer")
+        )
+        .withColumnRenamed("CREDIT_PARTY_ID", "user_id")
+        .groupBy("user_id")
+        .agg(F.max("ts").alias("last_loan_ts"))
     )
 
 
@@ -77,56 +112,60 @@ def _categorize_txtype(df):
 
 # ── Public API ───────────────────────────────────────────────────────────────
 
-def derive_labels(df):
+def derive_labels(df, cutoffs_spark):
     """Derive a three-class credit risk label for every borrower.
 
-    Label scheme (mirrors the synthetic data convention used by CreditRiskDataLoader):
-        0 — Good    : made repayments, no penalty transactions
-        1 — Risky   : has at least one penalty transaction but did repay something
-        2 — Default : never made a principal or interest repayment
+    Labels are based on repayment / penalty events that occur STRICTLY AFTER
+    each borrower's index loan (their most recent disbursement).  This prevents
+    the repayment signals used to construct the label from also appearing as
+    input features.
 
-    Non-borrowers (never received a loan) are excluded — exactly as the
-    synthetic pipeline excludes credit_risk_label == -1.
+    Label scheme (mirrors the synthetic data convention):
+        0 — Good    : made at least one repayment after index loan, no penalties
+        1 — Risky   : has at least one penalty after index loan but did repay
+        2 — Default : never made a principal or interest repayment after index loan
+
+    Parameters
+    ----------
+    df : Spark DataFrame
+        Raw transaction table with ``ts`` column added by ``_parse_timestamp``.
+    cutoffs_spark : Spark DataFrame
+        (user_id, last_loan_ts) — output of ``_derive_loan_cutoffs``.
 
     Returns
     -------
     pandas.DataFrame with columns: user_id, credit_risk_label
     """
-    # Borrowers: customers who received a disbursement from the lender
-    borrowers = (
-        df.filter(
-            (F.col("TRANSACTION_TYPE") == LOAN_DISBURSEMENT_TYPE)
-            & (F.col("DEBIT_PARTY_ID") == LENDER_ID)
-            & (F.col("CREDIT_PARTY_TYPE") == "Customer")
-        )
-        .select(F.col("CREDIT_PARTY_ID").alias("user_id"))
-        .distinct()
-    )
-
-    # Penalised: at least one penalty transaction debited from the customer
+    # Penalised AFTER their index loan
     penalised = (
         df.filter(
             (F.col("TRANSACTION_TYPE") == LOAN_PENALTY_TYPE)
             & (F.col("DEBIT_PARTY_TYPE") == "Customer")
         )
-        .select(F.col("DEBIT_PARTY_ID").alias("user_id"))
+        .withColumnRenamed("DEBIT_PARTY_ID", "user_id")
+        .join(cutoffs_spark, on="user_id", how="inner")
+        .filter(F.col("ts") > F.col("last_loan_ts"))
+        .select("user_id")
         .distinct()
         .withColumn("has_penalty", F.lit(1))
     )
 
-    # Repayers: made at least one principal or interest repayment
+    # Repayers AFTER their index loan
     repayers = (
         df.filter(
             F.col("TRANSACTION_TYPE").isin([LOAN_PRINCIPAL_TYPE, LOAN_INTEREST_TYPE])
             & (F.col("DEBIT_PARTY_TYPE") == "Customer")
         )
-        .select(F.col("DEBIT_PARTY_ID").alias("user_id"))
+        .withColumnRenamed("DEBIT_PARTY_ID", "user_id")
+        .join(cutoffs_spark, on="user_id", how="inner")
+        .filter(F.col("ts") > F.col("last_loan_ts"))
+        .select("user_id")
         .distinct()
         .withColumn("has_repayment", F.lit(1))
     )
 
     labels_spark = (
-        borrowers
+        cutoffs_spark
         .join(penalised, on="user_id", how="left")
         .join(repayers,  on="user_id", how="left")
         .withColumn(
@@ -141,41 +180,55 @@ def derive_labels(df):
     return labels_spark.toPandas()
 
 
-def engineer_features(df, borrower_ids_spark):
+def engineer_features(df, borrower_ids_spark, cutoffs_spark):
     """Compute user-level aggregate features from the raw transaction table.
+
+    Only transactions that occurred STRICTLY BEFORE each borrower's index loan
+    (``last_loan_ts`` from ``cutoffs_spark``) are included.  This ensures no
+    post-loan repayment or penalty signals leak into the feature set.
+
+    For repeat borrowers (n_loans_received > 0 in the pre-loan window), past
+    repayment features such as ``n_principal_repayments`` and
+    ``loan_repayment_ratio`` reflect behaviour on *previous* loans — a
+    legitimate credit signal.  For first-time borrowers these will be zero.
 
     Features are split by transaction direction:
       - Outgoing (customer is DEBIT party): spending behaviour, temporal patterns,
-        repayment activity, recipient diversity.
-      - Incoming (customer is CREDIT party): inflow amounts, loan disbursements
-        received, deposit activity.
+        prior repayment activity, recipient diversity.
+      - Incoming (customer is CREDIT party): inflow amounts, prior loan
+        disbursements received, deposit activity.
 
     Combined derived features: net flow, loan repayment ratio, account age, etc.
 
-    Loan-specific column names (total_loan_volume, avg_loan_amount, …) are kept
-    identical to those produced by CreditRiskDataLoader._engineer_loan_features so
-    that the existing skip-if-present guard in credit_model.py fires correctly.
-
     Parameters
     ----------
-    df : Spark DataFrame — raw transaction table
+    df : Spark DataFrame
+        Raw transaction table with ``ts`` and ``txtype_cat`` columns already
+        added (call ``_parse_timestamp`` and ``_categorize_txtype`` first).
     borrower_ids_spark : Spark DataFrame with a single column 'user_id'
+    cutoffs_spark : Spark DataFrame (user_id, last_loan_ts)
 
     Returns
     -------
     pandas.DataFrame — one row per borrower, user_id + all feature columns
     """
-    df = _parse_timestamp(df)
-    df = _categorize_txtype(df)
+    if "ts" not in df.columns:
+        df = _parse_timestamp(df)
+    if "txtype_cat" not in df.columns:
+        df = _categorize_txtype(df)
 
-    # ── Outgoing transactions (customer initiates) ────────────────────────────
+    # Join borrower list with cutoffs to get (user_id, last_loan_ts)
+    borrower_cutoffs = borrower_ids_spark.join(cutoffs_spark, on="user_id", how="inner")
+
+    # ── Outgoing transactions (customer initiates) BEFORE index loan ──────────
     out_df = (
         df.filter(
             (F.col("DEBIT_PARTY_TYPE") == "Customer")
             & (F.col("DEBIT_ACCOUNT_TYPE") == CUSTOMER_ACCOUNT_TYPE)
         )
         .withColumnRenamed("DEBIT_PARTY_ID", "user_id")
-        .join(borrower_ids_spark, on="user_id", how="inner")
+        .join(borrower_cutoffs, on="user_id", how="inner")
+        .filter(F.col("ts") < F.col("last_loan_ts"))
     )
 
     # Recipient concentration requires a sub-aggregation:
@@ -235,14 +288,15 @@ def engineer_features(df, borrower_ids_spark):
         .join(max_recip, on="user_id", how="left")
     )
 
-    # ── Incoming transactions (customer receives) ─────────────────────────────
+    # ── Incoming transactions (customer receives) BEFORE index loan ───────────
     in_df = (
         df.filter(
             (F.col("CREDIT_PARTY_TYPE") == "Customer")
             & (F.col("CREDIT_ACCOUNT_TYPE") == CUSTOMER_ACCOUNT_TYPE)
         )
         .withColumnRenamed("CREDIT_PARTY_ID", "user_id")
-        .join(borrower_ids_spark, on="user_id", how="inner")
+        .join(borrower_cutoffs, on="user_id", how="inner")
+        .filter(F.col("ts") < F.col("last_loan_ts"))
     )
 
     in_agg = in_df.groupBy("user_id").agg(
@@ -352,10 +406,25 @@ def build_pipeline(df, output_dir=None):
     print("Real Data Pipeline — Telecel Ghana MoMo")
     print("=" * 60)
 
-    # ── Step 1: Labels ────────────────────────────────────────────────────────
-    print("\n[1/3] Deriving labels from loan lifecycle signals...")
-    labels_pd = derive_labels(df)
-    total   = len(labels_pd)
+    spark = SparkSession.builder.getOrCreate()
+
+    # Parse timestamps once; pass pre-parsed df to all downstream functions
+    # so Spark can cache/reuse the parsed column across multiple actions.
+    df_ts = _parse_timestamp(df)
+    df_ts = _categorize_txtype(df_ts)
+    df_ts.cache()
+
+    # ── Step 1: Loan cutoffs (index loan date per borrower) ───────────────────
+    print("\n[1/4] Computing index-loan cutoff dates per borrower...")
+    cutoffs_spark = _derive_loan_cutoffs(df_ts)
+    cutoffs_spark.cache()
+    n_borrowers = cutoffs_spark.count()
+    print(f"  Borrowers (with ≥1 loan): {n_borrowers:,}")
+
+    # ── Step 2: Labels (post-cutoff repayment / penalty signals) ─────────────
+    print("\n[2/4] Deriving labels from post-index-loan signals...")
+    labels_pd = derive_labels(df_ts, cutoffs_spark)
+    total     = len(labels_pd)
     n_good    = (labels_pd["credit_risk_label"] == 0).sum()
     n_risky   = (labels_pd["credit_risk_label"] == 1).sum()
     n_default = (labels_pd["credit_risk_label"] == 2).sum()
@@ -364,18 +433,17 @@ def build_pipeline(df, output_dir=None):
     print(f"  Risky     (1)   : {n_risky:,}  ({n_risky / total:.1%})")
     print(f"  Default   (2)   : {n_default:,}  ({n_default / total:.1%})")
 
-    # ── Step 2: Features ──────────────────────────────────────────────────────
-    print("\n[2/3] Engineering user-level features (Spark aggregations)...")
-    spark = SparkSession.builder.getOrCreate()
+    # ── Step 3: Features (pre-cutoff transactions only) ───────────────────────
+    print("\n[3/4] Engineering user-level features (pre-index-loan window)...")
     borrower_ids_spark = spark.createDataFrame(
         labels_pd[["user_id"]], schema="user_id string"
     )
-    features_pd = engineer_features(df, borrower_ids_spark)
+    features_pd = engineer_features(df_ts, borrower_ids_spark, cutoffs_spark)
     print(f"  Shape   : {features_pd.shape}")
     print(f"  Columns : {list(features_pd.columns)}")
 
-    # ── Step 3: Save ──────────────────────────────────────────────────────────
-    print("\n[3/3] Saving CSVs...")
+    # ── Step 4: Save ──────────────────────────────────────────────────────────
+    print("\n[4/4] Saving CSVs...")
     features_path = out_path / "user_features.csv"
     labels_path   = out_path / "user_labels.csv"
     features_pd.to_csv(features_path, index=False)

@@ -568,12 +568,18 @@ def main():
                 best_static = m
                 best_static_auc = auc
 
-    model_pairs = []
-    for seq_m in seq_models:
-        if best_static:
-            model_pairs.append((seq_m, best_static))
-        for static_m in static_models:
-            model_pairs.append((seq_m, static_m))
+    if seq_models:
+        # Compare each sequence model against the best static model and all others
+        model_pairs = []
+        for seq_m in seq_models:
+            if best_static:
+                model_pairs.append((seq_m, best_static))
+            for static_m in static_models:
+                model_pairs.append((seq_m, static_m))
+    else:
+        # No sequence models available — compare static models pairwise instead
+        from itertools import combinations
+        model_pairs = list(combinations(static_models, 2))
 
     sig_results = []
 
@@ -598,12 +604,15 @@ def main():
         print(f"  Saved significance_tests.csv")
 
         print("\n  Significant comparisons (p < 0.05):")
-        sig_only = sig_results_df[sig_results_df["significant"] == True]
-        print(
-            sig_only[
-                ["comparison", "target", "metric", "delta_mean", "p_value"]
-            ].to_string()
-        )
+        if "significant" in sig_results_df.columns:
+            sig_only = sig_results_df[sig_results_df["significant"] == True]
+            print(
+                sig_only[
+                    ["comparison", "target", "metric", "delta_mean", "p_value"]
+                ].to_string()
+            )
+        else:
+            print("  (no comparisons available)")
     else:
         print("  No valid OOF predictions available for significance tests")
 
