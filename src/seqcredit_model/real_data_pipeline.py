@@ -412,12 +412,10 @@ def build_pipeline(df, output_dir=None):
     # so Spark can cache/reuse the parsed column across multiple actions.
     df_ts = _parse_timestamp(df)
     df_ts = _categorize_txtype(df_ts)
-    df_ts.cache()
 
     # ── Step 1: Loan cutoffs (index loan date per borrower) ───────────────────
     print("\n[1/4] Computing index-loan cutoff dates per borrower...")
     cutoffs_spark = _derive_loan_cutoffs(df_ts)
-    cutoffs_spark.cache()
     n_borrowers = cutoffs_spark.count()
     print(f"  Borrowers (with ≥1 loan): {n_borrowers:,}")
 
