@@ -19,5 +19,9 @@ USER_LABELS_FILE = DATA_DIR / "user_labels.csv"
 # Cached padded LSTM sequence arrays (written by CreditRiskDataLoader.load_sequences)
 LSTM_CACHE_FILE = DATA_DIR / "lstm_sequences.npz"
 
+# Raw per-user sequences built by real_data_pipeline.build_sequences_spark()
+# Contains all borrowers; CreditRiskDataLoader.load_sequences() splits train/test from this.
+RAW_SEQ_FILE = DATA_DIR / "lstm_sequences_raw.npz"
+
 LEGACY_DIR = DATA_DIR / "legacy"
 MODELS_DIR = PROJECT_ROOT / "models"

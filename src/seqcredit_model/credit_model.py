@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 try:
     from seqcredit_model.config import (
         LSTM_CACHE_FILE,
+        RAW_SEQ_FILE,
         TRANSACTIONS_DIR,
         USER_FEATURES_FILE,
         USER_LABELS_FILE,
@@ -19,6 +20,7 @@ try:
 except ModuleNotFoundError:
     from config import (
         LSTM_CACHE_FILE,
+        RAW_SEQ_FILE,
         TRANSACTIONS_DIR,
         USER_FEATURES_FILE,
         USER_LABELS_FILE,
@@ -489,7 +491,55 @@ class CreditRiskDataLoader:
                 "feature_names": list(data["feature_names"]),
             }
 
-        # Build user-label lookup (non-borrowers already filtered out)
+        # ── Fallback: raw sequences NPZ from build_sequences_spark() ─────────
+        raw_seq_file = Path(RAW_SEQ_FILE)
+        if raw_seq_file.exists():
+            print(f"Loading raw sequences from {raw_seq_file}...")
+            raw = np.load(raw_seq_file, allow_pickle=True)
+            raw_user_ids = list(raw["user_ids"])
+            raw_sequences = raw["sequences"]   # (N, T, F)
+            raw_feature_names = list(raw["feature_names"])
+
+            uid_to_idx = {uid: i for i, uid in enumerate(raw_user_ids)}
+
+            # Align to the SAME order as X_train / X_test from prepare_static_splits()
+            train_indices = [uid_to_idx[u] for u in self._train_user_ids_ordered if u in uid_to_idx]
+            X_train_seq = raw_sequences[train_indices].astype(np.float32)
+
+            test_indices = [uid_to_idx[u] for u in self._test_user_ids_ordered if u in uid_to_idx]
+            X_test_seq = raw_sequences[test_indices].astype(np.float32)
+
+            # Labels: derive from user_labels CSV, aligned to same user order
+            df_lbl = pd.read_csv(self.summaries_path)
+            df_lbl = df_lbl[df_lbl["credit_risk_label"] != -1]
+            uid_to_label = dict(zip(df_lbl["user_id"], (df_lbl["credit_risk_label"] == 2).astype(int)))
+
+            train_users = [u for u in self._train_user_ids_ordered if u in uid_to_idx]
+            test_users  = [u for u in self._test_user_ids_ordered  if u in uid_to_idx]
+            y_train = np.array([uid_to_label[u] for u in train_users], dtype=np.int32)
+            y_test  = np.array([uid_to_label[u] for u in test_users],  dtype=np.int32)
+
+            print(f"  Train sequences: {X_train_seq.shape}, Test sequences: {X_test_seq.shape}")
+
+            np.savez(
+                cache_path,
+                X_train_seq=X_train_seq,
+                X_test_seq=X_test_seq,
+                y_train=y_train,
+                y_test=y_test,
+                feature_names=np.array(raw_feature_names),
+            )
+            print(f"  Cached to {cache_path}")
+
+            return {
+                "X_train_seq": X_train_seq,
+                "X_test_seq": X_test_seq,
+                "y_train": y_train,
+                "y_test": y_test,
+                "feature_names": raw_feature_names,
+            }
+
+        # ── Build user-label lookup (non-borrowers already filtered out) ──────
         df_summaries = pd.read_csv(self.summaries_path)
         df_summaries = df_summaries[df_summaries["credit_risk_label"] != -1]
         user_labels = dict(

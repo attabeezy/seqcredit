@@ -15,6 +15,7 @@ try:
     from seqcredit_model.config import (
         DATA_DIR,
         LSTM_CACHE_FILE,
+        RAW_SEQ_FILE,
         RANDOM_SEED,
         TRANSACTIONS_DIR,
         USER_FEATURES_FILE,
@@ -34,6 +35,7 @@ except ModuleNotFoundError:
     from config import (
         DATA_DIR,
         LSTM_CACHE_FILE,
+        RAW_SEQ_FILE,
         RANDOM_SEED,
         TRANSACTIONS_DIR,
         USER_FEATURES_FILE,
@@ -66,10 +68,12 @@ N_SPLITS = 5
 N_BOOTSTRAP = 1000
 CI_LEVEL = 0.95
 
-# Sequential models require per-user transaction CSV files in TRANSACTIONS_DIR.
-# When running on real data (produced by real_data_pipeline.py) those files do
-# not exist, so LSTM and HybridLSTM are skipped automatically.
-HAS_SEQUENCES = TRANSACTIONS_DIR.exists() and any(TRANSACTIONS_DIR.glob("*.csv"))
+# Sequential models require either per-user transaction CSV files (synthetic data)
+# or a pre-built raw sequences NPZ from build_sequences_spark() (real data).
+HAS_SEQUENCES = (
+    (TRANSACTIONS_DIR.exists() and any(TRANSACTIONS_DIR.glob("*.csv")))
+    or Path(RAW_SEQ_FILE).exists()
+)
 
 
 def compute_brier_score(y_true: np.ndarray, y_proba: np.ndarray) -> float:

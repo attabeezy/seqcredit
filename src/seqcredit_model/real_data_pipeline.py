@@ -22,7 +22,7 @@ Usage (Databricks notebook):
 
 from pathlib import Path
 
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Window
 from pyspark.sql import functions as F
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -35,6 +35,23 @@ LOAN_INTEREST_TYPE          = "Loan Interest via API"
 LOAN_PENALTY_TYPE           = "Loan Penalty via API"
 
 CUSTOMER_ACCOUNT_TYPE       = "M-Pesa Account For Customer"
+
+# ── Sequence feature constants ───────────────────────────────────────────────
+
+# 12 semantic transaction-type categories (must match _categorize_txtype order)
+TXTYPE_CATS = [
+    "loan_disbursement", "loan_repayment_principal", "loan_repayment_interest",
+    "loan_penalty", "cash_out", "cash_in", "airtime_data", "transfer",
+    "payment", "betting", "fsi", "other",
+]
+
+# 19 features per timestep: log_amount, is_outgoing, 12× txtype one-hot,
+# hour_sin/cos, dow_sin/cos, hours_since_last_txn
+SEQ_FEATURE_NAMES = (
+    ["log_amount", "is_outgoing"]
+    + [f"txtype_{c}" for c in TXTYPE_CATS]
+    + ["hour_sin", "hour_cos", "dow_sin", "dow_cos", "hours_since_last_txn"]
+)
 
 # ── Internal helpers ─────────────────────────────────────────────────────────
 
@@ -55,19 +72,34 @@ def _parse_timestamp(df):
     )
 
 
-def _derive_loan_cutoffs(df):
+def _derive_loan_cutoffs(df, min_followup_days=30):
     """Return a Spark DataFrame (user_id, last_loan_ts) for every borrower.
 
     ``last_loan_ts`` is the timestamp of the borrower's most recent loan
     disbursement — the *index loan*.  Features are computed from transactions
     strictly before this date; labels are derived from events after it.
 
+    Only borrowers whose index loan occurred at least ``min_followup_days``
+    before the end of the observation window are included.  This prevents
+    right-censoring bias: borrowers who took a loan near the dataset cutoff
+    have insufficient time to demonstrate repayment, causing them to be
+    falsely labelled as defaulters.
+
     Parameters
     ----------
     df : Spark DataFrame
         Raw transaction table with the ``ts`` column already added by
         ``_parse_timestamp``.
+    min_followup_days : int, optional (default 30)
+        Minimum days of post-loan observation required to include a borrower.
+        Borrowers whose index loan falls within this many days of the latest
+        timestamp in the dataset are excluded.
     """
+    from datetime import timedelta
+
+    max_ts = df.agg(F.max("ts")).collect()[0][0]
+    followup_cutoff = max_ts - timedelta(days=min_followup_days)
+
     return (
         df.filter(
             (F.col("TRANSACTION_TYPE") == LOAN_DISBURSEMENT_TYPE)
@@ -77,6 +109,7 @@ def _derive_loan_cutoffs(df):
         .withColumnRenamed("CREDIT_PARTY_ID", "user_id")
         .groupBy("user_id")
         .agg(F.max("ts").alias("last_loan_ts"))
+        .filter(F.col("last_loan_ts") <= F.lit(followup_cutoff))
     )
 
 
@@ -375,7 +408,182 @@ def engineer_features(df, borrower_ids_spark, cutoffs_spark):
     return features.toPandas()
 
 
-def build_pipeline(df, output_dir=None):
+def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path=None):
+    """Build per-user transaction sequences for LSTM from the Spark table.
+
+    For each borrower, collects up to ``max_seq_len`` pre-index-loan transactions
+    (most recent first, then reversed so time flows forward), extracts 19 numerical
+    features per timestep, pre-pads shorter histories with zeros, and saves a
+    compressed NPZ file that ``CreditRiskDataLoader.load_sequences()`` can consume
+    directly without per-user CSV files.
+
+    Per-timestep feature vector (19 dimensions):
+        [0]     log_amount           — log(TRANSACTION_AMOUNT + 1)
+        [1]     is_outgoing          — 1 if user is debit party, 0 if credit party
+        [2-13]  txtype_*             — 12-category one-hot from _categorize_txtype()
+        [14-15] hour_sin / hour_cos  — cyclical hour-of-day encoding
+        [16-17] dow_sin  / dow_cos   — cyclical day-of-week encoding
+        [18]    hours_since_last_txn — inter-transaction gap (capped at 720 h)
+
+    Parameters
+    ----------
+    df : Spark DataFrame
+        Raw transaction table (same object passed to build_pipeline).
+    min_followup_days : int, optional (default 30)
+        Must match the value used in build_pipeline() so the borrower sets align.
+    max_seq_len : int, optional (default 100)
+        Timesteps per user. Longer histories are truncated to the most recent
+        ``max_seq_len`` transactions; shorter ones are left-padded with zeros.
+    output_path : str or Path, optional
+        Destination for the NPZ file. Defaults to DATA_DIR / "lstm_sequences_raw.npz".
+
+    Returns
+    -------
+    pathlib.Path — path to the saved NPZ file.
+    """
+    import math
+    import numpy as np
+    from pathlib import Path
+
+    try:
+        from seqcredit_model.config import DATA_DIR, RAW_SEQ_FILE
+    except ModuleNotFoundError:
+        from config import DATA_DIR, RAW_SEQ_FILE
+
+    if output_path is None:
+        output_path = Path(RAW_SEQ_FILE)
+    else:
+        output_path = Path(output_path)
+
+    print("=" * 60)
+    print("Building LSTM Sequences — Telecel Ghana MoMo")
+    print("=" * 60)
+
+    # Parse and categorize once (same preprocessing as build_pipeline)
+    df_ts = _parse_timestamp(df)
+    df_ts = _categorize_txtype(df_ts)
+
+    # Recompute cutoffs with the same followup filter used in build_pipeline
+    print(f"\n[1/4] Computing index-loan cutoffs (≥{min_followup_days}d followup)...")
+    cutoffs_spark = _derive_loan_cutoffs(df_ts, min_followup_days=min_followup_days)
+    borrower_cutoffs = cutoffs_spark  # (user_id, last_loan_ts)
+    all_borrower_ids = [r[0] for r in cutoffs_spark.select("user_id").collect()]
+    n_borrowers = len(all_borrower_ids)
+    print(f"  Borrowers eligible: {n_borrowers:,}")
+
+    # ── Collect pre-cutoff transactions per borrower ─────────────────────────
+    print(f"\n[2/4] Collecting pre-cutoff transactions (cap={max_seq_len} per user)...")
+
+    # Outgoing: user is the DEBIT (spending) party
+    out_txns = (
+        df_ts.filter(
+            (F.col("DEBIT_PARTY_TYPE") == "Customer")
+            & (F.col("DEBIT_ACCOUNT_TYPE") == CUSTOMER_ACCOUNT_TYPE)
+        )
+        .withColumnRenamed("DEBIT_PARTY_ID", "user_id")
+        .join(borrower_cutoffs, on="user_id", how="inner")
+        .filter(F.col("ts") < F.col("last_loan_ts"))
+        .select("user_id", "ts", "TRANSACTION_AMOUNT", "txtype_cat", F.lit(1).alias("is_outgoing"))
+    )
+
+    # Incoming: user is the CREDIT (receiving) party
+    in_txns = (
+        df_ts.filter(
+            (F.col("CREDIT_PARTY_TYPE") == "Customer")
+            & (F.col("CREDIT_ACCOUNT_TYPE") == CUSTOMER_ACCOUNT_TYPE)
+        )
+        .withColumnRenamed("CREDIT_PARTY_ID", "user_id")
+        .join(borrower_cutoffs, on="user_id", how="inner")
+        .filter(F.col("ts") < F.col("last_loan_ts"))
+        .select("user_id", "ts", "TRANSACTION_AMOUNT", "txtype_cat", F.lit(0).alias("is_outgoing"))
+    )
+
+    all_txns = out_txns.union(in_txns)
+
+    # Keep only the most recent max_seq_len transactions per user (desc rank, then filter)
+    w = Window.partitionBy("user_id").orderBy(F.desc("ts"))
+    all_txns_capped = (
+        all_txns
+        .withColumn("_rank", F.row_number().over(w))
+        .filter(F.col("_rank") <= max_seq_len)
+        .drop("_rank")
+    )
+
+    # Collect sorted sequences per user (asc = chronological order)
+    seq_spark = all_txns_capped.groupBy("user_id").agg(
+        F.sort_array(
+            F.collect_list(F.struct("ts", "TRANSACTION_AMOUNT", "txtype_cat", "is_outgoing")),
+            asc=True,
+        ).alias("sequence")
+    )
+
+    print("  Collecting to driver...")
+    seq_pd = seq_spark.toPandas()
+    seq_lookup = {row["user_id"]: row["sequence"] for _, row in seq_pd.iterrows()}
+    print(f"  Users with ≥1 pre-cutoff transaction: {len(seq_lookup):,}")
+
+    # ── Numpy feature extraction ─────────────────────────────────────────────
+    print(f"\n[3/4] Extracting features and building padded array "
+          f"({n_borrowers} × {max_seq_len} × {len(SEQ_FEATURE_NAMES)})...")
+
+    cat_to_idx = {c: i for i, c in enumerate(TXTYPE_CATS)}
+    n_features = len(SEQ_FEATURE_NAMES)
+
+    user_ids_arr = np.array(all_borrower_ids)
+    X = np.zeros((n_borrowers, max_seq_len, n_features), dtype=np.float32)
+
+    for i, uid in enumerate(all_borrower_ids):
+        if uid not in seq_lookup:
+            continue  # zero-padded sequence for users with no pre-loan history
+
+        seq = seq_lookup[uid]  # list of Row(ts, TRANSACTION_AMOUNT, txtype_cat, is_outgoing)
+        T = len(seq)
+        pad_start = max_seq_len - T  # pre-pad: place sequence at the END
+        prev_ts = None
+
+        for j, txn in enumerate(seq):
+            slot = pad_start + j
+            amount = txn.TRANSACTION_AMOUNT or 0.0
+
+            # [0] log_amount
+            X[i, slot, 0] = math.log(amount + 1.0)
+            # [1] is_outgoing
+            X[i, slot, 1] = float(txn.is_outgoing)
+            # [2-13] txtype one-hot
+            cat_idx = cat_to_idx.get(txn.txtype_cat, cat_to_idx["other"])
+            X[i, slot, 2 + cat_idx] = 1.0
+            # [14-15] hour cyclical
+            hour = txn.ts.hour
+            X[i, slot, 14] = math.sin(2 * math.pi * hour / 24)
+            X[i, slot, 15] = math.cos(2 * math.pi * hour / 24)
+            # [16-17] day-of-week cyclical (Python weekday: Mon=0)
+            dow = txn.ts.weekday()
+            X[i, slot, 16] = math.sin(2 * math.pi * dow / 7)
+            X[i, slot, 17] = math.cos(2 * math.pi * dow / 7)
+            # [18] hours since last transaction (capped at 720 h = 30 days)
+            if prev_ts is not None:
+                delta_h = (txn.ts - prev_ts).total_seconds() / 3600.0
+                X[i, slot, 18] = min(delta_h, 720.0)
+            prev_ts = txn.ts
+
+        if (i + 1) % 50_000 == 0:
+            print(f"  {i + 1:,} / {n_borrowers:,} users processed...")
+
+    # ── Save ────────────────────────────────────────────────────────────────
+    print(f"\n[4/4] Saving to {output_path}...")
+    np.savez_compressed(
+        output_path,
+        user_ids=user_ids_arr,
+        sequences=X,
+        feature_names=np.array(SEQ_FEATURE_NAMES),
+    )
+    print(f"  Shape  : {X.shape}")
+    print(f"  Features: {SEQ_FEATURE_NAMES}")
+    print(f"\nDone. Load via CreditRiskDataLoader.load_sequences() — no CSV files needed.")
+    return output_path
+
+
+def build_pipeline(df, output_dir=None, min_followup_days=30):
     """Run the full real-data pipeline and save outputs to CSV.
 
     Derives labels → engineers features → writes user_features.csv and
@@ -415,9 +623,9 @@ def build_pipeline(df, output_dir=None):
 
     # ── Step 1: Loan cutoffs (index loan date per borrower) ───────────────────
     print("\n[1/4] Computing index-loan cutoff dates per borrower...")
-    cutoffs_spark = _derive_loan_cutoffs(df_ts)
+    cutoffs_spark = _derive_loan_cutoffs(df_ts, min_followup_days=min_followup_days)
     n_borrowers = cutoffs_spark.count()
-    print(f"  Borrowers (with ≥1 loan): {n_borrowers:,}")
+    print(f"  Borrowers (with ≥1 loan, ≥{min_followup_days}d followup): {n_borrowers:,}")
 
     # ── Step 2: Labels (post-cutoff repayment / penalty signals) ─────────────
     print("\n[2/4] Deriving labels from post-index-loan signals...")
