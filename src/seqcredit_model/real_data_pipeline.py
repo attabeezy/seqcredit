@@ -20,6 +20,9 @@ Usage (Databricks notebook):
     build_pipeline(df)
 """
 
+import hashlib
+import json
+import os
 from pathlib import Path
 
 from pyspark.sql import SparkSession, Window
@@ -52,6 +55,35 @@ SEQ_FEATURE_NAMES = (
     + [f"txtype_{c}" for c in TXTYPE_CATS]
     + ["hour_sin", "hour_cos", "dow_sin", "dow_cos", "hours_since_last_txn"]
 )
+
+RAW_SEQUENCE_VERSION = 2
+
+
+def _resolve_storage_path(path_value):
+    """Resolve local and DBFS-style paths to a filesystem path."""
+    path_str = str(path_value)
+    if path_str.startswith("dbfs:/"):
+        return Path("/dbfs") / path_str.removeprefix("dbfs:/").lstrip("/")
+    return Path(path_str)
+
+
+def _hash_user_ids(user_ids):
+    """Build a stable digest for ordered user IDs."""
+    digest = hashlib.sha256()
+    for user_id in user_ids:
+        digest.update(str(user_id).encode("utf-8"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def _write_npz_with_metadata(output_path: Path, metadata: dict, **arrays) -> None:
+    """Write an NPZ file with sidecar JSON metadata."""
+    import numpy as np
+
+    npz_payload = dict(arrays)
+    npz_payload["metadata_json"] = np.array(json.dumps(metadata), dtype=object)
+    with output_path.open("wb") as handle:
+        np.savez_compressed(handle, **npz_payload)
 
 # ── Internal helpers ─────────────────────────────────────────────────────────
 
@@ -409,72 +441,57 @@ def engineer_features(df, borrower_ids_spark, cutoffs_spark):
 
 
 def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path=None):
-    """Build per-user transaction sequences for LSTM from the Spark table.
+    """Build ephemeral per-user transaction sequences for LSTM from the Spark table.
 
-    For each borrower, collects up to ``max_seq_len`` pre-index-loan transactions
-    (most recent first, then reversed so time flows forward), extracts 19 numerical
-    features per timestep, pre-pads shorter histories with zeros, and saves a
-    compressed NPZ file that ``CreditRiskDataLoader.load_sequences()`` can consume
-    directly without per-user CSV files.
-
-    Per-timestep feature vector (19 dimensions):
-        [0]     log_amount           — log(TRANSACTION_AMOUNT + 1)
-        [1]     is_outgoing          — 1 if user is debit party, 0 if credit party
-        [2-13]  txtype_*             — 12-category one-hot from _categorize_txtype()
-        [14-15] hour_sin / hour_cos  — cyclical hour-of-day encoding
-        [16-17] dow_sin  / dow_cos   — cyclical day-of-week encoding
-        [18]    hours_since_last_txn — inter-transaction gap (capped at 720 h)
-
-    Parameters
-    ----------
-    df : Spark DataFrame
-        Raw transaction table (same object passed to build_pipeline).
-    min_followup_days : int, optional (default 30)
-        Must match the value used in build_pipeline() so the borrower sets align.
-    max_seq_len : int, optional (default 100)
-        Timesteps per user. Longer histories are truncated to the most recent
-        ``max_seq_len`` transactions; shorter ones are left-padded with zeros.
-    output_path : str or Path, optional
-        Destination for the NPZ file. Defaults to DATA_DIR / "lstm_sequences_raw.npz".
-
-    Returns
-    -------
-    pathlib.Path — path to the saved NPZ file.
+    The raw NPZ and derived cache are temporary runtime artifacts intended to exist
+    only for the current notebook session. Final notebook outputs remain visible
+    in an exported notebook, but the sequence files themselves are cleaned up at
+    the end of the benchmark.
     """
-    import math
     import numpy as np
-    from pathlib import Path
+    import tempfile
 
     try:
-        from seqcredit_model.config import DATA_DIR, RAW_SEQ_FILE
+        from seqcredit_model.config import (
+            get_runtime_lstm_cache_file,
+            get_runtime_raw_seq_file,
+        )
     except ModuleNotFoundError:
-        from config import DATA_DIR, RAW_SEQ_FILE
+        from config import get_runtime_lstm_cache_file, get_runtime_raw_seq_file
 
     if output_path is None:
-        output_path = Path(RAW_SEQ_FILE)
+        temp_dir = Path(tempfile.gettempdir()) / "seqcredit_model"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        output_path = temp_dir / "lstm_sequences_raw.npz"
+        os.environ["SEQCREDIT_EPHEMERAL"] = "1"
+        os.environ["SEQCREDIT_RAW_SEQ_FILE"] = str(output_path)
+        os.environ["SEQCREDIT_LSTM_CACHE_FILE"] = str(temp_dir / "lstm_sequences.npz")
     else:
-        output_path = Path(output_path)
+        output_path = _resolve_storage_path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    runtime_cache_path = get_runtime_lstm_cache_file()
 
     print("=" * 60)
-    print("Building LSTM Sequences — Telecel Ghana MoMo")
+    print("Building LSTM Sequences - Telecel Ghana MoMo")
     print("=" * 60)
+    print(f"  Ephemeral raw sequence file: {output_path}")
+    print(f"  Ephemeral derived cache: {runtime_cache_path}")
 
-    # Parse and categorize once (same preprocessing as build_pipeline)
     df_ts = _parse_timestamp(df)
     df_ts = _categorize_txtype(df_ts)
 
-    # Recompute cutoffs with the same followup filter used in build_pipeline
-    print(f"\n[1/4] Computing index-loan cutoffs (≥{min_followup_days}d followup)...")
+    print(f"\n[1/4] Computing index-loan cutoffs (>={min_followup_days}d followup)...")
     cutoffs_spark = _derive_loan_cutoffs(df_ts, min_followup_days=min_followup_days)
-    borrower_cutoffs = cutoffs_spark  # (user_id, last_loan_ts)
-    all_borrower_ids = [r[0] for r in cutoffs_spark.select("user_id").collect()]
-    n_borrowers = len(all_borrower_ids)
+    borrower_cutoffs = cutoffs_spark
+    borrower_ids_spark = cutoffs_spark.select("user_id").orderBy("user_id")
+    n_borrowers = cutoffs_spark.count()
     print(f"  Borrowers eligible: {n_borrowers:,}")
 
-    # ── Collect pre-cutoff transactions per borrower ─────────────────────────
-    print(f"\n[2/4] Collecting pre-cutoff transactions (cap={max_seq_len} per user)...")
+    print(
+        f"\n[2/4] Collecting pre-cutoff transactions in Spark "
+        f"(cap={max_seq_len} per user)..."
+    )
 
-    # Outgoing: user is the DEBIT (spending) party
     out_txns = (
         df_ts.filter(
             (F.col("DEBIT_PARTY_TYPE") == "Customer")
@@ -483,10 +500,15 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
         .withColumnRenamed("DEBIT_PARTY_ID", "user_id")
         .join(borrower_cutoffs, on="user_id", how="inner")
         .filter(F.col("ts") < F.col("last_loan_ts"))
-        .select("user_id", "ts", "TRANSACTION_AMOUNT", "txtype_cat", F.lit(1).alias("is_outgoing"))
+        .select(
+            "user_id",
+            "ts",
+            "TRANSACTION_AMOUNT",
+            "txtype_cat",
+            F.lit(1).alias("is_outgoing"),
+        )
     )
 
-    # Incoming: user is the CREDIT (receiving) party
     in_txns = (
         df_ts.filter(
             (F.col("CREDIT_PARTY_TYPE") == "Customer")
@@ -495,151 +517,176 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
         .withColumnRenamed("CREDIT_PARTY_ID", "user_id")
         .join(borrower_cutoffs, on="user_id", how="inner")
         .filter(F.col("ts") < F.col("last_loan_ts"))
-        .select("user_id", "ts", "TRANSACTION_AMOUNT", "txtype_cat", F.lit(0).alias("is_outgoing"))
+        .select(
+            "user_id",
+            "ts",
+            "TRANSACTION_AMOUNT",
+            "txtype_cat",
+            F.lit(0).alias("is_outgoing"),
+        )
     )
 
     all_txns = out_txns.union(in_txns)
-
-    # Keep only the most recent max_seq_len transactions per user (desc rank, then filter)
-    w = Window.partitionBy("user_id").orderBy(F.desc("ts"))
+    seq_window = Window.partitionBy("user_id").orderBy(F.desc("ts"))
     all_txns_capped = (
-        all_txns
-        .withColumn("_rank", F.row_number().over(w))
+        all_txns.withColumn("_rank", F.row_number().over(seq_window))
         .filter(F.col("_rank") <= max_seq_len)
         .drop("_rank")
     )
 
-    # Collect sorted sequences per user (asc = chronological order)
-    seq_spark = all_txns_capped.groupBy("user_id").agg(
-        F.sort_array(
-            F.collect_list(F.struct("ts", "TRANSACTION_AMOUNT", "txtype_cat", "is_outgoing")),
-            asc=True,
-        ).alias("sequence")
+    seq_spark = (
+        all_txns_capped.groupBy("user_id")
+        .agg(
+            F.sort_array(
+                F.collect_list(
+                    F.struct("ts", "TRANSACTION_AMOUNT", "txtype_cat", "is_outgoing")
+                ),
+                asc=True,
+            ).alias("sequence")
+        )
+        .orderBy("user_id")
     )
 
-    print("  Collecting to driver...")
-    seq_pd = seq_spark.toPandas()
-    seq_lookup = {row["user_id"]: row["sequence"] for _, row in seq_pd.iterrows()}
-    print(f"  Users with ≥1 pre-cutoff transaction: {len(seq_lookup):,}")
+    print(
+        "  Streaming borrower ids and grouped sequences to the driver in bounded batches..."
+    )
+    sequence_rows = seq_spark.toLocalIterator()
+    next_sequence_row = next(sequence_rows, None)
 
-    # ── Numpy feature extraction ─────────────────────────────────────────────
-    print(f"\n[3/4] Extracting features and building padded array "
-          f"({n_borrowers} × {max_seq_len} × {len(SEQ_FEATURE_NAMES)})...")
+    print(
+        f"\n[3/4] Extracting features and building padded array "
+        f"({n_borrowers:,} x {max_seq_len} x {len(SEQ_FEATURE_NAMES)})..."
+    )
 
     cat_to_idx = {c: i for i, c in enumerate(TXTYPE_CATS)}
     n_features = len(SEQ_FEATURE_NAMES)
-
-    user_ids_arr = np.array(all_borrower_ids)
+    borrower_ids = []
+    users_with_history = 0
     X = np.zeros((n_borrowers, max_seq_len, n_features), dtype=np.float32)
 
-    for i, uid in enumerate(all_borrower_ids):
-        if uid not in seq_lookup:
-            continue  # zero-padded sequence for users with no pre-loan history
+    for i, borrower_row in enumerate(borrower_ids_spark.toLocalIterator()):
+        uid = borrower_row["user_id"]
+        borrower_ids.append(uid)
 
-        seq = seq_lookup[uid]  # list of Row(ts, TRANSACTION_AMOUNT, txtype_cat, is_outgoing)
-        T = len(seq)
-        pad_start = max_seq_len - T  # pre-pad: place sequence at the END
-        prev_ts = None
+        seq = None
+        if next_sequence_row is not None and next_sequence_row["user_id"] == uid:
+            seq = next_sequence_row["sequence"]
+            next_sequence_row = next(sequence_rows, None)
+            users_with_history += 1
 
-        for j, txn in enumerate(seq):
-            slot = pad_start + j
-            amount = txn.TRANSACTION_AMOUNT or 0.0
+        if seq:
+            timesteps = len(seq)
+            pad_start = max_seq_len - timesteps
+            prev_ts = None
 
-            # [0] log_amount
-            X[i, slot, 0] = math.log(amount + 1.0)
-            # [1] is_outgoing
-            X[i, slot, 1] = float(txn.is_outgoing)
-            # [2-13] txtype one-hot
-            cat_idx = cat_to_idx.get(txn.txtype_cat, cat_to_idx["other"])
-            X[i, slot, 2 + cat_idx] = 1.0
-            # [14-15] hour cyclical
-            hour = txn.ts.hour
-            X[i, slot, 14] = math.sin(2 * math.pi * hour / 24)
-            X[i, slot, 15] = math.cos(2 * math.pi * hour / 24)
-            # [16-17] day-of-week cyclical (Python weekday: Mon=0)
-            dow = txn.ts.weekday()
-            X[i, slot, 16] = math.sin(2 * math.pi * dow / 7)
-            X[i, slot, 17] = math.cos(2 * math.pi * dow / 7)
-            # [18] hours since last transaction (capped at 720 h = 30 days)
-            if prev_ts is not None:
-                delta_h = (txn.ts - prev_ts).total_seconds() / 3600.0
-                X[i, slot, 18] = min(delta_h, 720.0)
-            prev_ts = txn.ts
+            for j, txn in enumerate(seq):
+                slot = pad_start + j
+                amount = float(txn["TRANSACTION_AMOUNT"] or 0.0)
+
+                X[i, slot, 0] = np.log1p(amount)
+                X[i, slot, 1] = float(txn["is_outgoing"])
+
+                cat_idx = cat_to_idx.get(txn["txtype_cat"], cat_to_idx["other"])
+                X[i, slot, 2 + cat_idx] = 1.0
+
+                hour = txn["ts"].hour
+                X[i, slot, 14] = np.sin(2 * np.pi * hour / 24.0)
+                X[i, slot, 15] = np.cos(2 * np.pi * hour / 24.0)
+
+                dow = txn["ts"].weekday()
+                X[i, slot, 16] = np.sin(2 * np.pi * dow / 7.0)
+                X[i, slot, 17] = np.cos(2 * np.pi * dow / 7.0)
+
+                if prev_ts is not None:
+                    delta_h = (txn["ts"] - prev_ts).total_seconds() / 3600.0
+                    X[i, slot, 18] = min(delta_h, 720.0)
+                prev_ts = txn["ts"]
 
         if (i + 1) % 50_000 == 0:
             print(f"  {i + 1:,} / {n_borrowers:,} users processed...")
 
-    # ── Save ────────────────────────────────────────────────────────────────
-    print(f"\n[4/4] Saving to {output_path}...")
-    np.savez_compressed(
+    metadata = {
+        "sequence_version": RAW_SEQUENCE_VERSION,
+        "borrower_count": n_borrowers,
+        "users_with_history": users_with_history,
+        "n_features": n_features,
+        "feature_names": list(SEQ_FEATURE_NAMES),
+        "max_seq_len": max_seq_len,
+        "min_followup_days": min_followup_days,
+        "user_ids_sha256": _hash_user_ids(borrower_ids),
+        "storage_path": str(output_path),
+        "ephemeral": True,
+        "runtime": "databricks"
+        if os.environ.get("DATABRICKS_RUNTIME_VERSION")
+        else "local",
+    }
+
+    print(f"\n[4/4] Saving ephemeral raw NPZ to {output_path}...")
+    _write_npz_with_metadata(
         output_path,
-        user_ids=user_ids_arr,
+        metadata,
+        user_ids=np.array(borrower_ids, dtype=object),
         sequences=X,
-        feature_names=np.array(SEQ_FEATURE_NAMES),
+        feature_names=np.array(SEQ_FEATURE_NAMES, dtype=object),
     )
     print(f"  Shape  : {X.shape}")
     print(f"  Features: {SEQ_FEATURE_NAMES}")
-    print(f"\nDone. Load via CreditRiskDataLoader.load_sequences() — no CSV files needed.")
+    print("\nDone. Run the benchmark in this same notebook session.")
     return output_path
 
 
 def build_pipeline(df, output_dir=None, min_followup_days=30):
-    """Run the full real-data pipeline and save outputs to CSV.
+    """Run the full real-data pipeline and save outputs for the current runtime.
 
-    Derives labels → engineers features → writes user_features.csv and
-    user_labels.csv to output_dir (defaults to the project data/ directory).
-
-    Parameters
-    ----------
-    df : Spark DataFrame
-        Raw transaction table, e.g.
-        ``spark.sql("SELECT * FROM melodatabricks616.default.yara_dump_table")``
-    output_dir : str or Path, optional
-        Directory to write output CSVs. Defaults to the project's data/ dir
-        as resolved by config.py. In Databricks you may prefer a /dbfs/ path,
-        e.g. ``output_dir='/dbfs/tmp/seqcredit/'``.
+    In Databricks notebook workflows with ``output_dir=None``, feature and label
+    tables are written to temporary runtime storage and registered via env vars so
+    the rest of the pipeline can run end-to-end without leaving persistent
+    artifacts behind.
     """
-    if output_dir is None:
-        try:
-            from seqcredit_model.config import DATA_DIR
-        except ModuleNotFoundError:
-            from config import DATA_DIR
-        out_path = Path(DATA_DIR)
+    import tempfile
+
+    if output_dir is None and os.environ.get("DATABRICKS_RUNTIME_VERSION"):
+        temp_dir = Path(tempfile.gettempdir()) / "seqcredit_model"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        out_path = temp_dir
+        os.environ["SEQCREDIT_EPHEMERAL"] = "1"
+        os.environ["SEQCREDIT_USER_FEATURES_FILE"] = str(out_path / "user_features.csv")
+        os.environ["SEQCREDIT_USER_LABELS_FILE"] = str(out_path / "user_labels.csv")
+    elif output_dir is None:
+        out_path = Path(output_dir) if output_dir else Path(".") / "data"
+        out_path = out_path.resolve()
     else:
         out_path = Path(output_dir)
 
     out_path.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
-    print("Real Data Pipeline — Telecel Ghana MoMo")
+    print("Real Data Pipeline - Telecel Ghana MoMo")
     print("=" * 60)
+    print(f"  Runtime output dir: {out_path}")
 
     spark = SparkSession.builder.getOrCreate()
-
-    # Parse timestamps once; pass pre-parsed df to all downstream functions
-    # so Spark can cache/reuse the parsed column across multiple actions.
     df_ts = _parse_timestamp(df)
     df_ts = _categorize_txtype(df_ts)
 
-    # ── Step 1: Loan cutoffs (index loan date per borrower) ───────────────────
     print("\n[1/4] Computing index-loan cutoff dates per borrower...")
     cutoffs_spark = _derive_loan_cutoffs(df_ts, min_followup_days=min_followup_days)
     n_borrowers = cutoffs_spark.count()
-    print(f"  Borrowers (with ≥1 loan, ≥{min_followup_days}d followup): {n_borrowers:,}")
+    print(
+        f"  Borrowers (with >=1 loan, >={min_followup_days}d followup): {n_borrowers:,}"
+    )
 
-    # ── Step 2: Labels (post-cutoff repayment / penalty signals) ─────────────
     print("\n[2/4] Deriving labels from post-index-loan signals...")
     labels_pd = derive_labels(df_ts, cutoffs_spark)
-    total     = len(labels_pd)
-    n_good    = (labels_pd["credit_risk_label"] == 0).sum()
-    n_risky   = (labels_pd["credit_risk_label"] == 1).sum()
+    total = len(labels_pd)
+    n_good = (labels_pd["credit_risk_label"] == 0).sum()
+    n_risky = (labels_pd["credit_risk_label"] == 1).sum()
     n_default = (labels_pd["credit_risk_label"] == 2).sum()
     print(f"  Total borrowers : {total:,}")
     print(f"  Good      (0)   : {n_good:,}  ({n_good / total:.1%})")
     print(f"  Risky     (1)   : {n_risky:,}  ({n_risky / total:.1%})")
     print(f"  Default   (2)   : {n_default:,}  ({n_default / total:.1%})")
 
-    # ── Step 3: Features (pre-cutoff transactions only) ───────────────────────
     print("\n[3/4] Engineering user-level features (pre-index-loan window)...")
     borrower_ids_spark = spark.createDataFrame(
         labels_pd[["user_id"]], schema="user_id string"
@@ -648,14 +695,13 @@ def build_pipeline(df, output_dir=None, min_followup_days=30):
     print(f"  Shape   : {features_pd.shape}")
     print(f"  Columns : {list(features_pd.columns)}")
 
-    # ── Step 4: Save ──────────────────────────────────────────────────────────
-    print("\n[4/4] Saving CSVs...")
+    print("\n[4/4] Saving runtime CSVs...")
     features_path = out_path / "user_features.csv"
-    labels_path   = out_path / "user_labels.csv"
+    labels_path = out_path / "user_labels.csv"
     features_pd.to_csv(features_path, index=False)
     labels_pd.to_csv(labels_path, index=False)
     print(f"  {features_path}")
     print(f"  {labels_path}")
 
-    print("\nDone. Next: run src/seqcredit_model/run_cv_benchmark.py")
+    print("\nDone. Next: run build_sequences_spark() in this same notebook session.")
     return features_pd, labels_pd
