@@ -594,6 +594,15 @@ def main():
 
         print("  Saved cv_results_y_default.csv")
         print("  Saved cv_results_y_bad.csv")
+
+        # Save OOF predictions for downstream ROC curve generation
+        oof_arrays = {"y_default": y_default, "y_bad": y_bad}
+        for model_name, oof in oof_preds_default.items():
+            oof_arrays[f"default_{model_name}"] = oof
+        for model_name, oof in oof_preds_bad.items():
+            oof_arrays[f"bad_{model_name}"] = oof
+        np.savez(DATA_DIR / "cv_oof_preds.npz", **oof_arrays)
+        print("  Saved cv_oof_preds.npz")
     else:
         print("\n[4/6] Ephemeral run: skipping persisted CV result files.")
 
