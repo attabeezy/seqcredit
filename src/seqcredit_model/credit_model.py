@@ -16,6 +16,10 @@ try:
         TRANSACTIONS_DIR,
         USER_FEATURES_FILE,
         USER_LABELS_FILE,
+        get_runtime_lstm_cache_file,
+        get_runtime_raw_seq_file,
+        get_runtime_user_features_file,
+        get_runtime_user_labels_file,
     )
 except ModuleNotFoundError:
     from config import (
@@ -24,6 +28,10 @@ except ModuleNotFoundError:
         TRANSACTIONS_DIR,
         USER_FEATURES_FILE,
         USER_LABELS_FILE,
+        get_runtime_lstm_cache_file,
+        get_runtime_raw_seq_file,
+        get_runtime_user_features_file,
+        get_runtime_user_labels_file,
     )
 import json
 
@@ -107,6 +115,52 @@ LSTM_FEATURE_COLUMNS = [
     "reverse_txn_number",
     "last_5_std_amount",
 ]
+
+
+def _load_npz_metadata(npz_file) -> Dict:
+    """Load JSON metadata stored inside an NPZ file."""
+    if "metadata_json" not in npz_file.files:
+        return {}
+    metadata_raw = npz_file["metadata_json"]
+    if isinstance(metadata_raw, np.ndarray):
+        metadata_raw = metadata_raw.item()
+    return json.loads(str(metadata_raw))
+
+
+def _sequence_cache_metadata(
+    train_users: List[str],
+    test_users: List[str],
+    feature_names: List[str],
+    max_seq_len: int,
+    raw_seq_path: Path,
+) -> Dict[str, object]:
+    """Build metadata used to validate derived sequence caches."""
+    return {
+        "train_user_ids": list(train_users),
+        "test_user_ids": list(test_users),
+        "feature_names": list(feature_names),
+        "max_seq_len": int(max_seq_len),
+        "raw_seq_path": str(raw_seq_path),
+    }
+
+
+def _normalize_sequence_splits(
+    X_train_seq: np.ndarray, X_test_seq: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Fit sequence scaling on non-padded train timesteps only."""
+    train_mask = np.any(X_train_seq != 0.0, axis=2)
+    test_mask = np.any(X_test_seq != 0.0, axis=2)
+
+    if train_mask.any():
+        scaler = StandardScaler()
+        scaler.fit(X_train_seq[train_mask])
+        X_train_seq = X_train_seq.copy()
+        X_test_seq = X_test_seq.copy()
+        X_train_seq[train_mask] = scaler.transform(X_train_seq[train_mask])
+        if test_mask.any():
+            X_test_seq[test_mask] = scaler.transform(X_test_seq[test_mask])
+
+    return X_train_seq.astype(np.float32), X_test_seq.astype(np.float32)
 
 
 def _normalize_keras_save_path(path: str) -> str:
@@ -244,6 +298,11 @@ class CreditRiskDataLoader:
         self.transactions_dir = transactions_dir
         self.test_size = test_size
         self.random_state = random_state
+
+        if features_path == str(USER_FEATURES_FILE):
+            self.features_path = str(get_runtime_user_features_file())
+        if summaries_path == str(USER_LABELS_FILE):
+            self.summaries_path = str(get_runtime_user_labels_file())
 
         self._train_user_ids = None
         self._test_user_ids = None
@@ -478,6 +537,104 @@ class CreditRiskDataLoader:
 
         if self._train_user_ids is None:
             self.prepare_static_splits()
+
+        runtime_cache_path = (
+            get_runtime_lstm_cache_file()
+            if cache_path == str(LSTM_CACHE_FILE)
+            else Path(cache_path)
+        )
+        raw_seq_file = get_runtime_raw_seq_file()
+        expected_cache_metadata = _sequence_cache_metadata(
+            list(self._train_user_ids_ordered),
+            list(self._test_user_ids_ordered),
+            [],
+            max_seq_len,
+            raw_seq_file,
+        )
+
+        if runtime_cache_path.exists():
+            print(f"Loading cached sequences from {runtime_cache_path}...")
+            cached = np.load(runtime_cache_path, allow_pickle=True)
+            cache_metadata = _load_npz_metadata(cached)
+            metadata_matches = (
+                cache_metadata.get("train_user_ids")
+                == expected_cache_metadata["train_user_ids"]
+                and cache_metadata.get("test_user_ids")
+                == expected_cache_metadata["test_user_ids"]
+                and cache_metadata.get("max_seq_len") == max_seq_len
+                and cache_metadata.get("raw_seq_path") == str(raw_seq_file)
+            )
+            if metadata_matches:
+                return {
+                    "X_train_seq": cached["X_train_seq"],
+                    "X_test_seq": cached["X_test_seq"],
+                    "y_train": cached["y_train"],
+                    "y_test": cached["y_test"],
+                    "feature_names": list(cached["feature_names"]),
+                }
+            print("  Cached sequence metadata mismatch; rebuilding from source...")
+
+        if raw_seq_file.exists():
+            print(f"Loading raw sequences from {raw_seq_file}...")
+            raw = np.load(raw_seq_file, allow_pickle=True)
+            raw_metadata = _load_npz_metadata(raw)
+            raw_user_ids = list(raw["user_ids"])
+            raw_sequences = raw["sequences"]
+            raw_feature_names = list(raw["feature_names"])
+            uid_to_idx = {uid: i for i, uid in enumerate(raw_user_ids)}
+
+            train_users = [u for u in self._train_user_ids_ordered if u in uid_to_idx]
+            test_users = [u for u in self._test_user_ids_ordered if u in uid_to_idx]
+            train_indices = [uid_to_idx[u] for u in train_users]
+            test_indices = [uid_to_idx[u] for u in test_users]
+
+            X_train_seq = raw_sequences[train_indices].astype(np.float32)
+            X_test_seq = raw_sequences[test_indices].astype(np.float32)
+
+            df_lbl = pd.read_csv(self.summaries_path)
+            df_lbl = df_lbl[df_lbl["credit_risk_label"] != -1]
+            uid_to_label = dict(
+                zip(
+                    df_lbl["user_id"],
+                    (df_lbl["credit_risk_label"] == 2).astype(int),
+                )
+            )
+            y_train = np.array([uid_to_label[u] for u in train_users], dtype=np.int32)
+            y_test = np.array([uid_to_label[u] for u in test_users], dtype=np.int32)
+
+            X_train_seq, X_test_seq = _normalize_sequence_splits(
+                X_train_seq, X_test_seq
+            )
+            print(
+                f"  Train sequences: {X_train_seq.shape}, Test sequences: {X_test_seq.shape}"
+            )
+
+            cache_metadata = _sequence_cache_metadata(
+                train_users,
+                test_users,
+                raw_feature_names,
+                int(raw_metadata.get("max_seq_len", X_train_seq.shape[1])),
+                raw_seq_file,
+            )
+            runtime_cache_path.parent.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(
+                runtime_cache_path,
+                X_train_seq=X_train_seq,
+                X_test_seq=X_test_seq,
+                y_train=y_train,
+                y_test=y_test,
+                feature_names=np.array(raw_feature_names, dtype=object),
+                metadata_json=np.array(json.dumps(cache_metadata), dtype=object),
+            )
+            print(f"  Cached to {runtime_cache_path}")
+
+            return {
+                "X_train_seq": X_train_seq,
+                "X_test_seq": X_test_seq,
+                "y_train": y_train,
+                "y_test": y_test,
+                "feature_names": raw_feature_names,
+            }
 
         cache_file = Path(cache_path)
         if cache_file.exists():

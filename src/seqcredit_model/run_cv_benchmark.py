@@ -1,6 +1,7 @@
 """5-fold stratified cross-validation benchmark with statistical significance tests."""
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -20,6 +21,10 @@ try:
         TRANSACTIONS_DIR,
         USER_FEATURES_FILE,
         USER_LABELS_FILE,
+        get_runtime_lstm_cache_file,
+        get_runtime_raw_seq_file,
+        get_runtime_user_features_file,
+        get_runtime_user_labels_file,
     )
     from seqcredit_model.credit_model import (
         CreditRiskDataLoader,
@@ -40,6 +45,10 @@ except ModuleNotFoundError:
         TRANSACTIONS_DIR,
         USER_FEATURES_FILE,
         USER_LABELS_FILE,
+        get_runtime_lstm_cache_file,
+        get_runtime_raw_seq_file,
+        get_runtime_user_features_file,
+        get_runtime_user_labels_file,
     )
     from credit_model import (
         CreditRiskDataLoader,
@@ -68,12 +77,41 @@ N_SPLITS = 5
 N_BOOTSTRAP = 1000
 CI_LEVEL = 0.95
 
-# Sequential models require either per-user transaction CSV files (synthetic data)
-# or a pre-built raw sequences NPZ from build_sequences_spark() (real data).
-HAS_SEQUENCES = (
-    (TRANSACTIONS_DIR.exists() and any(TRANSACTIONS_DIR.glob("*.csv")))
-    or Path(RAW_SEQ_FILE).exists()
-)
+
+def is_ephemeral_run() -> bool:
+    """Return whether the current run should avoid persistent artifacts."""
+    return os.environ.get("SEQCREDIT_EPHEMERAL") == "1"
+
+def has_sequences() -> bool:
+    """Return whether sequential inputs are available in the current runtime."""
+    return (
+        (TRANSACTIONS_DIR.exists() and any(TRANSACTIONS_DIR.glob("*.csv")))
+        or get_runtime_raw_seq_file().exists()
+    )
+
+
+def cleanup_ephemeral_sequence_artifacts() -> None:
+    """Remove temporary sequence artifacts created for a single notebook run."""
+    if os.environ.get("SEQCREDIT_EPHEMERAL") != "1":
+        return
+
+    for path in [
+        get_runtime_lstm_cache_file(),
+        get_runtime_raw_seq_file(),
+        get_runtime_user_features_file(),
+        get_runtime_user_labels_file(),
+    ]:
+        if path.exists():
+            path.unlink()
+            print(f"  Removed temporary artifact: {path}")
+    for env_var in [
+        "SEQCREDIT_EPHEMERAL",
+        "SEQCREDIT_RAW_SEQ_FILE",
+        "SEQCREDIT_LSTM_CACHE_FILE",
+        "SEQCREDIT_USER_FEATURES_FILE",
+        "SEQCREDIT_USER_LABELS_FILE",
+    ]:
+        os.environ.pop(env_var, None)
 
 
 def compute_brier_score(y_true: np.ndarray, y_proba: np.ndarray) -> float:
@@ -367,6 +405,7 @@ def main():
     print(f"  Bootstrap iterations: {N_BOOTSTRAP}")
 
     set_random_seeds(RANDOM_SEED)
+    has_seq_inputs = has_sequences()
 
     print("\n[1/6] Loading data...")
     loader = CreditRiskDataLoader()
@@ -377,7 +416,7 @@ def main():
     feature_names = static_data["feature_names"]
 
     # Load labels and create y_bad target
-    df_labels = pd.read_csv(USER_LABELS_FILE)
+    df_labels = pd.read_csv(get_runtime_user_labels_file())
     df_labels = df_labels[df_labels["credit_risk_label"] != -1]
     df_labels["y_bad"] = df_labels["credit_risk_label"].isin([1, 2]).astype(int)
 
@@ -396,7 +435,7 @@ def main():
     assert len(y_default) == len(y_bad), "y_default and y_bad length mismatch!"
     assert len(X) == len(y_bad), "X and y_bad length mismatch!"
 
-    if HAS_SEQUENCES:
+    if has_seq_inputs:
         print("\n[2/6] Loading LSTM sequences...")
         seq_data = loader.load_sequences()
         X_seq = seq_data["X_train_seq"]
@@ -440,8 +479,8 @@ def main():
     total_start = time.time()
 
     for target_name, y, X_seq_curr in [
-        ("y_default", y_default, X_seq if HAS_SEQUENCES else None),
-        ("y_bad",     y_bad,     X_seq if HAS_SEQUENCES else None),
+        ("y_default", y_default, X_seq if has_seq_inputs else None),
+        ("y_bad",     y_bad,     X_seq if has_seq_inputs else None),
     ]:
         print(f"\n  === Target: {target_name} ===")
 
@@ -483,7 +522,7 @@ def main():
                 oof_preds_bad[model_name] = oof
 
         # --- LSTM + HybridLSTM (skipped when no per-user transaction files) ---
-        if HAS_SEQUENCES:
+        if has_seq_inputs:
             model_start = time.time()
             print(f"    LSTM...")
             fold_df, summary, oof = run_lstm_cv(lstm_params, X_seq_curr, y)
@@ -533,31 +572,35 @@ def main():
             print("    LSTM / HybridLSTM — skipped (no sequence files)")
 
         # Intermediate save after each target
-        results_df = pd.DataFrame(all_results)
-        results_df.to_csv(
-            DATA_DIR / f"cv_results_intermediate_{target_name}.csv", index=False
-        )
-        print(f"    [Checkpoint] Saved intermediate results for {target_name}")
+        if not is_ephemeral_run():
+            results_df = pd.DataFrame(all_results)
+            results_df.to_csv(
+                DATA_DIR / f"cv_results_intermediate_{target_name}.csv", index=False
+            )
+            print(f"    [Checkpoint] Saved intermediate results for {target_name}")
 
     total_elapsed = time.time() - total_start
     print(f"\n  Total CV time: {total_elapsed / 60:.1f} minutes")
 
     results_df = pd.DataFrame(all_results)
 
-    print("\n[4/6] Saving CV results...")
-    DATA_DIR.mkdir(exist_ok=True)
+    if not is_ephemeral_run():
+        print("\n[4/6] Saving CV results...")
+        DATA_DIR.mkdir(exist_ok=True)
 
-    for target_name in ["y_default", "y_bad"]:
-        target_df = results_df[results_df["target"] == target_name].copy()
-        target_df.to_csv(DATA_DIR / f"cv_results_{target_name}.csv", index=False)
+        for target_name in ["y_default", "y_bad"]:
+            target_df = results_df[results_df["target"] == target_name].copy()
+            target_df.to_csv(DATA_DIR / f"cv_results_{target_name}.csv", index=False)
 
-    print(f"  Saved cv_results_y_default.csv")
-    print(f"  Saved cv_results_y_bad.csv")
+        print("  Saved cv_results_y_default.csv")
+        print("  Saved cv_results_y_bad.csv")
+    else:
+        print("\n[4/6] Ephemeral run: skipping persisted CV result files.")
 
     print("\n[5/6] Running significance tests...")
 
     static_models = ["LogisticRegression", "XGBoost", "RandomForest", "LightGBM"]
-    seq_models = ["LSTM", "HybridLSTM"] if HAS_SEQUENCES else []
+    seq_models = ["LSTM", "HybridLSTM"] if has_seq_inputs else []
     all_models = static_models + seq_models
 
     best_static = None
@@ -604,8 +647,9 @@ def main():
 
     if sig_results:
         sig_results_df = pd.concat(sig_results, ignore_index=True)
-        sig_results_df.to_csv(DATA_DIR / "significance_tests.csv", index=False)
-        print(f"  Saved significance_tests.csv")
+        if not is_ephemeral_run():
+            sig_results_df.to_csv(DATA_DIR / "significance_tests.csv", index=False)
+            print("  Saved significance_tests.csv")
 
         print("\n  Significant comparisons (p < 0.05):")
         if "significant" in sig_results_df.columns:
@@ -620,7 +664,7 @@ def main():
     else:
         print("  No valid OOF predictions available for significance tests")
 
-    print("\n[6/6] Saving reproducibility manifest...")
+    print("\n[6/6] Finalizing run...")
 
     manifest = {
         "random_seed": RANDOM_SEED,
@@ -633,9 +677,14 @@ def main():
         "total_time_minutes": total_elapsed / 60,
     }
 
-    with open(DATA_DIR / "cv_manifest.json", "w") as f:
-        json.dump(manifest, f, indent=2)
-    print(f"  Saved cv_manifest.json")
+    if not is_ephemeral_run():
+        with open(DATA_DIR / "cv_manifest.json", "w") as f:
+            json.dump(manifest, f, indent=2)
+        print("  Saved cv_manifest.json")
+    else:
+        print("  Ephemeral run: skipping persisted manifest.")
+
+    cleanup_ephemeral_sequence_artifacts()
 
     print("\n" + "=" * 60)
     print("CV Benchmark Complete")
@@ -656,6 +705,12 @@ def main():
         .mean()
     )
     print(bad_summary.round(4).to_string())
+
+    return {
+        "results_df": results_df,
+        "significance_tests": sig_results_df if sig_results else None,
+        "manifest": manifest,
+    }
 
 
 if __name__ == "__main__":
