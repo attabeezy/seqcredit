@@ -6,7 +6,11 @@
 \usepackage{multirow}
 \usepackage{hyperref}
 \usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage{placeins}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning}
+\usepackage{algorithm}
 
 \usepackage{icml2026}
 
@@ -42,8 +46,8 @@ We present a large-scale empirical study using 374 million real
 transactions from 222,618 borrowers on a Ghanaian MoMo platform,
 applying a temporal feature engineering framework that derives 47
 behavioral features exclusively from pre-loan transaction history.
-We identify and correct a critical data leakage pattern — the
-\emph{index-loan temporal cutoff} — and show it inflates AUC-ROC to
+We identify and correct a critical data leakage pattern,the
+\emph{index-loan temporal cutoff},and show it inflates AUC-ROC to
 1.0 without correction.
 After full correction, gradient boosting models achieve AUC-ROC of
 0.732 for strict default prediction without any credit bureau features.
@@ -60,7 +64,7 @@ adoption, with Ghana ranking among the continent's most active markets:
 over 65 million registered MoMo accounts and GHS 278 billion in
 transaction value as of 2023~\cite{ghana2024mobile}.
 For tens of millions of individuals, mobile money is their \emph{only}
-financial footprint — the sole structured record of income, spending,
+financial footprint,the sole structured record of income, spending,
 and financial behavior.
 Yet credit scoring in this context remains largely unsolved: traditional
 bureaus are absent or nascent, and most micro-lenders rely on simple
@@ -71,7 +75,7 @@ platforms can predict creditworthiness even without conventional credit
 history~\cite{bjorkegren2020behavior,francis2019effective}.
 However, most published studies use small proprietary samples, synthetic
 proxies, or data from markets with stronger baseline infrastructure.
-The unique characteristics of West African MoMo ecosystems — dense
+The unique characteristics of West African MoMo ecosystems,dense
 transaction graphs, high loan turnover, and informal economic patterns —
 are largely unstudied at scale.
 
@@ -82,7 +86,7 @@ Our contributions are:
   \item \textbf{Scale:} The largest published credit scoring study on
         real African MoMo data: 374M transactions, 222K borrowers.
   \item \textbf{Temporal leakage formalization:} We identify and correct
-        a systematic leakage pattern — the index-loan temporal cutoff —
+        a systematic leakage pattern,the index-loan temporal cutoff —
         and show it inflates AUC to 1.0.
   \item \textbf{Real-data baseline:} AUC-ROC of 0.732 for strict default
         prediction using behavioral features alone.
@@ -99,8 +103,8 @@ emerging markets~\cite{bjorkegren2020behavior,francis2019effective,ngwenya2024cr
 \citet{bjorkegren2020behavior} show smartphone behavioral signatures
 predict repayment in developing markets; \citet{ngwenya2024credit} apply
 logistic regression to alternative data in Africa.
-Gradient boosting models — XGBoost~\cite{chen2016xgboost} and
-LightGBM~\cite{ke2017lightgbm} — consistently dominate tabular credit
+Gradient boosting models,XGBoost~\cite{chen2016xgboost} and
+LightGBM~\cite{ke2017lightgbm},consistently dominate tabular credit
 benchmarks, a pattern we confirm on real MoMo data.
 Mobile money as a financial inclusion vehicle specific to sub-Saharan
 Africa is surveyed by \citet{osabutey2024mobile} and documented
@@ -114,7 +118,7 @@ controls.
 \subsection{Dataset}
 
 Our data is drawn from a proprietary transaction log of a major Ghanaian
-MoMo provider covering December 2025 to February 2026 — approximately
+MoMo provider covering December 2025 to February 2026,approximately
 90 days of activity.
 All identifiers are hashed and anonymized.
 The raw table contains 374,295,424 rows across 12 columns:
@@ -134,8 +138,8 @@ features are derived exclusively from transactions occurring
 \emph{strictly before} their most recent loan disbursement; labels are
 derived from events \emph{strictly after} it.
 
-To address right-censoring — borrowers whose index loan occurred near
-the end of the window have insufficient followup time — we apply a
+To address right-censoring,borrowers whose index loan occurred near
+the end of the window have insufficient followup time,we apply a
 30-day minimum followup filter, retaining 223,081 borrowers.
 Of these, 222,618 have at least one pre-loan transaction and thus
 non-empty feature vectors; 463 are dropped at merge.
@@ -196,6 +200,7 @@ transactions per day, average inter-transaction gap).
 
 The 243 raw transaction type strings are mapped to 9 semantic categories
 via rule-based pattern matching.
+The full feature list is in Appendix~\ref{app:features}.
 
 \section{Experiments}
 
@@ -212,16 +217,25 @@ We report mean AUC-ROC, AUC-PR, F1, Brier score, and Expected
 Calibration Error (ECE) across folds.
 Statistical significance between model pairs is assessed with 1,000
 bootstrap iterations at $p < 0.05$.
+Hyperparameters are listed in Appendix~\ref{app:hyperparams}.
 
 \subsection{Results}
 
-\FloatBarrier
-\begin{table*}[t]
+Table~\ref{tab:results} reports results for both targets.
+For $y_{\text{default}}$, XGBoost achieves the best AUC-ROC
+($0.732_{\pm.010}$), with all gradient boosting models clustered in
+$0.723$--$0.732$ and LR trailing at $0.709_{\pm.010}$.
+For $y_{\text{bad}}$, the task is better-conditioned (58.2\% positive
+rate): LightGBM leads at AUC-ROC $0.729_{\pm.002}$ with excellent
+calibration (ECE 0.067), while XGBoost achieves the best F1 (0.741)
+but with poor calibration (ECE 0.363).
+ROC curves are shown in Figure~\ref{fig:roc}.
+
+\begin{table*}[tp]
 \caption{5-fold CV results on 222,618 borrowers (30-day followup
-  filter). Means across folds.
+  filter). Means across folds; subscript shows per-fold std.
   $y_{\text{default}}$: strict default (zero repayments).
-  $y_{\text{bad}}$: default or penalised.
-  ROC curves are provided in Appendix~\ref{app:roc}.}
+  $y_{\text{bad}}$: default or penalised.}
 \label{tab:results}
 \vskip 0.1in
 \begin{center}
@@ -247,68 +261,59 @@ Target & Model & AUC-ROC & AUC-PR & F1 & Brier & ECE \\
 \end{center}
 \vskip -0.1in
 \end{table*}
-\FloatBarrier
-
-Table~\ref{tab:results} reports results for both targets.
-For $y_{\text{default}}$, XGBoost achieves the best AUC-ROC
-($0.732_{\pm.010}$), with all gradient boosting models clustered in
-$0.723$--$0.732$ and LR trailing at $0.709_{\pm.010}$.
-For $y_{\text{bad}}$, the task is better-conditioned (58.2\% positive
-rate): LightGBM leads at AUC-ROC $0.729_{\pm.002}$ with excellent
-calibration (ECE 0.067), while XGBoost achieves the best F1 (0.741)
-but with poor calibration (ECE 0.363).
 
 \subsection{Discussion}
 
 \textbf{Leakage impact.}
-Without the index-loan cutoff, AUC-ROC reaches 1.0 — a trivial
+Without the index-loan cutoff, AUC-ROC reaches 1.0,a trivial
 outcome driven by post-loan repayment features encoding the label.
-After correction, AUC-ROC is 0.733: a meaningful but honest result.
-This leakage pattern is a systematic risk in any loan-outcome pipeline
-where features are computed over a rolling history spanning the
-prediction event.
+After correction, AUC-ROC is 0.732: a meaningful but honest result.
 
 \textbf{Severe class imbalance shapes metrics.}
 The 4.4\% default rate makes AUC-PR and F1 low by construction for
 $y_{\text{default}}$ (AUC-PR $\approx$ 0.11, F1 $\approx$ 0.16),
-even though AUC-ROC of 0.733 represents genuine discrimination.
-Practitioners deploying these models for loan pricing should rely on
-probability scores with proper recalibration rather than fixed-threshold
-F1, particularly for the strict default target.
+even though AUC-ROC of 0.732 represents genuine discrimination.
+Practitioners deploying these models should rely on probability scores
+with proper recalibration rather than fixed-threshold F1.
 
 \textbf{Synthetic-to-real gap.}
 A companion study~\cite{anonymous2026seqcredit} evaluated the same
 feature framework on a calibrated 10,000-user synthetic MoMo dataset,
 reporting XGBoost AUC-ROC of 0.881 and LightGBM 0.878.
-On real data the same models achieve 0.732 and 0.729 — a gap of
-approximately 15 percentage points.
-Real behavioral signal is \emph{noisier} than synthetic calibration
-assumes: informal economy patterns, irregular income cycles, and
-data sparsity at the user level all reduce predictive signal.
-Synthetic benchmarks should be treated as optimistic upper bounds, not
-substitutes for real evaluation.
+On real data the same models achieve 0.732 and 0.729,a gap of
+approximately 15 percentage points, driven by informal economy noise,
+irregular income cycles, and user-level data sparsity absent from
+synthetic calibration.
 
 \textbf{Feature engineering dominates model choice.}
 No pairwise comparison reaches statistical significance at 5\% for
 either target, despite $n = 222$K.
 This convergence suggests the performance ceiling is set by the feature
-representation, not the model family — consistent with prior work in
+representation, not the model family,consistent with prior work in
 tabular ML~\cite{ngwenya2024credit}.
 
 \textbf{Calibration varies by task.}
 For $y_{\text{bad}}$ (balanced classes), LightGBM delivers both strong
-discrimination and excellent calibration (ECE 0.007), making its
+discrimination and excellent calibration (ECE 0.067), making its
 probability scores directly actionable for loan pricing.
 For $y_{\text{default}}$ (4.4\% positive), all models show high ECE
-(0.32--0.40), reflecting the difficulty of calibrating on severely
-imbalanced data without post-hoc correction.
+(0.32--0.40), requiring post-hoc recalibration before deployment.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{roc_curves}
+\caption{Out-of-fold ROC curves for all four classifiers on both
+  prediction targets ($n=222{,}618$, 5-fold OOF).
+  AUC values match Table~\ref{tab:results}.}
+\label{fig:roc}
+\end{figure}
 
 \section{Conclusion}
 
 We present a large-scale credit scoring study on real West African
 mobile money data, demonstrating that behavioral features derived from
 transaction history predict strict default with AUC-ROC of 0.732 on
-222,618 Ghanaian borrowers — without any credit bureau features.
+222,618 Ghanaian borrowers,without any credit bureau features.
 We formalize the index-loan temporal cutoff as a necessary leakage
 control, and establish that a calibrated synthetic benchmark
 overestimates real-world performance by $\approx$15 percentage points.
@@ -331,17 +336,189 @@ assessments and mechanisms for human review.
 \bibliography{references}
 \bibliographystyle{icml2026}
 
+\clearpage
+\onecolumn
 \appendix
-\section{ROC Curves}
-\label{app:roc}
+
+\section{Pipeline Pseudocode}
+\label{app:pseudocode}
+
+Algorithm~\ref{alg:cutoff} formalizes the index-loan temporal cutoff
+and right-censoring filter that are the core methodological
+contributions of this work.
+
+\begin{algorithm}[h]
+\caption{Index-loan cutoff and right-censoring filter}
+\label{alg:cutoff}
+\begin{algorithmic}
+\REQUIRE Transaction log $\mathcal{T}$, min followup $d = 30$ days
+\ENSURE Feature matrix $X$, label vector $y$
+\STATE $t_{\max} \gets \max_{r \in \mathcal{T}} r.\mathit{ts}$
+\STATE $t_{\text{cutoff}} \gets t_{\max} - d$
+\FOR{each borrower $u$}
+  \STATE $t^*_u \gets \max\{r.\mathit{ts} : r \in \mathcal{T}_u,\ r.\mathit{type} = \textsc{LoanDisb}\}$
+  \IF{$t^*_u > t_{\text{cutoff}}$}
+    \STATE \textbf{drop} $u$ \COMMENT{insufficient followup}
+  \ELSE
+    \STATE $\mathcal{T}^-_u \gets \{r \in \mathcal{T}_u : r.\mathit{ts} < t^*_u\}$ \COMMENT{pre-loan}
+    \STATE $\mathcal{T}^+_u \gets \{r \in \mathcal{T}_u : r.\mathit{ts} > t^*_u\}$ \COMMENT{post-loan}
+    \STATE $X_u \gets \textsc{ExtractFeatures}(\mathcal{T}^-_u)$
+    \STATE $y_u \gets \mathbf{1}[\text{no repayments in } \mathcal{T}^+_u]$
+  \ENDIF
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\section{Feature Engineering Pipeline}
+\label{app:flowchart}
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\columnwidth]{roc_curves}
-\caption{Out-of-fold ROC curves for all four classifiers on both
-  prediction targets. Generated from 5-fold OOF predictions on
-  222,618 borrowers.}
-\label{fig:roc}
+\begin{tikzpicture}[
+  node distance=0.5cm,
+  box/.style={rectangle, draw, rounded corners=3pt, text centered,
+              minimum width=5.0cm, minimum height=0.5cm,
+              font=\small, fill=white},
+  hibox/.style={rectangle, draw, rounded corners=3pt, text centered,
+              minimum width=5.0cm, minimum height=0.5cm,
+              font=\small, fill=gray!12},
+  arr/.style={-{Latex[length=2mm]}, thick}
+]
+\node[hibox] (raw)  {374M raw MoMo transactions};
+\node[box, below=of raw]  (parse) {Parse timestamps; categorise tx types};
+\node[box, below=of parse] (cut)  {Index-loan cutoff per borrower};
+\node[box, below=of cut]  (filt) {30-day followup filter};
+\node[box, below=of filt] (feat) {Aggregate feature extraction (8 groups)};
+\node[hibox, below=of feat] (mat)  {User matrix $\mathbb{R}^{222{,}618 \times 47}$};
+\node[box, below=of mat]  (cv)   {5-fold stratified CV $\times$ 4 classifiers};
+
+\draw[arr] (raw)   -- (parse);
+\draw[arr] (parse) -- (cut);
+\draw[arr] (cut)   -- (filt);
+\draw[arr] (filt)  -- (feat);
+\draw[arr] (feat)  -- (mat);
+\draw[arr] (mat)   -- (cv);
+\end{tikzpicture}
+\caption{End-to-end pipeline from raw transactions to cross-validated
+  model evaluation.}
+\label{fig:pipeline}
 \end{figure}
+
+\section{Full Feature List}
+\label{app:features}
+
+Table~\ref{tab:features} lists all 47 features.
+Four balance-at-loan features (\dag) are not available from the raw
+transaction log and are set to zero; they are retained for interface
+compatibility with the synthetic benchmark~\cite{anonymous2026seqcredit}.
+
+\begin{table*}[h]
+\caption{All 47 user-level features by category.}
+\label{tab:features}
+\vskip 0.05in
+\begin{center}
+\begin{scriptsize}
+\begin{tabular}{p{2.0cm}p{12.0cm}}
+\toprule
+Category & Features \\
+\midrule
+Volume \& amount
+  & \texttt{obs\_txn\_count}, \texttt{total\_volume},
+    \texttt{avg\_transaction\_amount}, \texttt{median\_transaction\_amount},
+    \texttt{std\_transaction\_amount}, \texttt{max\_transaction\_amount},
+    \texttt{min\_transaction\_amount}, \texttt{cv\_transaction\_amount} \\
+\addlinespace
+Tx type mix
+  & \texttt{pct\_transfers}, \texttt{pct\_cashouts},
+    \texttt{pct\_payments}, \texttt{pct\_airtime},
+    \texttt{pct\_betting}, \texttt{pct\_fsi} \\
+\addlinespace
+Temporal
+  & \texttt{pct\_night\_txns},
+    \texttt{pct\_early\_morning\_txns},
+    \texttt{pct\_weekend\_txns} \\
+\addlinespace
+Loan history
+  & \texttt{n\_loans\_received}, \texttt{total\_loan\_volume},
+    \texttt{avg\_loan\_amount}, \texttt{max\_loan\_amount} \\
+\addlinespace
+Repayment
+  & \texttt{n\_principal\_repayments}, \texttt{n\_interest\_repayments},
+    \texttt{n\_penalty\_txns}, \texttt{total\_principal\_repaid},
+    \texttt{total\_interest\_repaid}, \texttt{total\_penalties\_paid},
+    \texttt{total\_repaid}, \texttt{loan\_repayment\_ratio} \\
+\addlinespace
+Inflow
+  & \texttt{total\_inflow}, \texttt{avg\_inflow\_amount},
+    \texttt{total\_cash\_in} \\
+\addlinespace
+Diversity
+  & \texttt{unique\_recipients}, \texttt{unique\_txn\_types},
+    \texttt{unique\_senders}, \texttt{recipient\_concentration} \\
+\addlinespace
+Cash-flow
+  & \texttt{net\_flow}, \texttt{inflow\_outflow\_ratio},
+    \texttt{account\_age\_days}, \texttt{transactions\_per\_day},
+    \texttt{avg\_hours\_between\_txns}, \texttt{loan\_to\_total\_volume\_ratio},
+    \texttt{pct\_credit\_transactions},
+    \texttt{loan\_timing\_in\_sequence}$^\dag$,
+    \texttt{avg\_balance\_at\_loan}$^\dag$,
+    \texttt{min\_balance\_at\_loan}$^\dag$,
+    \texttt{balance\_to\_loan\_ratio\_at\_disbursement}$^\dag$ \\
+\bottomrule
+\end{tabular}
+\end{scriptsize}
+\end{center}
+\vskip -0.1in
+\end{table*}
+
+\section{Model Hyperparameters and Infrastructure}
+\label{app:hyperparams}
+
+All models use 5-fold stratified cross-validation (seed~42) with
+\texttt{StandardScaler} fit on each training fold.
+Experiments ran on Azure Databricks (serverless runtime, Apache Spark
+3.x); feature engineering processed 374M rows in a single distributed
+pass via PySpark aggregations.
+
+\begin{table}[h]
+\caption{Hyperparameters for all classifiers.}
+\label{tab:hyperparams}
+\vskip 0.05in
+\begin{center}
+\begin{small}
+\begin{tabular}{lll}
+\toprule
+Model & Parameter & Value \\
+\midrule
+\multirow{3}{*}{Logistic Regression}
+  & C                  & 1.0 \\
+  & max\_iter          & 1000 \\
+  & class\_weight      & balanced \\
+\midrule
+\multirow{5}{*}{XGBoost}
+  & n\_estimators      & 200 \\
+  & max\_depth         & 5 \\
+  & learning\_rate     & 0.1 \\
+  & subsample          & 0.8 \\
+  & colsample\_bytree  & 0.8 \\
+\midrule
+\multirow{4}{*}{Random Forest}
+  & n\_estimators      & 200 \\
+  & max\_depth         & 10 \\
+  & min\_samples\_split & 5 \\
+  & class\_weight      & balanced \\
+\midrule
+\multirow{4}{*}{LightGBM}
+  & n\_estimators      & 200 \\
+  & max\_depth         & 5 \\
+  & learning\_rate     & 0.1 \\
+  & num\_leaves        & 31 \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
 
 \end{document}
