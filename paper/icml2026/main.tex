@@ -45,7 +45,7 @@ We identify and correct a critical data leakage pattern — the
 \emph{index-loan temporal cutoff} — and show it inflates AUC-ROC to
 1.0 without correction.
 After full correction, gradient boosting models achieve AUC-ROC of
-0.733 for strict default prediction without any credit bureau features.
+0.732 for strict default prediction without any credit bureau features.
 We further find that a calibrated synthetic benchmark
 overestimates real-world discriminative performance by approximately
 15 percentage points, suggesting that synthetic pre-training should be
@@ -83,7 +83,7 @@ Our contributions are:
   \item \textbf{Temporal leakage formalization:} We identify and correct
         a systematic leakage pattern — the index-loan temporal cutoff —
         and show it inflates AUC to 1.0.
-  \item \textbf{Real-data baseline:} AUC-ROC of 0.733 for strict default
+  \item \textbf{Real-data baseline:} AUC-ROC of 0.732 for strict default
         prediction using behavioral features alone.
   \item \textbf{Synthetic-to-real gap:} We compare results to a prior
         synthetic benchmark~\cite{anonymous2026seqcredit}, finding that
@@ -230,16 +230,16 @@ bootstrap iterations at $p < 0.05$.
 Target & Model & AUC-ROC & AUC-PR & F1 & Brier & ECE \\
 \midrule
 \multirow{4}{*}{$y_{\text{default}}$}
-  & XGBoost             & \textbf{0.7330} & \textbf{0.1113} & 0.1583 & \textbf{0.1744} & \textbf{0.3175} \\
-  & LightGBM            & 0.7303 & 0.1103 & 0.1573 & 0.1752 & 0.3196 \\
-  & Random Forest       & 0.7243 & 0.1015 & \textbf{0.1613} & \textbf{0.1612} & \textbf{0.3155} \\
-  & Logistic Regression & 0.7082 & 0.0974 & 0.1398 & 0.2193 & 0.3976 \\
+  & XGBoost             & $\mathbf{0.7317}_{\pm.010}$ & \textbf{0.1120} & 0.1566 & 0.1749 & 0.3175 \\
+  & LightGBM            & $0.7289_{\pm.008}$ & 0.1105 & 0.1570 & 0.1748 & 0.3187 \\
+  & Random Forest       & $0.7229_{\pm.008}$ & 0.1007 & \textbf{0.1611} & \textbf{0.1620} & \textbf{0.3168} \\
+  & Logistic Regression & $0.7093_{\pm.010}$ & 0.0971 & 0.1394 & 0.2194 & 0.3966 \\
 \midrule
 \multirow{4}{*}{$y_{\text{bad}}$}
-  & LightGBM            & \textbf{0.7312} & \textbf{0.7804} & 0.6996 & \textbf{0.2089} & \textbf{0.0666} \\
-  & XGBoost             & 0.7295 & 0.7794 & \textbf{0.7408} & 0.3591 & 0.3632 \\
-  & Random Forest       & 0.7204 & 0.7694 & 0.6913 & 0.2143 & 0.0739 \\
-  & Logistic Regression & 0.6917 & 0.7475 & 0.6667 & 0.2225 & 0.0736 \\
+  & LightGBM            & $\mathbf{0.7293}_{\pm.002}$ & \textbf{0.7791} & 0.6988 & \textbf{0.2095} & \textbf{0.0666} \\
+  & XGBoost             & $0.7274_{\pm.003}$ & 0.7774 & \textbf{0.7407} & 0.3596 & 0.3634 \\
+  & Random Forest       & $0.7185_{\pm.003}$ & 0.7684 & 0.6886 & 0.2149 & 0.0735 \\
+  & Logistic Regression & $0.6907_{\pm.004}$ & 0.7467 & 0.6660 & 0.2228 & 0.0735 \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -249,13 +249,13 @@ Target & Model & AUC-ROC & AUC-PR & F1 & Brier & ECE \\
 \FloatBarrier
 
 Table~\ref{tab:results} reports results for both targets.
-For $y_{\text{default}}$, XGBoost achieves the best AUC-ROC (0.733),
-with all gradient boosting models clustered in 0.724--0.733 and LR
-trailing at 0.708.
+For $y_{\text{default}}$, XGBoost achieves the best AUC-ROC
+($0.732_{\pm.010}$), with all gradient boosting models clustered in
+$0.723$--$0.732$ and LR trailing at $0.709_{\pm.010}$.
 For $y_{\text{bad}}$, the task is better-conditioned (58.2\% positive
-rate): LightGBM leads at AUC-ROC 0.731 with excellent calibration
-(ECE 0.007), while XGBoost achieves the best F1 (0.741) but with
-poor calibration (ECE 0.363).
+rate): LightGBM leads at AUC-ROC $0.729_{\pm.002}$ with excellent
+calibration (ECE 0.067), while XGBoost achieves the best F1 (0.741)
+but with poor calibration (ECE 0.363).
 
 \subsection{Discussion}
 
@@ -279,7 +279,7 @@ F1, particularly for the strict default target.
 A companion study~\cite{anonymous2026seqcredit} evaluated the same
 feature framework on a calibrated 10,000-user synthetic MoMo dataset,
 reporting XGBoost AUC-ROC of 0.881 and LightGBM 0.878.
-On real data the same models achieve 0.733 and 0.730 — a gap of
+On real data the same models achieve 0.732 and 0.729 — a gap of
 approximately 15 percentage points.
 Real behavioral signal is \emph{noisier} than synthetic calibration
 assumes: informal economy patterns, irregular income cycles, and
@@ -306,7 +306,7 @@ imbalanced data without post-hoc correction.
 
 We present a large-scale credit scoring study on real West African
 mobile money data, demonstrating that behavioral features derived from
-transaction history predict strict default with AUC-ROC of 0.733 on
+transaction history predict strict default with AUC-ROC of 0.732 on
 222,618 Ghanaian borrowers — without any credit bureau features.
 We formalize the index-loan temporal cutoff as a necessary leakage
 control, and establish that a calibrated synthetic benchmark
