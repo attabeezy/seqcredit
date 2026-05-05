@@ -485,6 +485,19 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
     df_ts = _parse_timestamp(df)
     df_ts = _categorize_txtype(df_ts)
 
+    # Materialise the parsed + categorised table so that the expensive
+    # try_to_timestamp coalesce runs exactly once.  Without this, every
+    # downstream Spark action re-executes the full 374M-row parse lineage
+    # (6 times in total with the previous design).  Parquet reads are
+    # columnar and order-of-magnitude faster than re-parsing the raw text.
+    from pyspark.sql import SparkSession
+    _spark = SparkSession.getActiveSession()
+    _tmp_df_ts = f"dbfs:/tmp/seqcredit_seq_df_ts_{os.getpid()}"
+    print(f"\n[0/4] Materialising parsed table to {_tmp_df_ts} ...")
+    df_ts.write.mode("overwrite").parquet(_tmp_df_ts)
+    df_ts = _spark.read.parquet(_tmp_df_ts)
+    print(f"  Done — subsequent steps read fast Parquet instead of re-parsing.")
+
     print(f"\n[1/4] Computing index-loan cutoffs (>={min_followup_days}d followup)...")
     cutoffs_spark = _derive_loan_cutoffs(df_ts, min_followup_days=min_followup_days)
     borrower_cutoffs = cutoffs_spark
@@ -503,38 +516,46 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
         f"(cap={max_seq_len} per user, all 19 features computed on workers)..."
     )
 
-    # broadcast borrower_cutoffs so the 374M-row table is never shuffled
+    # Single-pass scan: derive (user_id, is_outgoing) for each customer party
+    # using array + explode so the 374M-row Parquet is read once, not twice.
+    debit_cond = (
+        (F.col("DEBIT_PARTY_TYPE") == "Customer")
+        & (F.col("DEBIT_ACCOUNT_TYPE") == CUSTOMER_ACCOUNT_TYPE)
+    )
+    credit_cond = (
+        (F.col("CREDIT_PARTY_TYPE") == "Customer")
+        & (F.col("CREDIT_ACCOUNT_TYPE") == CUSTOMER_ACCOUNT_TYPE)
+    )
     bc = F.broadcast(borrower_cutoffs)
 
-    out_txns = (
-        df_ts.filter(
-            (F.col("DEBIT_PARTY_TYPE") == "Customer")
-            & (F.col("DEBIT_ACCOUNT_TYPE") == CUSTOMER_ACCOUNT_TYPE)
+    all_txns = (
+        df_ts
+        .filter(debit_cond | credit_cond)
+        .withColumn(
+            "_party",
+            F.explode(F.array(
+                F.when(debit_cond, F.struct(
+                    F.col("DEBIT_PARTY_ID").alias("user_id"),
+                    F.lit(1.0).alias("is_outgoing"),
+                )),
+                F.when(credit_cond, F.struct(
+                    F.col("CREDIT_PARTY_ID").alias("user_id"),
+                    F.lit(0.0).alias("is_outgoing"),
+                )),
+            )),
         )
-        .withColumnRenamed("DEBIT_PARTY_ID", "user_id")
+        .filter(F.col("_party").isNotNull())
+        .select(
+            F.col("_party.user_id").alias("user_id"),
+            "ts",
+            "TRANSACTION_AMOUNT",
+            "txtype_cat",
+            F.col("_party.is_outgoing").alias("is_outgoing"),
+        )
         .join(bc, on="user_id", how="inner")
         .filter(F.col("ts") < F.col("last_loan_ts"))
-        .select(
-            "user_id", "ts", "TRANSACTION_AMOUNT", "txtype_cat",
-            F.lit(1.0).alias("is_outgoing"),
-        )
+        .select("user_id", "ts", "TRANSACTION_AMOUNT", "txtype_cat", "is_outgoing")
     )
-
-    in_txns = (
-        df_ts.filter(
-            (F.col("CREDIT_PARTY_TYPE") == "Customer")
-            & (F.col("CREDIT_ACCOUNT_TYPE") == CUSTOMER_ACCOUNT_TYPE)
-        )
-        .withColumnRenamed("CREDIT_PARTY_ID", "user_id")
-        .join(bc, on="user_id", how="inner")
-        .filter(F.col("ts") < F.col("last_loan_ts"))
-        .select(
-            "user_id", "ts", "TRANSACTION_AMOUNT", "txtype_cat",
-            F.lit(0.0).alias("is_outgoing"),
-        )
-    )
-
-    all_txns = out_txns.union(in_txns)
 
     # Keep the max_seq_len most-recent transactions per user
     seq_window = Window.partitionBy("user_id").orderBy(F.desc("ts"))
@@ -602,19 +623,16 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
         )
 
     # ── Assign left-padded slot positions in Spark ───────────────────────────
-    # slot = (max_seq_len - seq_len) + seq_rank  →  sequence is right-aligned
-    # seq_len is computed via groupBy (broadcast-joined back) to avoid a second
-    # window function over the same partition.
-    user_seq_len = (
-        all_txns_capped.groupBy("user_id").agg(F.count("*").alias("seq_len"))
-    )
+    # slot = (max_seq_len - seq_len) + seq_rank  →  sequence is right-aligned.
+    # seq_len is inlined as a partition-count window on feat_df — this keeps
+    # everything in a single lineage so toPandas() triggers only one Parquet
+    # scan (no diamond dependency from a separate user_seq_len groupBy).
+    count_w = Window.partitionBy("user_id")
     slot_w = Window.partitionBy("user_id").orderBy("ts")
-    # Cast feature columns to float32 in Spark so toPandas() transfers float32
-    # instead of float64 — halves driver memory and avoids a temporary copy later.
     feat_cols = list(SEQ_FEATURE_NAMES)
     flat_spark = (
         feat_df
-        .join(F.broadcast(user_seq_len), on="user_id")
+        .withColumn("seq_len", F.count("*").over(count_w))
         .withColumn("seq_rank", F.row_number().over(slot_w) - 1)
         .withColumn(
             "slot",
