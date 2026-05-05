@@ -609,6 +609,9 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
         all_txns_capped.groupBy("user_id").agg(F.count("*").alias("seq_len"))
     )
     slot_w = Window.partitionBy("user_id").orderBy("ts")
+    # Cast feature columns to float32 in Spark so toPandas() transfers float32
+    # instead of float64 — halves driver memory and avoids a temporary copy later.
+    feat_cols = list(SEQ_FEATURE_NAMES)
     flat_spark = (
         feat_df
         .join(F.broadcast(user_seq_len), on="user_id")
@@ -618,7 +621,11 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
             (F.lit(max_seq_len) - F.col("seq_len") + F.col("seq_rank")).cast("int"),
         )
         .filter(F.col("slot") >= 0)
-        .select("user_id", "slot", *list(SEQ_FEATURE_NAMES))
+        .select(
+            "user_id",
+            "slot",
+            *[F.col(c).cast("float").alias(c) for c in feat_cols],
+        )
     )
 
     print(
@@ -640,9 +647,11 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
         flat_pdf = flat_pdf.dropna(subset=["_bidx"])
         bidx = flat_pdf["_bidx"].astype(int).values
         slot = flat_pdf["slot"].values
-        X[bidx, slot, :] = flat_pdf[list(SEQ_FEATURE_NAMES)].values.astype(np.float32)
+        # .values is already float32 (cast in Spark) — no copy needed
+        X[bidx, slot, :] = flat_pdf[feat_cols].values
 
     users_with_history = int(flat_pdf["user_id"].nunique()) if len(flat_pdf) > 0 else 0
+    del flat_pdf  # release before NPZ write
 
     metadata = {
         "sequence_version": RAW_SEQUENCE_VERSION,
