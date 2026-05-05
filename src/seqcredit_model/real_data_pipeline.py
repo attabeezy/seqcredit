@@ -127,12 +127,7 @@ def _derive_loan_cutoffs(df, min_followup_days=30):
         Borrowers whose index loan falls within this many days of the latest
         timestamp in the dataset are excluded.
     """
-    from datetime import timedelta
-
-    max_ts = df.agg(F.max("ts")).collect()[0][0]
-    followup_cutoff = max_ts - timedelta(days=min_followup_days)
-
-    return (
+    loan_cutoffs = (
         df.filter(
             (F.col("TRANSACTION_TYPE") == LOAN_DISBURSEMENT_TYPE)
             & (F.col("DEBIT_PARTY_ID") == LENDER_ID)
@@ -141,7 +136,20 @@ def _derive_loan_cutoffs(df, min_followup_days=30):
         .withColumnRenamed("CREDIT_PARTY_ID", "user_id")
         .groupBy("user_id")
         .agg(F.max("ts").alias("last_loan_ts"))
-        .filter(F.col("last_loan_ts") <= F.lit(followup_cutoff))
+    )
+
+    # Compute global max_ts lazily via a scalar crossJoin so it is folded into
+    # the same Spark action as the downstream toPandas() — no separate collect().
+    global_max = df.agg(F.max("ts").alias("_global_max_ts"))
+
+    return (
+        loan_cutoffs
+        .crossJoin(global_max)
+        .filter(
+            F.col("last_loan_ts")
+            <= F.col("_global_max_ts") - F.expr(f"INTERVAL {min_followup_days} DAYS")
+        )
+        .select("user_id", "last_loan_ts")
     )
 
 
@@ -485,18 +493,44 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
     df_ts = _parse_timestamp(df)
     df_ts = _categorize_txtype(df_ts)
 
-    # Materialise the parsed + categorised table so that the expensive
-    # try_to_timestamp coalesce runs exactly once.  Without this, every
-    # downstream Spark action re-executes the full 374M-row parse lineage
-    # (6 times in total with the previous design).  Parquet reads are
-    # columnar and order-of-magnitude faster than re-parsing the raw text.
+    # Attempt to materialise the parsed + categorised table so the expensive
+    # try_to_timestamp coalesce runs once instead of once per Spark action.
+    # We try a Unity Catalog managed table first (works when DBFS root is
+    # disabled); if that fails we fall back to a user-specified path via the
+    # SEQCREDIT_TMP_PATH env var; otherwise we skip materialisation entirely
+    # (2 remaining full-table scans instead of 1, but still correct).
     from pyspark.sql import SparkSession
     _spark = SparkSession.getActiveSession()
-    _tmp_df_ts = f"dbfs:/tmp/seqcredit_seq_df_ts_{os.getpid()}"
-    print(f"\n[0/4] Materialising parsed table to {_tmp_df_ts} ...")
-    df_ts.write.mode("overwrite").parquet(_tmp_df_ts)
-    df_ts = _spark.read.parquet(_tmp_df_ts)
-    print(f"  Done — subsequent steps read fast Parquet instead of re-parsing.")
+    _tmp_table = f"seqcredit_tmp_df_ts_{os.getpid()}"
+    _tmp_path = os.environ.get("SEQCREDIT_TMP_PATH")
+    _materialised = False
+
+    if not _materialised:
+        try:
+            print(f"\n[0/4] Materialising parsed table as Delta table {_tmp_table} ...")
+            df_ts.write.mode("overwrite").saveAsTable(_tmp_table)
+            df_ts = _spark.table(_tmp_table)
+            _materialised = True
+            print(f"  Done — subsequent reads hit Delta cache instead of re-parsing.")
+        except Exception as _e:
+            print(f"  saveAsTable failed ({type(_e).__name__}), trying SEQCREDIT_TMP_PATH ...")
+
+    if not _materialised and _tmp_path:
+        try:
+            print(f"  Writing to {_tmp_path} ...")
+            df_ts.write.mode("overwrite").parquet(_tmp_path)
+            df_ts = _spark.read.parquet(_tmp_path)
+            _materialised = True
+            print(f"  Done.")
+        except Exception as _e:
+            print(f"  Path write failed ({type(_e).__name__}).")
+
+    if not _materialised:
+        print(
+            f"  Warning: could not materialise df_ts — each downstream action will\n"
+            f"  re-parse the 374M-row source.  Set SEQCREDIT_TMP_PATH to a writable\n"
+            f"  cloud path (e.g. abfss://...) or Unity Catalog volume path to avoid this."
+        )
 
     print(f"\n[1/4] Computing index-loan cutoffs (>={min_followup_days}d followup)...")
     cutoffs_spark = _derive_loan_cutoffs(df_ts, min_followup_days=min_followup_days)
