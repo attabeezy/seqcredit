@@ -443,11 +443,16 @@ def engineer_features(df, borrower_ids_spark, cutoffs_spark):
 def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path=None):
     """Build ephemeral per-user transaction sequences for LSTM from the Spark table.
 
+    All feature engineering is pushed into Spark so workers do the computation.
+    Data is collected once via toPandas() and assembled into the output array with
+    a single vectorised numpy index operation — no Python row loop.
+
     The raw NPZ and derived cache are temporary runtime artifacts intended to exist
     only for the current notebook session. Final notebook outputs remain visible
     in an exported notebook, but the sequence files themselves are cleaned up at
     the end of the benchmark.
     """
+    import math
     import numpy as np
     import tempfile
 
@@ -483,14 +488,23 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
     print(f"\n[1/4] Computing index-loan cutoffs (>={min_followup_days}d followup)...")
     cutoffs_spark = _derive_loan_cutoffs(df_ts, min_followup_days=min_followup_days)
     borrower_cutoffs = cutoffs_spark
-    borrower_ids_spark = cutoffs_spark.select("user_id").orderBy("user_id")
-    n_borrowers = cutoffs_spark.count()
+
+    # Collect borrower IDs in one shot — replaces count() + toLocalIterator()
+    borrowers_pdf = (
+        borrower_cutoffs.select("user_id").orderBy("user_id").toPandas()
+    )
+    borrower_ids = list(borrowers_pdf["user_id"])
+    n_borrowers = len(borrower_ids)
+    uid_to_idx = {uid: i for i, uid in enumerate(borrower_ids)}
     print(f"  Borrowers eligible: {n_borrowers:,}")
 
     print(
-        f"\n[2/4] Collecting pre-cutoff transactions in Spark "
-        f"(cap={max_seq_len} per user)..."
+        f"\n[2/4] Building flat feature table in Spark "
+        f"(cap={max_seq_len} per user, all 19 features computed on workers)..."
     )
+
+    # broadcast borrower_cutoffs so the 374M-row table is never shuffled
+    bc = F.broadcast(borrower_cutoffs)
 
     out_txns = (
         df_ts.filter(
@@ -498,14 +512,11 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
             & (F.col("DEBIT_ACCOUNT_TYPE") == CUSTOMER_ACCOUNT_TYPE)
         )
         .withColumnRenamed("DEBIT_PARTY_ID", "user_id")
-        .join(borrower_cutoffs, on="user_id", how="inner")
+        .join(bc, on="user_id", how="inner")
         .filter(F.col("ts") < F.col("last_loan_ts"))
         .select(
-            "user_id",
-            "ts",
-            "TRANSACTION_AMOUNT",
-            "txtype_cat",
-            F.lit(1).alias("is_outgoing"),
+            "user_id", "ts", "TRANSACTION_AMOUNT", "txtype_cat",
+            F.lit(1.0).alias("is_outgoing"),
         )
     )
 
@@ -515,18 +526,17 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
             & (F.col("CREDIT_ACCOUNT_TYPE") == CUSTOMER_ACCOUNT_TYPE)
         )
         .withColumnRenamed("CREDIT_PARTY_ID", "user_id")
-        .join(borrower_cutoffs, on="user_id", how="inner")
+        .join(bc, on="user_id", how="inner")
         .filter(F.col("ts") < F.col("last_loan_ts"))
         .select(
-            "user_id",
-            "ts",
-            "TRANSACTION_AMOUNT",
-            "txtype_cat",
-            F.lit(0).alias("is_outgoing"),
+            "user_id", "ts", "TRANSACTION_AMOUNT", "txtype_cat",
+            F.lit(0.0).alias("is_outgoing"),
         )
     )
 
     all_txns = out_txns.union(in_txns)
+
+    # Keep the max_seq_len most-recent transactions per user
     seq_window = Window.partitionBy("user_id").orderBy(F.desc("ts"))
     all_txns_capped = (
         all_txns.withColumn("_rank", F.row_number().over(seq_window))
@@ -534,76 +544,105 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
         .drop("_rank")
     )
 
-    seq_spark = (
-        all_txns_capped.groupBy("user_id")
-        .agg(
-            F.sort_array(
-                F.collect_list(
-                    F.struct("ts", "TRANSACTION_AMOUNT", "txtype_cat", "is_outgoing")
-                ),
-                asc=True,
-            ).alias("sequence")
+    # ── Compute all 19 features on Spark workers ─────────────────────────────
+    # hours_since_last_txn uses a lag window ordered by ts (ascending)
+    lag_w = Window.partitionBy("user_id").orderBy("ts")
+    TWO_PI = 2.0 * math.pi
+
+    feat_df = (
+        all_txns_capped
+        .withColumn("prev_ts", F.lag("ts").over(lag_w))
+        .withColumn(
+            "log_amount",
+            F.log1p(F.coalesce(F.col("TRANSACTION_AMOUNT").cast("double"), F.lit(0.0))),
         )
-        .orderBy("user_id")
+        .withColumn(
+            "hour_sin",
+            F.sin(F.lit(TWO_PI) * F.hour("ts").cast("double") / F.lit(24.0)),
+        )
+        .withColumn(
+            "hour_cos",
+            F.cos(F.lit(TWO_PI) * F.hour("ts").cast("double") / F.lit(24.0)),
+        )
+        # Spark dayofweek: 1=Sun … 7=Sat  →  (dow - 2) % 7 gives 0=Mon (matches Python weekday)
+        .withColumn(
+            "dow_sin",
+            F.sin(
+                F.lit(TWO_PI)
+                * ((F.dayofweek("ts") - 2 + 7) % 7).cast("double")
+                / F.lit(7.0)
+            ),
+        )
+        .withColumn(
+            "dow_cos",
+            F.cos(
+                F.lit(TWO_PI)
+                * ((F.dayofweek("ts") - 2 + 7) % 7).cast("double")
+                / F.lit(7.0)
+            ),
+        )
+        .withColumn(
+            "hours_since_last_txn",
+            F.when(
+                F.col("prev_ts").isNull(), F.lit(0.0)
+            ).otherwise(
+                F.least(
+                    (F.unix_timestamp("ts") - F.unix_timestamp("prev_ts")).cast("double")
+                    / F.lit(3600.0),
+                    F.lit(720.0),
+                )
+            ),
+        )
+    )
+    # txtype one-hot columns (12 categories)
+    for cat in TXTYPE_CATS:
+        feat_df = feat_df.withColumn(
+            f"txtype_{cat}",
+            F.when(F.col("txtype_cat") == cat, F.lit(1.0)).otherwise(F.lit(0.0)),
+        )
+
+    # ── Assign left-padded slot positions in Spark ───────────────────────────
+    # slot = (max_seq_len - seq_len) + seq_rank  →  sequence is right-aligned
+    # seq_len is computed via groupBy (broadcast-joined back) to avoid a second
+    # window function over the same partition.
+    user_seq_len = (
+        all_txns_capped.groupBy("user_id").agg(F.count("*").alias("seq_len"))
+    )
+    slot_w = Window.partitionBy("user_id").orderBy("ts")
+    flat_spark = (
+        feat_df
+        .join(F.broadcast(user_seq_len), on="user_id")
+        .withColumn("seq_rank", F.row_number().over(slot_w) - 1)
+        .withColumn(
+            "slot",
+            (F.lit(max_seq_len) - F.col("seq_len") + F.col("seq_rank")).cast("int"),
+        )
+        .filter(F.col("slot") >= 0)
+        .select("user_id", "slot", *list(SEQ_FEATURE_NAMES))
     )
 
     print(
-        "  Streaming borrower ids and grouped sequences to the driver in bounded batches..."
+        f"\n[3/4] Collecting flat feature table to driver "
+        f"(~{n_borrowers:,} users × up to {max_seq_len} steps × {len(SEQ_FEATURE_NAMES)} features)..."
     )
-    sequence_rows = seq_spark.toLocalIterator()
-    next_sequence_row = next(sequence_rows, None)
+    # Single toPandas() — no streaming connection, no gRPC timeout risk
+    flat_pdf = flat_spark.toPandas()
 
     print(
-        f"\n[3/4] Extracting features and building padded array "
-        f"({n_borrowers:,} x {max_seq_len} x {len(SEQ_FEATURE_NAMES)})..."
+        f"\n[4/4] Assembling padded array via vectorised numpy index assignment..."
     )
-
-    cat_to_idx = {c: i for i, c in enumerate(TXTYPE_CATS)}
     n_features = len(SEQ_FEATURE_NAMES)
-    borrower_ids = []
-    users_with_history = 0
     X = np.zeros((n_borrowers, max_seq_len, n_features), dtype=np.float32)
 
-    for i, borrower_row in enumerate(borrower_ids_spark.toLocalIterator()):
-        uid = borrower_row["user_id"]
-        borrower_ids.append(uid)
+    if len(flat_pdf) > 0:
+        flat_pdf["_bidx"] = flat_pdf["user_id"].map(uid_to_idx)
+        # Drop rows whose user_id is not in borrower list (shouldn't happen, but be safe)
+        flat_pdf = flat_pdf.dropna(subset=["_bidx"])
+        bidx = flat_pdf["_bidx"].astype(int).values
+        slot = flat_pdf["slot"].values
+        X[bidx, slot, :] = flat_pdf[list(SEQ_FEATURE_NAMES)].values.astype(np.float32)
 
-        seq = None
-        if next_sequence_row is not None and next_sequence_row["user_id"] == uid:
-            seq = next_sequence_row["sequence"]
-            next_sequence_row = next(sequence_rows, None)
-            users_with_history += 1
-
-        if seq:
-            timesteps = len(seq)
-            pad_start = max_seq_len - timesteps
-            prev_ts = None
-
-            for j, txn in enumerate(seq):
-                slot = pad_start + j
-                amount = float(txn["TRANSACTION_AMOUNT"] or 0.0)
-
-                X[i, slot, 0] = np.log1p(amount)
-                X[i, slot, 1] = float(txn["is_outgoing"])
-
-                cat_idx = cat_to_idx.get(txn["txtype_cat"], cat_to_idx["other"])
-                X[i, slot, 2 + cat_idx] = 1.0
-
-                hour = txn["ts"].hour
-                X[i, slot, 14] = np.sin(2 * np.pi * hour / 24.0)
-                X[i, slot, 15] = np.cos(2 * np.pi * hour / 24.0)
-
-                dow = txn["ts"].weekday()
-                X[i, slot, 16] = np.sin(2 * np.pi * dow / 7.0)
-                X[i, slot, 17] = np.cos(2 * np.pi * dow / 7.0)
-
-                if prev_ts is not None:
-                    delta_h = (txn["ts"] - prev_ts).total_seconds() / 3600.0
-                    X[i, slot, 18] = min(delta_h, 720.0)
-                prev_ts = txn["ts"]
-
-        if (i + 1) % 50_000 == 0:
-            print(f"  {i + 1:,} / {n_borrowers:,} users processed...")
+    users_with_history = int(flat_pdf["user_id"].nunique()) if len(flat_pdf) > 0 else 0
 
     metadata = {
         "sequence_version": RAW_SEQUENCE_VERSION,
@@ -621,7 +660,7 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
         else "local",
     }
 
-    print(f"\n[4/4] Saving ephemeral raw NPZ to {output_path}...")
+    print(f"  Writing ephemeral raw NPZ to {output_path}...")
     _write_npz_with_metadata(
         output_path,
         metadata,
