@@ -82,6 +82,20 @@ def is_ephemeral_run() -> bool:
     """Return whether the current run should avoid persistent artifacts."""
     return os.environ.get("SEQCREDIT_EPHEMERAL") == "1"
 
+
+def get_runtime_data_dir() -> Path:
+    """Return a writable directory for CV outputs in the current runtime.
+
+    In ephemeral Databricks runs the features file lives under a temp dir
+    (e.g. /tmp/seqcredit_model/).  CV results are written there so that
+    cell 24 can read them in the same session.  Outside ephemeral mode the
+    committed data/ directory is used as usual.
+    """
+    runtime_features = get_runtime_user_features_file()
+    if runtime_features != USER_FEATURES_FILE:
+        return runtime_features.parent
+    return DATA_DIR
+
 def has_sequences() -> bool:
     """Return whether sequential inputs are available in the current runtime."""
     return (
@@ -222,7 +236,7 @@ def run_lstm_cv(
         _cls = model_class if model_class is not None else LSTMModel
         model = _cls(**model_params)
         model.build_model(input_shape)
-        model.fit(X_tr, y_tr, X_val=X_val, y_val=y_val, epochs=50, batch_size=32)
+        model.fit(X_tr, y_tr, X_val=X_val, y_val=y_val, epochs=50, batch_size=256)
 
         y_proba = model.predict_proba(X_val)
         metrics = compute_metrics(y_val, y_proba)
@@ -282,7 +296,7 @@ def run_hybrid_cv(
             X_val_static=X_static_val_scaled,
             y_val=y_val,
             epochs=50,
-            batch_size=32,
+            batch_size=256,
         )
 
         y_proba = model.predict_proba(X_seq_val, X_static_val_scaled)
@@ -571,40 +585,38 @@ def main():
         else:
             print("    LSTM / HybridLSTM — skipped (no sequence files)")
 
-        # Intermediate save after each target
-        if not is_ephemeral_run():
-            results_df = pd.DataFrame(all_results)
-            results_df.to_csv(
-                DATA_DIR / f"cv_results_intermediate_{target_name}.csv", index=False
-            )
-            print(f"    [Checkpoint] Saved intermediate results for {target_name}")
+        # Intermediate checkpoint — always save so progress survives a kill
+        _runtime_dir = get_runtime_data_dir()
+        _runtime_dir.mkdir(parents=True, exist_ok=True)
+        results_df = pd.DataFrame(all_results)
+        results_df.to_csv(
+            _runtime_dir / f"cv_results_intermediate_{target_name}.csv", index=False
+        )
+        print(f"    [Checkpoint] Saved intermediate results for {target_name}")
 
     total_elapsed = time.time() - total_start
     print(f"\n  Total CV time: {total_elapsed / 60:.1f} minutes")
 
     results_df = pd.DataFrame(all_results)
 
-    if not is_ephemeral_run():
-        print("\n[4/6] Saving CV results...")
-        DATA_DIR.mkdir(exist_ok=True)
+    runtime_dir = get_runtime_data_dir()
+    runtime_dir.mkdir(parents=True, exist_ok=True)
 
-        for target_name in ["y_default", "y_bad"]:
-            target_df = results_df[results_df["target"] == target_name].copy()
-            target_df.to_csv(DATA_DIR / f"cv_results_{target_name}.csv", index=False)
+    print("\n[4/6] Saving CV results...")
+    for target_name in ["y_default", "y_bad"]:
+        target_df = results_df[results_df["target"] == target_name].copy()
+        target_df.to_csv(runtime_dir / f"cv_results_{target_name}.csv", index=False)
+    print("  Saved cv_results_y_default.csv")
+    print("  Saved cv_results_y_bad.csv")
 
-        print("  Saved cv_results_y_default.csv")
-        print("  Saved cv_results_y_bad.csv")
-
-        # Save OOF predictions for downstream ROC curve generation
-        oof_arrays = {"y_default": y_default, "y_bad": y_bad}
-        for model_name, oof in oof_preds_default.items():
-            oof_arrays[f"default_{model_name}"] = oof
-        for model_name, oof in oof_preds_bad.items():
-            oof_arrays[f"bad_{model_name}"] = oof
-        np.savez(DATA_DIR / "cv_oof_preds.npz", **oof_arrays)
-        print("  Saved cv_oof_preds.npz")
-    else:
-        print("\n[4/6] Ephemeral run: skipping persisted CV result files.")
+    # Save OOF predictions for downstream ROC curve generation
+    oof_arrays = {"y_default": y_default, "y_bad": y_bad}
+    for model_name, oof in oof_preds_default.items():
+        oof_arrays[f"default_{model_name}"] = oof
+    for model_name, oof in oof_preds_bad.items():
+        oof_arrays[f"bad_{model_name}"] = oof
+    np.savez(runtime_dir / "cv_oof_preds.npz", **oof_arrays)
+    print("  Saved cv_oof_preds.npz")
 
     print("\n[5/6] Running significance tests...")
 
@@ -656,9 +668,8 @@ def main():
 
     if sig_results:
         sig_results_df = pd.concat(sig_results, ignore_index=True)
-        if not is_ephemeral_run():
-            sig_results_df.to_csv(DATA_DIR / "significance_tests.csv", index=False)
-            print("  Saved significance_tests.csv")
+        sig_results_df.to_csv(runtime_dir / "significance_tests.csv", index=False)
+        print("  Saved significance_tests.csv")
 
         print("\n  Significant comparisons (p < 0.05):")
         if "significant" in sig_results_df.columns:
@@ -686,12 +697,9 @@ def main():
         "total_time_minutes": total_elapsed / 60,
     }
 
-    if not is_ephemeral_run():
-        with open(DATA_DIR / "cv_manifest.json", "w") as f:
-            json.dump(manifest, f, indent=2)
-        print("  Saved cv_manifest.json")
-    else:
-        print("  Ephemeral run: skipping persisted manifest.")
+    with open(runtime_dir / "cv_manifest.json", "w") as f:
+        json.dump(manifest, f, indent=2)
+    print("  Saved cv_manifest.json")
 
     cleanup_ephemeral_sequence_artifacts()
 
