@@ -490,6 +490,29 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
     print(f"  Ephemeral raw sequence file: {output_path}")
     print(f"  Ephemeral derived cache: {runtime_cache_path}")
 
+    # Pre-filter: keep only rows where a customer M-Pesa account appears on
+    # either side, plus lender-originated loan disbursements.  This prunes the
+    # 374M-row source to just the rows we actually need before the expensive
+    # try_to_timestamp parse runs, and selects only the 9 columns used
+    # downstream — both dramatically reduce I/O for the materialisation write.
+    _NEEDED_COLS = [
+        "TRANSACTION_TIMESTAMP", "TRANSACTION_TYPE", "TRANSACTION_AMOUNT",
+        "DEBIT_PARTY_ID", "DEBIT_PARTY_TYPE", "DEBIT_ACCOUNT_TYPE",
+        "CREDIT_PARTY_ID", "CREDIT_PARTY_TYPE", "CREDIT_ACCOUNT_TYPE",
+    ]
+    _cust_filter = (
+        (
+            (F.col("DEBIT_PARTY_TYPE") == "Customer")
+            & (F.col("DEBIT_ACCOUNT_TYPE") == CUSTOMER_ACCOUNT_TYPE)
+        )
+        | (
+            (F.col("CREDIT_PARTY_TYPE") == "Customer")
+            & (F.col("CREDIT_ACCOUNT_TYPE") == CUSTOMER_ACCOUNT_TYPE)
+        )
+        | (F.col("DEBIT_PARTY_ID") == LENDER_ID)   # loan disbursements
+    )
+    df = df.filter(_cust_filter).select(*_NEEDED_COLS)
+
     df_ts = _parse_timestamp(df)
     df_ts = _categorize_txtype(df_ts)
 
