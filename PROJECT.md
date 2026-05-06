@@ -20,11 +20,12 @@ This document consolidates all project documentation: overview, research framewo
 8. [Research Analysis Notebook](#research-analysis-notebook)
 9. [Development History](#development-history)
 10. [Publication Plan](#publication-plan)
-11. [Open Questions](#open-questions)
-12. [Usage](#usage)
-13. [Dependencies](#dependencies)
-14. [Limitations](#limitations)
-15. [Future Work](#future-work)
+11. [JMLR MLOSS Submission Roadmap](#jmlr-mloss-submission-roadmap)
+12. [Open Questions](#open-questions)
+13. [Usage](#usage)
+14. [Dependencies](#dependencies)
+15. [Limitations](#limitations)
+16. [Future Work](#future-work)
 
 ---
 
@@ -460,6 +461,16 @@ model = ModelClass.load("models/model_name")
 - [ ] Final benchmark claims are supported by CV + CIs + significance checks
 - [ ] Paper draft is complete with reproducible figures/tables
 - [ ] Documentation and result artifacts are fully consistent across the repository
+
+## JMLR MLOSS Submission Roadmap
+
+The project is a strong candidate for the **JMLR Machine Learning Open Source Software (MLOSS)** track, which prioritizes non-trivial ML contributions, high-quality documentation, and software robustness.
+
+1. **Fix the README:** Replace placeholder text with a professional overview, "Quick Start" guide, and links to tutorial notebooks.
+2. **Implement Unit Tests:** Achieve 60-70% code coverage focusing on data synthesis (`synthesize.py`), feature engineering (`pipeline.py`), and model interface consistency. (See Phase 4.1)
+3. **Generate API Documentation:** Use Sphinx or pdoc to generate a formal API reference from docstrings.
+4. **Draft 4-Page Software Paper:** Focus on the software's design, usability (specifically the `CalibratedMoMoDataGenerator`), and impact on the African fintech research ecosystem.
+5. **Community Engagement:** Release the repository publicly and gather initial community feedback/stars to provide evidence of an "active user community" as required by JMLR.
 
 ---
 
