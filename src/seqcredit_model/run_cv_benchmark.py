@@ -353,7 +353,11 @@ def bootstrap_delta_test(
     alpha = 1 - CI_LEVEL
     ci_lower = np.percentile(deltas, alpha / 2 * 100)
     ci_upper = np.percentile(deltas, (1 - alpha / 2) * 100)
-    p_value = (np.abs(deltas) >= np.abs(delta_mean)).mean()
+    # Shift bootstrap distribution to null (delta=0) before computing p-value.
+    # Without centering, p_value ≈ 0.5 always (mean is always near median of
+    # its own distribution — a tautology, not a test).
+    deltas_centered = deltas - delta_mean
+    p_value = (np.abs(deltas_centered) >= np.abs(delta_mean)).mean()
 
     return {
         "delta_mean": delta_mean,
