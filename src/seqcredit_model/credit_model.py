@@ -1398,7 +1398,7 @@ class LSTMModel:
 
         callbacks = [
             EarlyStopping(
-                patience=10, monitor="val_auc", mode="max", restore_best_weights=True
+                patience=7, monitor="val_auc", mode="max", restore_best_weights=True
             ),
             ReduceLROnPlateau(patience=5, factor=0.5, monitor="val_auc", mode="max"),
         ]
@@ -1409,7 +1409,7 @@ class LSTMModel:
         else:
             # Use 15% of training data for validation when no explicit val set supplied
             callbacks[0] = EarlyStopping(
-                patience=10, monitor="val_auc", mode="max", restore_best_weights=True
+                patience=7, monitor="val_auc", mode="max", restore_best_weights=True
             )
 
         if class_weight is None:
@@ -1576,7 +1576,7 @@ class GRUModel:
 
         callbacks = [
             EarlyStopping(
-                patience=10, monitor="val_auc", mode="max", restore_best_weights=True
+                patience=7, monitor="val_auc", mode="max", restore_best_weights=True
             ),
             ReduceLROnPlateau(patience=5, factor=0.5, monitor="val_auc", mode="max"),
         ]
@@ -1755,7 +1755,7 @@ class HybridLSTMModel:
 
         callbacks = [
             EarlyStopping(
-                patience=10, monitor="val_auc", mode="max", restore_best_weights=True
+                patience=7, monitor="val_auc", mode="max", restore_best_weights=True
             ),
             ReduceLROnPlateau(patience=5, factor=0.5, monitor="val_auc", mode="max"),
         ]
@@ -1938,7 +1938,7 @@ class HybridGRUModel:
 
         callbacks = [
             EarlyStopping(
-                patience=10, monitor="val_auc", mode="max", restore_best_weights=True
+                patience=7, monitor="val_auc", mode="max", restore_best_weights=True
             ),
             ReduceLROnPlateau(patience=5, factor=0.5, monitor="val_auc", mode="max"),
         ]

@@ -240,7 +240,7 @@ def run_lstm_cv(
         _cls = model_class if model_class is not None else LSTMModel
         model = _cls(**model_params)
         model.build_model(input_shape)
-        model.fit(X_tr, y_tr, X_val=X_val, y_val=y_val, epochs=50, batch_size=256)
+        model.fit(X_tr, y_tr, X_val=X_val, y_val=y_val, epochs=30, batch_size=256)
 
         y_proba = model.predict_proba(X_val)
         metrics = compute_metrics(y_val, y_proba)
@@ -302,7 +302,7 @@ def run_hybrid_cv(
             X_val_seq=X_seq_val,
             X_val_static=X_static_val_scaled,
             y_val=y_val,
-            epochs=50,
+            epochs=30,
             batch_size=256,
         )
 
