@@ -1428,7 +1428,7 @@ class LSTMModel:
             validation_data=validation_data,
             callbacks=callbacks,
             class_weight=class_weight,
-            verbose=1,
+            verbose=2,
         )
 
         return self.history
@@ -1601,7 +1601,7 @@ class GRUModel:
             validation_data=validation_data,
             callbacks=callbacks,
             class_weight=class_weight,
-            verbose=1,
+            verbose=2,
         )
 
         return self.history
@@ -1780,7 +1780,7 @@ class HybridLSTMModel:
             validation_data=validation_data,
             callbacks=callbacks,
             class_weight=class_weight,
-            verbose=1,
+            verbose=2,
         )
 
         return self.history
@@ -1963,7 +1963,7 @@ class HybridGRUModel:
             validation_data=validation_data,
             callbacks=callbacks,
             class_weight=class_weight,
-            verbose=1,
+            verbose=2,
         )
 
         return self.history
