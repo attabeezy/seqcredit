@@ -28,6 +28,8 @@ try:
     )
     from seqcredit_model.credit_model import (
         CreditRiskDataLoader,
+        GRUModel,
+        HybridGRUModel,
         HybridLSTMModel,
         LightGBMModel,
         LogisticRegressionModel,
@@ -52,6 +54,8 @@ except ModuleNotFoundError:
     )
     from credit_model import (
         CreditRiskDataLoader,
+        GRUModel,
+        HybridGRUModel,
         HybridLSTMModel,
         LightGBMModel,
         LogisticRegressionModel,
@@ -267,14 +271,17 @@ def run_hybrid_cv(
     y: np.ndarray,
     n_splits: int = N_SPLITS,
     seed: int = RANDOM_SEED,
+    model_class=None,
 ) -> Tuple[pd.DataFrame, Dict, np.ndarray]:
-    """Run 5-fold CV for Hybrid LSTM model with OOF predictions."""
+    """Run 5-fold CV for a hybrid sequential+static model with OOF predictions."""
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
     fold_results = []
     oof_predictions = np.zeros(len(y))
 
     seq_shape = (X_seq.shape[1], X_seq.shape[2])
     static_dim = X_static.shape[1]
+
+    _cls = model_class if model_class is not None else HybridLSTMModel
 
     for fold, (train_idx, val_idx) in enumerate(skf.split(X_seq, y)):
         print(f"      Fold {fold + 1}/{n_splits}...")
@@ -286,7 +293,7 @@ def run_hybrid_cv(
         X_static_tr_scaled = scaler.fit_transform(X_static_tr)
         X_static_val_scaled = scaler.transform(X_static_val)
 
-        model = HybridLSTMModel(**model_params)
+        model = _cls(**model_params)
         model.build_model(seq_shape, static_dim)
         model.fit(
             X_seq_tr,
@@ -586,8 +593,56 @@ def main():
                 oof_preds_default["HybridLSTM"] = oof
             else:
                 oof_preds_bad["HybridLSTM"] = oof
+
+            model_start = time.time()
+            print(f"    GRU...")
+            fold_df, summary, oof = run_lstm_cv(
+                lstm_params, X_seq_curr, y, model_class=GRUModel
+            )
+            elapsed = time.time() - model_start
+            model_timings[f"GRU_{target_name}"] = elapsed
+            print(f"      done ({elapsed:.1f}s, AUC-ROC={summary['auc_roc']:.4f})")
+
+            for _, row in fold_df.iterrows():
+                all_results.append(
+                    {
+                        "model": "GRU",
+                        "target": target_name,
+                        "fold": row["fold"],
+                        **{k: v for k, v in row.items() if k not in ["model", "target", "fold"]},
+                    }
+                )
+
+            if target_name == "y_default":
+                oof_preds_default["GRU"] = oof
+            else:
+                oof_preds_bad["GRU"] = oof
+
+            model_start = time.time()
+            print(f"    HybridGRU...")
+            fold_df, summary, oof = run_hybrid_cv(
+                lstm_params, X_seq_curr, static_X.values, y, model_class=HybridGRUModel
+            )
+            elapsed = time.time() - model_start
+            model_timings[f"HybridGRU_{target_name}"] = elapsed
+            print(f"      done ({elapsed:.1f}s, AUC-ROC={summary['auc_roc']:.4f})")
+
+            for _, row in fold_df.iterrows():
+                all_results.append(
+                    {
+                        "model": "HybridGRU",
+                        "target": target_name,
+                        "fold": row["fold"],
+                        **{k: v for k, v in row.items() if k not in ["model", "target", "fold"]},
+                    }
+                )
+
+            if target_name == "y_default":
+                oof_preds_default["HybridGRU"] = oof
+            else:
+                oof_preds_bad["HybridGRU"] = oof
         else:
-            print("    LSTM / HybridLSTM — skipped (no sequence files)")
+            print("    LSTM / HybridLSTM / GRU / HybridGRU — skipped (no sequence files)")
 
         # Intermediate checkpoint — always save so progress survives a kill
         _runtime_dir = get_runtime_data_dir()
@@ -625,7 +680,7 @@ def main():
     print("\n[5/6] Running significance tests...")
 
     static_models = ["LogisticRegression", "XGBoost", "RandomForest", "LightGBM"]
-    seq_models = ["LSTM", "HybridLSTM"] if has_seq_inputs else []
+    seq_models = ["LSTM", "HybridLSTM", "GRU", "HybridGRU"] if has_seq_inputs else []
     all_models = static_models + seq_models
 
     best_static = None

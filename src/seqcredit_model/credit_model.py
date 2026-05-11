@@ -62,6 +62,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.layers import LSTM as KerasLSTM
+from tensorflow.keras.layers import GRU as KerasGRU
 from tensorflow.keras.layers import Dense, Dropout, Masking
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -1501,6 +1502,179 @@ class LSTMModel:
         return instance
 
 
+class GRUModel:
+    """GRU model for sequential credit risk prediction.
+
+    Drop-in replacement for LSTMModel using GRU cells. GRU has fewer parameters
+    (no separate cell state) which often means faster convergence on shorter
+    sequences — relevant given the 100-step cap used here.
+    """
+
+    def __init__(
+        self,
+        lstm_units_1=32,
+        lstm_units_2=16,
+        dense_units=16,
+        dropout_rate=0.4,
+        learning_rate=0.001,
+    ):
+        self.lstm_units_1 = lstm_units_1
+        self.lstm_units_2 = lstm_units_2
+        self.dense_units = dense_units
+        self.dropout_rate = dropout_rate
+        self.learning_rate = learning_rate
+        self.model = None
+        self.history = None
+
+    def build_model(self, input_shape: Tuple[int, int]):
+        """Build a stacked GRU binary classifier."""
+        self.model = Sequential(
+            [
+                Masking(mask_value=0.0, input_shape=input_shape),
+                KerasGRU(
+                    self.lstm_units_1,
+                    return_sequences=True,
+                    recurrent_dropout=0.3,
+                    kernel_regularizer=l2(1e-4),
+                ),
+                Dropout(self.dropout_rate),
+                KerasGRU(
+                    self.lstm_units_2,
+                    return_sequences=False,
+                    recurrent_dropout=0.3,
+                    kernel_regularizer=l2(1e-4),
+                ),
+                Dropout(self.dropout_rate),
+                Dense(self.dense_units, activation="relu"),
+                Dropout(self.dropout_rate * 0.67),
+                Dense(1, activation="sigmoid"),
+            ]
+        )
+
+        self.model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=self.learning_rate),
+            loss="binary_crossentropy",
+            metrics=[tf.keras.metrics.AUC(name="auc")],
+        )
+
+        return self
+
+    def fit(
+        self,
+        X_train,
+        y_train,
+        X_val=None,
+        y_val=None,
+        epochs=100,
+        batch_size=32,
+        class_weight=None,
+    ):
+        """Train the GRU with early stopping on validation AUC."""
+        if self.model is None:
+            input_shape = (X_train.shape[1], X_train.shape[2])
+            self.build_model(input_shape)
+
+        callbacks = [
+            EarlyStopping(
+                patience=10, monitor="val_auc", mode="max", restore_best_weights=True
+            ),
+            ReduceLROnPlateau(patience=5, factor=0.5, monitor="val_auc", mode="max"),
+        ]
+
+        validation_data = None
+        if X_val is not None and y_val is not None:
+            validation_data = (X_val, y_val)
+
+        if class_weight is None:
+            from sklearn.utils.class_weight import compute_class_weight as _cw
+
+            _classes = np.unique(y_train)
+            _weights = _cw("balanced", classes=_classes, y=y_train)
+            class_weight = dict(zip(_classes.astype(int), _weights))
+
+        self.history = self.model.fit(
+            X_train,
+            y_train,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_split=0.15 if validation_data is None else 0.0,
+            validation_data=validation_data,
+            callbacks=callbacks,
+            class_weight=class_weight,
+            verbose=1,
+        )
+
+        return self.history
+
+    def predict_proba(self, X) -> np.ndarray:
+        return self.model.predict(X, verbose=0).flatten()
+
+    def predict(self, X, threshold=0.5) -> np.ndarray:
+        return (self.predict_proba(X) >= threshold).astype(int)
+
+    def cross_validate(
+        self, X, y, n_splits=5, epochs=100, batch_size=32, class_weight=None
+    ) -> Dict:
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RANDOM_SEED)
+        results = {"auc_roc": [], "auc_pr": [], "f1": [], "accuracy": []}
+
+        input_shape = (X.shape[1], X.shape[2])
+
+        for fold, (train_idx, val_idx) in enumerate(skf.split(X, y)):
+            print(f"\n--- Fold {fold + 1}/{n_splits} ---")
+            X_tr, X_val = X[train_idx], X[val_idx]
+            y_tr, y_val = y[train_idx], y[val_idx]
+
+            fold_model = GRUModel(
+                lstm_units_1=self.lstm_units_1,
+                lstm_units_2=self.lstm_units_2,
+                dense_units=self.dense_units,
+                dropout_rate=self.dropout_rate,
+                learning_rate=self.learning_rate,
+            )
+            fold_model.build_model(input_shape)
+            fold_model.fit(
+                X_tr,
+                y_tr,
+                X_val=X_val,
+                y_val=y_val,
+                epochs=epochs,
+                batch_size=batch_size,
+                class_weight=class_weight,
+            )
+
+            y_proba = fold_model.predict_proba(X_val)
+            y_pred = (y_proba >= 0.5).astype(int)
+
+            results["auc_roc"].append(roc_auc_score(y_val, y_proba))
+            results["auc_pr"].append(average_precision_score(y_val, y_proba))
+            results["f1"].append(f1_score(y_val, y_pred))
+            results["accuracy"].append(accuracy_score(y_val, y_pred))
+
+            print(f"  Fold {fold + 1} AUC-ROC: {results['auc_roc'][-1]:.4f}")
+
+        return results
+
+    def save(self, path: str) -> None:
+        model_path = _normalize_keras_save_path(path)
+        self.model.save(model_path)
+        config = {
+            k: v for k, v in self.__dict__.items() if k not in ("model", "history")
+        }
+        with open(f"{path}.json", "w") as f:
+            json.dump(config, f)
+
+    @classmethod
+    def load(cls, path: str) -> "GRUModel":
+        with open(f"{path}.json") as f:
+            config = json.load(f)
+        instance = cls(**config)
+        model_path = _resolve_keras_load_path(path)
+        instance.model = tf.keras.models.load_model(model_path)
+        instance.history = None
+        return instance
+
+
 class HybridLSTMModel:
     """Hybrid LSTM model combining sequential and static features for credit risk prediction."""
 
@@ -1682,6 +1856,189 @@ class HybridLSTMModel:
 
     @classmethod
     def load(cls, path: str) -> "HybridLSTMModel":
+        with open(f"{path}.json") as f:
+            config = json.load(f)
+        instance = cls(**config)
+        model_path = _resolve_keras_load_path(path)
+        instance.model = tf.keras.models.load_model(model_path)
+        instance.history = None
+        return instance
+
+
+class HybridGRUModel:
+    """Hybrid GRU model combining sequential and static features for credit risk prediction.
+
+    Drop-in replacement for HybridLSTMModel using GRU cells in the sequence branch.
+    """
+
+    def __init__(
+        self,
+        lstm_units_1=32,
+        lstm_units_2=16,
+        dense_units=16,
+        dropout_rate=0.3,
+        learning_rate=0.001,
+    ):
+        self.lstm_units_1 = lstm_units_1
+        self.lstm_units_2 = lstm_units_2
+        self.dense_units = dense_units
+        self.dropout_rate = dropout_rate
+        self.learning_rate = learning_rate
+        self.model = None
+        self.history = None
+
+    def build_model(self, seq_input_shape: Tuple[int, int], static_input_dim: int):
+        """Build a hybrid GRU model with both sequence and static inputs."""
+        from tensorflow.keras import Input, Model
+        from tensorflow.keras.layers import Concatenate
+
+        seq_input = Input(shape=seq_input_shape, name="sequence_input")
+        static_input = Input(shape=(static_input_dim,), name="static_input")
+
+        x = Masking(mask_value=0.0, name="masking")(seq_input)
+        x = KerasGRU(self.lstm_units_1, return_sequences=True, recurrent_dropout=0.2)(x)
+        x = Dropout(self.dropout_rate)(x)
+        x = KerasGRU(self.lstm_units_2, return_sequences=False, recurrent_dropout=0.2)(x)
+        x = Dropout(self.dropout_rate)(x)
+
+        s = Dense(self.dense_units // 2, activation="relu")(static_input)
+        s = Dropout(self.dropout_rate * 0.67)(s)
+
+        combined = Concatenate()([x, s])
+        combined = Dense(self.dense_units, activation="relu")(combined)
+        combined = Dropout(self.dropout_rate * 0.67)(combined)
+        output = Dense(1, activation="sigmoid")(combined)
+
+        self.model = Model(inputs=[seq_input, static_input], outputs=output)
+        self.model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=self.learning_rate),
+            loss="binary_crossentropy",
+            metrics=[tf.keras.metrics.AUC(name="auc")],
+        )
+
+        return self
+
+    def fit(
+        self,
+        X_train_seq,
+        X_train_static,
+        y_train,
+        X_val_seq=None,
+        X_val_static=None,
+        y_val=None,
+        epochs=100,
+        batch_size=32,
+        class_weight=None,
+    ):
+        """Train the hybrid GRU with early stopping on validation AUC."""
+        if self.model is None:
+            seq_shape = (X_train_seq.shape[1], X_train_seq.shape[2])
+            static_dim = X_train_static.shape[1]
+            self.build_model(seq_shape, static_dim)
+
+        callbacks = [
+            EarlyStopping(
+                patience=10, monitor="val_auc", mode="max", restore_best_weights=True
+            ),
+            ReduceLROnPlateau(patience=5, factor=0.5, monitor="val_auc", mode="max"),
+        ]
+
+        validation_data = None
+        if X_val_seq is not None and X_val_static is not None:
+            validation_data = ([X_val_seq, X_val_static], y_val)
+
+        if class_weight is None:
+            from sklearn.utils.class_weight import compute_class_weight as _cw
+
+            _classes = np.unique(y_train)
+            _weights = _cw("balanced", classes=_classes, y=y_train)
+            class_weight = dict(zip(_classes.astype(int), _weights))
+
+        self.history = self.model.fit(
+            [X_train_seq, X_train_static],
+            y_train,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_split=0.15 if validation_data is None else 0.0,
+            validation_data=validation_data,
+            callbacks=callbacks,
+            class_weight=class_weight,
+            verbose=1,
+        )
+
+        return self.history
+
+    def predict_proba(self, X_seq, X_static) -> np.ndarray:
+        return self.model.predict([X_seq, X_static], verbose=0).flatten()
+
+    def predict(self, X_seq, X_static, threshold=0.5) -> np.ndarray:
+        return (self.predict_proba(X_seq, X_static) >= threshold).astype(int)
+
+    def cross_validate(
+        self,
+        X_seq,
+        X_static,
+        y,
+        n_splits=5,
+        epochs=100,
+        batch_size=32,
+        class_weight=None,
+    ) -> Dict:
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RANDOM_SEED)
+        results = {"auc_roc": [], "auc_pr": [], "f1": [], "accuracy": []}
+
+        seq_shape = (X_seq.shape[1], X_seq.shape[2])
+        static_dim = X_static.shape[1]
+
+        for fold, (train_idx, val_idx) in enumerate(skf.split(X_seq, y)):
+            print(f"\n--- Fold {fold + 1}/{n_splits} ---")
+            X_seq_tr, X_seq_val = X_seq[train_idx], X_seq[val_idx]
+            X_static_tr, X_static_val = X_static[train_idx], X_static[val_idx]
+            y_tr, y_val = y[train_idx], y[val_idx]
+
+            fold_model = HybridGRUModel(
+                lstm_units_1=self.lstm_units_1,
+                lstm_units_2=self.lstm_units_2,
+                dense_units=self.dense_units,
+                dropout_rate=self.dropout_rate,
+                learning_rate=self.learning_rate,
+            )
+            fold_model.build_model(seq_shape, static_dim)
+            fold_model.fit(
+                X_seq_tr,
+                X_static_tr,
+                y_tr,
+                X_val_seq=X_seq_val,
+                X_val_static=X_static_val,
+                y_val=y_val,
+                epochs=epochs,
+                batch_size=batch_size,
+                class_weight=class_weight,
+            )
+
+            y_proba = fold_model.predict_proba(X_seq_val, X_static_val)
+            y_pred = (y_proba >= 0.5).astype(int)
+
+            results["auc_roc"].append(roc_auc_score(y_val, y_proba))
+            results["auc_pr"].append(average_precision_score(y_val, y_proba))
+            results["f1"].append(f1_score(y_val, y_pred))
+            results["accuracy"].append(accuracy_score(y_val, y_pred))
+
+            print(f"  Fold {fold + 1} AUC-ROC: {results['auc_roc'][-1]:.4f}")
+
+        return results
+
+    def save(self, path: str) -> None:
+        model_path = _normalize_keras_save_path(path)
+        self.model.save(model_path)
+        config = {
+            k: v for k, v in self.__dict__.items() if k not in ("model", "history")
+        }
+        with open(f"{path}.json", "w") as f:
+            json.dump(config, f)
+
+    @classmethod
+    def load(cls, path: str) -> "HybridGRUModel":
         with open(f"{path}.json") as f:
             config = json.load(f)
         instance = cls(**config)
