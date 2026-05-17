@@ -104,7 +104,7 @@ def _parse_timestamp(df):
     )
 
 
-def _derive_loan_cutoffs(df, min_followup_days=30):
+def _derive_loan_cutoffs(df, min_followup_days=60):
     """Return a Spark DataFrame (user_id, last_loan_ts) for every borrower.
 
     ``last_loan_ts`` is the timestamp of the borrower's most recent loan
@@ -122,7 +122,7 @@ def _derive_loan_cutoffs(df, min_followup_days=30):
     df : Spark DataFrame
         Raw transaction table with the ``ts`` column already added by
         ``_parse_timestamp``.
-    min_followup_days : int, optional (default 30)
+    min_followup_days : int, optional (default 60)
         Minimum days of post-loan observation required to include a borrower.
         Borrowers whose index loan falls within this many days of the latest
         timestamp in the dataset are excluded.
@@ -448,7 +448,7 @@ def engineer_features(df, borrower_ids_spark, cutoffs_spark):
     return features.toPandas()
 
 
-def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path=None):
+def build_sequences_spark(df, min_followup_days=60, max_seq_len=100, output_path=None):
     """Build ephemeral per-user transaction sequences for LSTM from the Spark table.
 
     All feature engineering is pushed into Spark so workers do the computation.
@@ -758,7 +758,7 @@ def build_sequences_spark(df, min_followup_days=30, max_seq_len=100, output_path
     return output_path
 
 
-def build_pipeline(df, output_dir=None, min_followup_days=30):
+def build_pipeline(df, output_dir=None, min_followup_days=60):
     """Run the full real-data pipeline and save outputs for the current runtime.
 
     In Databricks notebook workflows with ``output_dir=None``, feature and label
