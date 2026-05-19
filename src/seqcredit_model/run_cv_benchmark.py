@@ -33,7 +33,6 @@ try:
         LogisticRegressionModel,
         LSTMModel,
         RandomForestModel,
-        TransformerModel,
         XGBoostModel,
         set_random_seeds,
     )
@@ -58,7 +57,6 @@ except ModuleNotFoundError:
         LogisticRegressionModel,
         LSTMModel,
         RandomForestModel,
-        TransformerModel,
         XGBoostModel,
         set_random_seeds,
     )
@@ -426,14 +424,6 @@ def main():
     }
 
     lstm_params = {"learning_rate": 0.001}
-    transformer_params = {
-        "d_model": 32,
-        "num_heads": 4,
-        "ff_dim": 64,
-        "num_blocks": 2,
-        "dropout_rate": 0.3,
-        "learning_rate": 0.001,
-    }
 
     all_results = []
     oof_preds_default = {}
@@ -533,32 +523,8 @@ def main():
             else:
                 oof_preds_bad["GRU"] = oof
 
-            model_start = time.time()
-            print(f"    Transformer...")
-            fold_df, summary, oof = run_lstm_cv(
-                transformer_params, X_seq_curr, y, model_class=TransformerModel
-            )
-            elapsed = time.time() - model_start
-            model_timings[f"Transformer_{target_name}"] = elapsed
-            print(f"      done ({elapsed:.1f}s, AUC-ROC={summary['auc_roc']:.4f})")
-
-            for _, row in fold_df.iterrows():
-                all_results.append(
-                    {
-                        "model": "Transformer",
-                        "target": target_name,
-                        "fold": row["fold"],
-                        **{k: v for k, v in row.items() if k not in ["model", "target", "fold"]},
-                    }
-                )
-
-            if target_name == "y_default":
-                oof_preds_default["Transformer"] = oof
-            else:
-                oof_preds_bad["Transformer"] = oof
-
         else:
-            print("    LSTM / GRU / Transformer — skipped (no sequence files)")
+            print("    LSTM / GRU — skipped (no sequence files)")
 
         # Intermediate checkpoint — always save so progress survives a kill
         _runtime_dir = get_runtime_data_dir()
@@ -596,7 +562,7 @@ def main():
     print("\n[5/6] Running significance tests...")
 
     static_models = ["LogisticRegression", "XGBoost", "RandomForest", "LightGBM"]
-    seq_models = ["LSTM", "GRU", "Transformer"] if has_seq_inputs else []
+    seq_models = ["LSTM", "GRU"] if has_seq_inputs else []
     all_models = static_models + seq_models
 
     best_static = None
