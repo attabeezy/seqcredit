@@ -438,6 +438,11 @@ def main():
     ]:
         print(f"\n  === Target: {target_name} ===")
 
+        # Recompute XGBoost scale_pos_weight for this target's actual class ratio
+        n_neg = (y == 0).sum()
+        n_pos = (y == 1).sum()
+        static_model_params["XGBoost"]["scale_pos_weight"] = n_neg / max(n_pos, 1)
+
         # --- Static models ---
         for model_name, model_class in [
             ("LogisticRegression", LogisticRegressionModel),
