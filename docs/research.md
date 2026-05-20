@@ -2491,3 +2491,33 @@ The paper we are writing tells this story: a synthetic framework, a surprising f
 ---
 
 *Generated from complete codebase read — May 20, 2026. All findings trace to data files in `data/`, source code in `src/seqcredit_model/`, and git history on the `real-data` branch.*
+
+---
+
+## Session Log: May 20, 2026
+
+### What We Did
+
+**Discovered and fixed stale notebook outputs.** Cell 14 of Analysis Notebook B was displaying HybridLSTM results from an old CSV. Investigation confirmed that `run_cv_benchmark.py` had already dropped HybridLSTM and replaced it with GRU — but cells 14 and 15 had never been re-executed after that change, so their stored outputs still referenced HybridLSTM. Fixed by clearing the outputs on both cells. The source code was already correct; only the cached output was stale.
+
+**Confirmed no hybrid model is needed.** The question arose: do we need a HybridLSTM (or similar) in the benchmark to prove that static feature engineering beats pure sequential? The answer is no. The comparison is already complete: LR/XGBoost/RF/LightGBM (static) all beat LSTM and GRU cleanly on both targets. A hybrid is only relevant if the claim were that combined static+sequential is the ceiling — that is not the claim. The claim is that static aggregate features are sufficient, and the benchmark proves it.
+
+**GRU and LSTM showing improvement.** The latest benchmark run (cell 13 stored output) shows GRU at **0.7553 AUC-ROC** on `y_default` — a large jump from the previous LSTM result (0.5872). This may reflect the architectural change (GRU vs LSTM) or improvements to the pipeline (60-day followup filter, corrected scale_pos_weight). Still below the static models, but no longer near-random. Worth noting in Paper B.
+
+**Branch strategy confirmed.** `real-data` is 57 commits ahead of `main`, with no commits behind. `main` remains the clean Paper A (synthetic) baseline. Decision: do not merge until Paper B is complete. The two branches represent two papers; premature merging would muddy both.
+
+**Commits shipped today (`real-data` branch):**
+
+| Hash | Message |
+|---|---|
+| `cce541e` | chore(notebook-b): clear stale HybridLSTM outputs from cells 14–15 |
+| `58a076c` | chore: remove root-level duplicate docs and update .gitignore |
+| `179800d` | docs: update DATACARD/PROJECT for real-data findings, add research record |
+| `d6c35fb` | fix(notebook-a): cast TRANSACTION_AMOUNT display values to float, add CSV export |
+
+### State of Play
+
+- Notebook B is ready to run end-to-end on Azure. All cells top-to-bottom: cell 11 builds sequences, cell 12 builds static features/labels, cell 13 runs the CV benchmark (writes fresh CSVs), cells 14–15 display results. Cannot run 14–15 in isolation since `/tmp/` is ephemeral per session.
+- Root-level doc duplicates removed. All canonical documentation now lives under `docs/`.
+- `docs/publications/` is the designated path for paper drafts and figures (updated in `.gitignore` and `PROJECT.md`).
+- JMLR MLOSS submission roadmap added to `PROJECT.md` as a potential third output alongside Papers A and B.
