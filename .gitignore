@@ -238,8 +238,8 @@ data/user_transactions/
 data/test_user_transactions/
 data/legacy/
 
-# Paper/draft files
-paper/
+# Publications/draft files
+docs/publications/
 
 # IDE folders
 .idea/
