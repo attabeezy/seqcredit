@@ -377,7 +377,13 @@ model = ModelClass.load("models/model_name")
 - All other groups (amount_stats, balance_dynamics, fee_behaviour, temporal_patterns, txn_type_mix, activity_intensity) have negligible individual impact; some marginally improve performance when dropped.
 - Implication: behavioral diversity and loan history encode most of the default signal; the other 6 feature groups add robustness but not discriminative power.
 
-#### 2.3 Generalization & Leakage Investigation (CRITICAL)
+#### 2.3 Transformer/Attention Baseline
+
+- [ ] Implement a lightweight Transformer/attention baseline (2-layer encoder + global pooling)
+- [ ] Train/evaluate under the same 5-fold CV stack as LSTM/static models
+- [ ] **Goal:** Determine if the "sequence collapse" (0.52 AUC) is an LSTM limitation or a data property
+
+#### 2.4 Generalization & Leakage Investigation (CRITICAL)
 - [ ] Investigate 0.50 AUC collapse in `compute_bootstrap_ci.py` (Likely Scaling mismatch).
 - [ ] Audit `_engineer_loan_features` for data leakage (Lookahead bias: using all loans instead of just pre-target history).
 - [ ] Fix: Ensure static features and sequence models share a consistent, leakage-free "prediction point."
@@ -394,13 +400,13 @@ model = ModelClass.load("models/model_name")
 #### 3.1 Manuscript Draft Completion
 - [ ] Write full draft: Introduction, Related Work, Data, Methods, Results, Interpretability, Calibration, Ablations, Discussion, Conclusion
 - [ ] **Revise core claims based on CV findings:** Static features dominate MoMo sequences for default prediction.
-- [ ] Output `paper/draft_v1.md` (or LaTeX equivalent)
+- [ ] Output `docs/publications/draft_v1.md` (or LaTeX equivalent)
 
 #### 3.2 Figure/Table Freeze
 - [ ] Freeze benchmark tables with CIs and significance results (use CV results as primary)
 - [ ] Freeze SHAP/permutation/surrogate/calibration/ablation figures
-- [ ] Output `paper/figures/*` and `paper/tables/*`
-- [ ] Add reproducibility manifest (`paper/repro_manifest.md`)
+- [ ] Output `docs/publications/figures/*` and `docs/publications/tables/*`
+- [ ] Add reproducibility manifest (`docs/publications/repro_manifest.md`)
 
 #### 3.3 Documentation Sync
 
@@ -459,6 +465,18 @@ model = ModelClass.load("models/model_name")
 - [ ] Final benchmark claims are supported by CV + CIs + significance checks
 - [ ] Paper draft is complete with reproducible figures/tables
 - [ ] Documentation and result artifacts are fully consistent across the repository
+
+---
+
+## JMLR MLOSS Submission Roadmap
+
+The project is a candidate for the **JMLR Machine Learning Open Source Software (MLOSS)** track, which prioritizes non-trivial ML contributions, high-quality documentation, and software robustness.
+
+1. **Fix the README:** Replace placeholder text with a professional overview, "Quick Start" guide, and links to tutorial notebooks.
+2. **Implement Unit Tests:** Achieve 60-70% code coverage focusing on data synthesis (`synthesize.py`), feature engineering (`pipeline.py`), and model interface consistency. (See Phase 4.1)
+3. **Generate API Documentation:** Use Sphinx or pdoc to generate a formal API reference from docstrings.
+4. **Draft 4-Page Software Paper:** Focus on the software's design, usability (specifically the `CalibratedMoMoDataGenerator`), and impact on the African fintech research ecosystem.
+5. **Community Engagement:** Release the repository publicly and gather initial community feedback/stars to provide evidence of an "active user community" as required by JMLR.
 
 ---
 
