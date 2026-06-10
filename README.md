@@ -100,7 +100,7 @@ Additional classes currently present in `credit_model.py`:
 - `TransformerModel`
 - `HybridTransformerModel`
 
-The current checked-in CV benchmark artifacts were produced by the same benchmark configuration that the current `run_cv_benchmark.py` uses: `LSTMModel` and `GRUModel` as sequential models against four static baselines, 5-fold CV, 1000-bootstrap significance tests.
+For current research results, benchmark direction, and ablation findings, see `docs/research.md`.
 
 ## Runtime Paths
 
@@ -115,60 +115,9 @@ The current checked-in CV benchmark artifacts were produced by the same benchmar
 
 This is used primarily to support Databricks or temporary runtime outputs without rewriting repo constants.
 
-## Checked-In Results
+## Research Results
 
-The committed CSVs in `data/` currently describe the synthetic benchmark artifacts checked into this branch.
-
-### 5-fold CV means
-
-`y_default`
-
-| Model | AUC-ROC | AUC-PR | F1 | Brier | ECE |
-|---|---:|---:|---:|---:|---:|
-| GRU | 0.7565 | 0.1160 | 0.1452 | 0.2130 | 0.3671 |
-| LSTM | 0.7478 | 0.1070 | 0.1409 | 0.2151 | 0.3668 |
-| XGBoost | 0.7303 | 0.1075 | 0.1566 | 0.1612 | 0.2966 |
-| LightGBM | 0.7292 | 0.1032 | 0.1566 | 0.1621 | 0.2993 |
-| RandomForest | 0.7275 | 0.1018 | 0.1599 | 0.1466 | 0.2947 |
-| LogisticRegression | 0.7089 | 0.0920 | 0.1322 | 0.2194 | 0.3982 |
-
-`y_bad`
-
-| Model | AUC-ROC | AUC-PR | F1 | Brier | ECE |
-|---|---:|---:|---:|---:|---:|
-| GRU | 0.7159 | 0.8145 | 0.7069 | 0.2166 | 0.1406 |
-| LSTM | 0.7112 | 0.8109 | 0.7104 | 0.2170 | 0.1381 |
-| XGBoost | 0.7056 | 0.8116 | 0.7000 | 0.2171 | 0.1300 |
-| LightGBM | 0.7051 | 0.8115 | 0.7012 | 0.2171 | 0.1301 |
-| RandomForest | 0.6965 | 0.8063 | 0.6942 | 0.2186 | 0.1299 |
-| LogisticRegression | 0.6855 | 0.7967 | 0.6824 | 0.2250 | 0.1415 |
-
-Source files:
-
-- `data/cv_results_y_default.csv`
-- `data/cv_results_y_bad.csv`
-- `data/significance_tests.csv`
-- `data/ablation_features.csv`
-- `data/tuning_results.csv`
-- `data/cv_manifest.json`
-
-### Ablation highlights
-
-From `data/ablation_features.csv`:
-
-- Baseline RandomForest with all 38 features: AUC-ROC `0.8836`
-- Dropping `behavioural_diversity` lowers AUC-ROC to `0.7941`
-- Dropping `loan_history` lowers AUC-ROC to `0.7796`
-- `ONLY_loan_history` reaches `0.7890`
-- `ONLY_behavioural_diversity` reaches `0.7358`
-
-### Tuning highlights
-
-From `data/tuning_results.csv`:
-
-- Tuned `LightGBM`: AUC-ROC `0.8880`
-- Tuned `XGBoost`: AUC-ROC `0.8870`
-- Tuned `RandomForest`: AUC-ROC `0.8855`
+Current benchmark tables, real-data ablation findings, and research direction are maintained in `docs/research.md`. Keep this README focused on setup, workflows, and repository orientation rather than duplicating result metrics.
 
 ## Data Outputs
 
