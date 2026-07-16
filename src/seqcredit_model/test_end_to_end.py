@@ -94,12 +94,13 @@ def test_pipeline_flow():
 
         logger.info("End-to-end flow test COMPLETED SUCCESSFULY.")
 
-        logger.info("End-to-end flow test COMPLETED SUCCESSFULY.")
-        return True
     except Exception as e:
         logger.error(f"End-to-end flow test FAILED: {str(e)}", exc_info=True)
-        return False
+        raise
 
 if __name__ == "__main__":
-    success = test_pipeline_flow()
-    sys.exit(0 if success else 1)
+    try:
+        test_pipeline_flow()
+        sys.exit(0)
+    except Exception:
+        sys.exit(1)
