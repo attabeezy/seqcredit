@@ -1172,7 +1172,7 @@ class LSTMModel:
         """
         # Build model lazily on first fit call (needs input_shape from data)
         if self.model is None:
-            input_shape = (X_train.shape[1], X_train.shape[2])
+            input_shapes = (X_train.shape[1], X_train.shape[2])
             self.build_model(input_shape)
 
         callbacks = [
