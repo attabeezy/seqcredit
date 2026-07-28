@@ -29,6 +29,8 @@ The current branch is `real-data`. The checked-in Python package contains both t
   Computes bootstrap intervals for saved notebook-trained models.
 - `src/seqcredit_model/reset.py`
   Removes generated models and data artifacts for a fresh run.
+- `src/seqcredit_model/build_poster.py`
+  Generates a PowerPoint research poster from checked-in results.
 
 ## Setup
 
@@ -41,7 +43,13 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-`pip install -e .` is required. The package is imported as `seqcredit_model`, and several commands use `python -m`.
+Or, with [uv](https://docs.astral.sh/uv/) (uses the checked-in `uv.lock`):
+
+```bash
+uv sync
+```
+
+An editable install of the package is required either way. The package is imported as `seqcredit_model`, and several commands use `python -m`.
 
 ## What Runs Where
 
@@ -111,7 +119,6 @@ For current research results, benchmark direction, and ablation findings, see `d
 - `SEQCREDIT_RAW_SEQ_FILE`
 - `SEQCREDIT_USER_FEATURES_FILE`
 - `SEQCREDIT_USER_LABELS_FILE`
-- `SEQCREDIT_EPHEMERAL`
 
 This is used primarily to support Databricks or temporary runtime outputs without rewriting repo constants.
 
