@@ -154,6 +154,13 @@ Notebook/model artifacts used by `compute_bootstrap_ci.py`:
 ## Notes
 
 - Python requirement is `>=3.10` from `pyproject.toml`.
-- The repo has no formal automated test suite yet.
 - `docs/PROJECT.md` is the canonical project reference.
 - `docs/DATACARD.md` documents the synthetic datasets.
+
+## Testing
+
+```bash
+uv run pytest
+```
+
+`tests/` covers `config.py`, `reset.py`, package exports, `synthesize.py`, `pipeline.py`, `credit_model.py` (data loader, static and sequence models, `ModelEvaluator`), `real_data_pipeline.py`, and lightweight smoke tests for the CLI scripts. Tests build small synthetic fixtures on the fly and never touch checked-in `data/`. `real_data_pipeline.py` tests run against a local Spark session (`tests/conftest.py` requires a JDK compatible with Spark's launcher, not just any JRE on `PATH`).
