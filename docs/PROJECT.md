@@ -36,7 +36,7 @@ This project is a **preliminary investigation and proof-of-concept framework pap
 
 2. **Temporal feature engineering framework** — `TemporalTransactionFeatureEngineer` formalizes 8 feature groups (38 features) extracted from transaction sequences, offering a reusable pipeline for practitioners and researchers.
 
-Preliminary evaluation on this benchmark compares six models (Logistic Regression, XGBoost, Random Forest, LightGBM, LSTM, Hybrid LSTM) under rigorous 5-fold cross-validation. The central finding is that **well-engineered static user-level features capture most of the available default signal** (RF: 0.832 AUC-ROC); the Hybrid LSTM is comparable in discrimination (0.813) but significantly worse in calibration (ECE 0.22 vs 0.04); and the standalone LSTM collapses (0.523), confirming that transaction sequences alone carry insufficient signal.
+Preliminary evaluation on this benchmark compares six models (Logistic Regression, XGBoost, Random Forest, LightGBM, LSTM, Hybrid LSTM) under rigorous 5-fold cross-validation. The central finding is that **well-engineered static user-level features capture most of the available default signal** (LogisticRegression leads discrimination at 0.9143 AUC-ROC, ahead of RandomForest 0.8836, XGBoost 0.8809, and LightGBM 0.8777); tree-based static models calibrate best (LightGBM ECE 0.038, XGBoost ECE 0.042) while LogisticRegression itself calibrates worse (ECE 0.170) despite leading on AUC; the Hybrid LSTM is close in discrimination (0.8618) but worse calibrated (ECE 0.146) than the tree-based static models; and the standalone LSTM collapses (0.5872 AUC-ROC, ECE 0.329), confirming that transaction sequences alone carry insufficient signal.
 
 **Scope:** These are preliminary findings on a controlled synthetic benchmark. External validity on real-world mobile money data is the subject of Paper B (pending Telecel Ghana data access). This paper does not claim universal generalizability — it establishes a framework, an open benchmark, and motivating results for the larger study.
 
@@ -300,7 +300,7 @@ model = ModelClass.load("models/model_name")
 1. Calibrated synthetic Ghanaian mobile money dataset (open benchmark, 10k users, 5 archetypes)
 2. Temporal feature engineering framework (8 groups, 38 features) — reusable pipeline for African fintech
 3. Preliminary comparative evaluation: static features dominate sequences on this benchmark; LSTM alone is insufficient; Hybrid LSTM is comparable in AUC but worse in calibration
-4. Ablation evidence: `behavioural_diversity` and `loan_history` carry most default signal (drop-one: −0.135 and −0.045 AUC respectively)
+4. Ablation evidence: `behavioural_diversity` and `loan_history` carry most default signal (drop-one: −0.090 and −0.104 AUC respectively, off an ALL_FEATURES RandomForest baseline of 0.8836)
 
 ### Success Criteria
 
@@ -334,7 +334,7 @@ model = ModelClass.load("models/model_name")
 - [x] Report effect sizes with p-values and/or confidence intervals
 - [x] Output `data/significance_tests.csv`
 
-**Note:** No statistically significant differences found between top models (RandomForest, LogisticRegression, HybridLSTM) in CV results.
+**Note:** `data/significance_tests.csv` covers LSTM-vs-static and HybridLSTM-vs-static comparisons only (no direct RandomForest-vs-LogisticRegression test is present). Within what's tested: HybridLSTM shows no statistically significant AUC-ROC difference from XGBoost, RandomForest, or LightGBM; LSTM is significantly behind all static models.
 
 #### 1.3 Reproducibility Guardrails
 
@@ -362,7 +362,7 @@ model = ModelClass.load("models/model_name")
 - [x] Script: `src/seqcredit_model/run_hyperparameter_tuning.py` (40 trials RandomizedSearchCV, 3-fold search → 5-fold final, RF/XGBoost/LightGBM)
 - [x] Output `data/tuning_results.csv`
 
-**Tuning Results (y_default):** XGBoost tuned is marginally best (0.8303 AUC-ROC vs default 0.8183). Tuned RF (0.8271) performs slightly *worse* than default RF (0.8319) — likely due to reduced depth (max_depth=5 vs default 10). LightGBM tuned (0.8227) also below default (0.8123→0.8227). HybridLSTM excluded from tuning (compute cost). Conclusion: default hyperparameters are near-optimal for this dataset; gains from tuning are marginal.
+**Tuning Results (y_default):** All three tuned models improve marginally over their default-hyperparameter CV baselines: RandomForest 0.8855 tuned vs 0.8836 default, XGBoost 0.8870 tuned vs 0.8809 default, LightGBM 0.8880 tuned vs 0.8777 default. HybridLSTM excluded from tuning (compute cost). Conclusion: default hyperparameters were already close to optimal for this dataset; gains from tuning are marginal but consistently positive across all three models.
 
 #### 2.2 Ablation Studies
 
@@ -371,16 +371,16 @@ model = ModelClass.load("models/model_name")
 - [x] Script: `src/seqcredit_model/run_ablation_study.py`
 - [x] Output `data/ablation_features.csv`
 
-**Key ablation findings (y_default, RandomForest):**
-- `behavioural_diversity` (unique_recipients, recipient_concentration, unique_txn_types) is the dominant group: dropping it cuts AUC-ROC from 0.832 → 0.697 (−0.135). Alone it achieves AUC 0.777.
-- `loan_history` is second most important: dropping it costs −0.045 AUC-ROC.
-- All other groups (amount_stats, balance_dynamics, fee_behaviour, temporal_patterns, txn_type_mix, activity_intensity) have negligible individual impact (delta ≤ 0.005); some marginally improve performance when dropped.
+**Key ablation findings (y_default, RandomForest, ALL_FEATURES baseline AUC-ROC 0.8836):**
+- `behavioural_diversity` (unique_recipients, recipient_concentration, unique_txn_types) is the dominant group: dropping it cuts AUC-ROC to 0.7941 (−0.0895). Alone it achieves AUC 0.7358.
+- `loan_history` is second most important: dropping it costs −0.104 AUC-ROC (to 0.7796). Alone it achieves AUC 0.789.
+- All other groups (amount_stats, balance_dynamics, fee_behaviour, temporal_patterns, txn_type_mix, activity_intensity) have negligible individual impact (delta ≤ 0.007); some marginally improve performance when dropped.
 - Implication: behavioral diversity and loan history encode most of the default signal; the other 6 feature groups add robustness but not discriminative power.
 
 #### 2.3 Transformer/Attention Baseline (CRITICAL)
 - [ ] Implement a lightweight Transformer/attention baseline (e.g., 2-layer encoder + global pooling)
 - [ ] Train/evaluate under the same 5-fold CV stack as LSTM/static models
-- [ ] **Goal:** Determine if the "sequence collapse" (0.52 AUC) is an LSTM limitation or a data property.
+- [ ] **Goal:** Determine if the "sequence collapse" (0.587 AUC) is an LSTM limitation or a data property.
 
 #### 2.4 Formalized Reproducibility Script
 - [ ] Create `run_full_experiment_suite.py` that executes: synthesize → pipeline → cv_benchmark → ablation → tuning → transformer.
@@ -437,7 +437,7 @@ model = ModelClass.load("models/model_name")
 
 #### Week 2
 
-- [x] Re-run CV benchmark after LSTM fix — LSTM still 0.5231 AUC-ROC on y_default even after regularization (32→16 units, dropout 0.4, L2, recurrent_dropout 0.3). Confirms: sequences alone carry insufficient default-predictive signal. This is the publishable finding.
+- [x] Re-run CV benchmark after LSTM fix — LSTM still 0.5872 AUC-ROC on y_default even after regularization (32→16 units, dropout 0.4, L2, recurrent_dropout 0.3). Confirms: sequences alone carry insufficient default-predictive signal. This is the publishable finding.
 - [x] Ablation study complete (`data/ablation_features.csv`)
 - [x] Hyperparameter tuning complete (`data/tuning_results.csv`)
 - [ ] Transformer baseline
@@ -467,15 +467,15 @@ model = ModelClass.load("models/model_name")
 
 ### 1. ~~Why do static models perform much better in CV vs single-split?~~ (Resolved)
 
-**Root cause:** Class-imbalance handling bug in early runs caused static models to predict all-negative, yielding artificially low AUC (~0.53). The "post-imbalance fix" commit corrected `class_weight='balanced'` and `scale_pos_weight` settings. CV results (static ~0.83) are the true performance.
+**Root cause:** Class-imbalance handling bug in early runs caused static models to predict all-negative, yielding artificially low AUC (~0.53). The "post-imbalance fix" commit corrected `class_weight='balanced'` and `scale_pos_weight` settings. CV results (static models 0.878–0.914 AUC-ROC) are the true performance.
 
 ### 2. Is the "sequential models beat static models" thesis still valid? (Resolved — revised)
 
 **Conclusion:** No. With proper imbalance handling and CV evaluation:
-- Top static models (RF 0.832, LR 0.831) match HybridLSTM (0.813) in AUC-ROC
-- Static models are significantly better calibrated (ECE 0.04 vs 0.22)
-- No statistically significant pairwise differences between any top-5 models
-- **Revised framing:** The Hybrid provides comparable discriminative performance to static models, but static tree models should be preferred when calibration matters (e.g., loan pricing, risk scoring)
+- Top static model (LogisticRegression, 0.9143 AUC-ROC) leads all models, ahead of RandomForest (0.8836), XGBoost (0.8809), LightGBM (0.8777), and HybridLSTM (0.8618)
+- Tree-based static models are significantly better calibrated (LightGBM/XGBoost ECE ~0.04) than HybridLSTM (ECE 0.146) or LogisticRegression itself (ECE 0.170)
+- Per `significance_tests.csv`, HybridLSTM is not significantly different from XGBoost/RandomForest/LightGBM on AUC-ROC; LSTM is significantly behind all static models. (No direct RF-vs-LogisticRegression significance test is in the current CSV.)
+- **Revised framing:** The Hybrid provides comparable discriminative performance to the tree-based static models but is not the top performer overall — LogisticRegression leads on discrimination. Static tree models should be preferred when calibration matters (e.g., loan pricing, risk scoring), since they combine strong AUC with the best calibration.
 
 ### 3. ~~Single-split notebook consistency~~ (Superseded)
 
@@ -487,9 +487,9 @@ Single-split results from the notebook are no longer used as a primary benchmark
 
 **Fix applied:** Reduced to 32→16 units, dropout 0.4, L2 kernel regularization (1e-4), recurrent_dropout 0.3. Re-run completed.
 
-**Outcome:** LSTM still scores 0.5231 AUC-ROC on y_default after regularization (y_bad: 0.5071) — essentially random. This confirms the finding is not a capacity/overfitting artifact but a data property: transaction sequences alone lack sufficient signal to predict default.
+**Outcome:** LSTM still scores 0.5872 AUC-ROC on y_default after regularization (y_bad: 0.5340) — close to random. This confirms the finding is not a capacity/overfitting artifact but a data property: transaction sequences alone lack sufficient signal to predict default.
 
-**Conclusion (publishable):** *Well-engineered static user-level features capture the relevant predictive signal; the temporal order of individual transactions adds negligible marginal value for default prediction. The Hybrid model's 0.813 AUC is entirely attributable to its static feature branch.*
+**Conclusion (publishable):** *Well-engineered static user-level features capture the relevant predictive signal; the temporal order of individual transactions adds negligible marginal value for default prediction. The Hybrid model's 0.8618 AUC is close to, but still below, the best static model (LogisticRegression, 0.9143), suggesting its discriminative power is dominated by its static feature branch rather than the LSTM sequence branch.*
 
 ---
 
@@ -559,7 +559,7 @@ This work is an explicitly scoped **preliminary investigation**. Reviewers and r
 
 4. **Binary default framing.** The primary target (`y_default`) collapses late payment and default into non-default. Real credit risk applications typically require probability calibration and decision thresholds tuned to deployment costs — partially addressed by calibration analysis but not fully resolved.
 
-5. **Sequences may carry more signal in real data.** The finding that standalone LSTM collapses (0.523 AUC) reflects a property of the synthetic dataset's generation process, where credit outcomes are partly determined by user archetype labels rather than purely by transaction sequence dynamics. This motivates — but does not substitute for — real-data validation.
+5. **Sequences may carry more signal in real data.** The finding that standalone LSTM collapses (0.587 AUC) reflects a property of the synthetic dataset's generation process, where credit outcomes are partly determined by user archetype labels rather than purely by transaction sequence dynamics. This motivates — but does not substitute for — real-data validation.
 
 **Paper B** (Hybrid LSTM on real Telecel Ghana data, pending data access) addresses limitations 1–3 directly and is the intended real-world validation of this framework.
 
