@@ -85,10 +85,12 @@ because it gives the strongest AUC-ROC on both real-data targets in Notebook B.
 The static models remain important baselines and calibration comparators, but
 they are no longer the headline model family for the real-data workflow.
 
-Notebook B also reports significance tests showing recurrent models have
-statistically significant AUC-ROC gains over the static baselines for both
-targets. Some AUC-PR differences are smaller or not significant, so claims should
-focus on AUC-ROC unless citing the full significance table.
+Notebook B displays archived significance-test output, but those results are not
+independently verifiable: comparisons are duplicated and the underlying
+out-of-fold prediction archive is missing. Do not use statistical significance,
+confidence intervals, or fold variation as central evidence. The preserved mean
+benchmark tables and the separate Notebook C rerun support a descriptive
+ranking claim only.
 
 For the `y_default` target specifically, there is a clean discrimination-vs-calibration
 split: recurrent models (GRU, LSTM) lead on AUC-ROC while tree models (RandomForest,
@@ -119,30 +121,24 @@ Notebook A drop-one-group results:
 
 ### Ablation inferences
 
-**Two-group dominance.** `txn_type_mix` and `amount_stats` together account for
-the overwhelming majority of the drop-one signal (Δ −0.0072 and −0.0052
-respectively). The remaining four groups combined contribute only −0.0020. Any
-claim about feature importance in the static model should lead with these two
-groups.
+**Largest conditional drops.** `txn_type_mix` and `amount_stats` produce the
+largest drop-one AUC changes (−0.0072 and −0.0052 respectively). Drop-one
+effects are conditional and non-additive, so they must not be summed or treated
+as shares of model performance.
 
-**The model reads *what* and *how much*, not *when*.** `txn_type_mix` — the
-proportional split across transfers, debits, cashouts, and payments — is the
-single most informative group. Combined with `amount_stats` being second, the
-static model is essentially learning from the composition and scale of a user's
-transaction behaviour. Timing-based features add nothing.
+**Composition and amount statistics contain the strongest static signal.** In
+this RandomForest run, removing transaction-type mix or amount statistics causes
+the largest degradation. This supports a predictive-signal claim, not an
+explanation of borrower behavior.
 
-**Temporal patterns are effectively irrelevant.** Dropping `avg_hours_between_txns`,
-`pct_weekend_txns`, `pct_night_txns`, and `pct_early_morning_txns` changes
-AUC-ROC by +0.000024 — indistinguishable from noise. When a borrower transacts
-carries no incremental signal once composition and volume are already captured.
+**Temporal patterns add no measurable incremental discrimination in this run.**
+Dropping `avg_hours_between_txns`, `pct_weekend_txns`, `pct_night_txns`, and
+`pct_early_morning_txns` changes AUC-ROC by +0.000024. This does not establish
+that timing is generally irrelevant.
 
-**Loan history contributes almost nothing as a static group.** Despite including
-nine loan-specific features (`balance_to_loan_ratio_at_disbursement`,
-`avg_balance_at_loan`, `loan_to_total_volume_ratio`, etc.), dropping them costs
-only −0.0002 AUC-ROC. This is counterintuitive but plausible: for many borrowers
-in this cohort the index loan is their first or second loan, leaving loan history
-features sparse or near-constant. Whatever the loan history reveals may also be
-redundant with what `amount_stats` and `txn_type_mix` already encode.
+**Loan history adds little incremental static discrimination in this run.** The
+drop is −0.0002 AUC-ROC. The surviving evidence does not establish whether this
+is caused by first-time borrowing, sparsity, redundancy, or another mechanism.
 
 **Calibration note.** The Brier and ECE columns track AUC-ROC across all groups:
 dropping `txn_type_mix` or `amount_stats` also worsens calibration. Dropping
@@ -152,12 +148,11 @@ without contributing to discrimination.
 
 ## Current Research Questions
 
-- Can Notebook C be fixed so it becomes a clean single rerun notebook for A+B?
 - Do the GRU gains remain stable across reruns and hardware/runtime variation?
 - Which calibration strategy should be used for recurrent models, given their
   stronger AUC-ROC but weaker Brier/ECE than the best static baselines?
-- Should real-data benchmark outputs be promoted from notebook runtime artifacts
-  into tracked CSVs with a manifest?
+- If the data is restored, can preprocessing be moved inside each CV fold and
+  the untouched 20% test population be evaluated?
 
 ## Use of Results
 
