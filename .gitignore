@@ -238,8 +238,11 @@ data/user_transactions/
 data/test_user_transactions/
 data/legacy/
 
-# Publications/draft files
+# Private paper and submission artifacts
+docs/evidence-ledger.md
 docs/publications/
+output/
+tmp/
 
 # IDE folders
 .idea/
