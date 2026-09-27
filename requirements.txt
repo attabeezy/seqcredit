@@ -11,3 +11,6 @@ shap
 pyspark
 joblib
 ipykernel
+streamlit>=1.30
+streamlit-echarts>=0.7.0
+reportlab>=4.0
