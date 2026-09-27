@@ -1,0 +1,7 @@
+joblib>=1.5
+numpy>=2.3
+pandas>=2.3
+reportlab>=4.0
+scikit-learn>=1.8
+streamlit>=1.30
+streamlit-echarts>=0.7.0
