@@ -1,0 +1,6 @@
+evidence,model,auc_roc,auc_pr,brier
+synthetic_demo,Static random forest,0.7285968165662186,0.11767112428231573,0.1407004066001771
+synthetic_demo,Order-aware sequence surrogate,0.755104660495212,0.15187957082262282,0.03790915347401445
+archived_real_reference,XGBoost,0.7211,,
+archived_real_reference,LSTM,0.7418,,
+archived_real_reference,GRU,0.7517,,

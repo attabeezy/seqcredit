@@ -1,0 +1,141 @@
+{
+  "model_version": "synthetic-demo-v1",
+  "created_at": "2026-08-31T12:37:40.803173+00:00",
+  "status": "passed",
+  "notice": "Synthetic prototype only. Not for lending decisions.",
+  "generator": {
+    "n_borrowers": 4500,
+    "transactions_per_borrower": 36,
+    "default_rate": 0.0413,
+    "late_rate": 0.619,
+    "static_label_weight": 0.78,
+    "sequence_label_weight": 0.56,
+    "label_noise": 1.72,
+    "sequence_observation_strength": 0.34,
+    "seed": 42
+  },
+  "cohort": {
+    "borrowers": 4500,
+    "transactions": 162000,
+    "default_rate": 0.04133333333333333,
+    "class_counts": {
+      "0": 1528,
+      "1": 2786,
+      "2": 186
+    }
+  },
+  "models": {
+    "static": {
+      "family": "RandomForestClassifier",
+      "features": [
+        "transaction_count",
+        "total_volume",
+        "avg_amount",
+        "median_amount",
+        "std_amount",
+        "max_amount",
+        "pct_cashout",
+        "pct_transfer",
+        "pct_debit",
+        "pct_payment",
+        "pct_night",
+        "avg_balance",
+        "min_balance",
+        "balance_volatility",
+        "pct_low_balance",
+        "total_fees",
+        "unique_recipients",
+        "avg_hours_between"
+      ],
+      "metrics": {
+        "auc_roc": 0.7285968165662186,
+        "auc_pr": 0.11767112428231573,
+        "brier": 0.1407004066001771
+      },
+      "sha256": "0bc9c67ecc4386cd7d1fe3172b2fcb1f793fc5ec19c0ce5d8fe9c22fe1b73189"
+    },
+    "sequence": {
+      "family": "HistGradientBoostingClassifier over order-aware features",
+      "features": [
+        "transaction_count",
+        "total_volume",
+        "avg_amount",
+        "median_amount",
+        "std_amount",
+        "max_amount",
+        "pct_cashout",
+        "pct_transfer",
+        "pct_debit",
+        "pct_payment",
+        "pct_night",
+        "avg_balance",
+        "min_balance",
+        "balance_volatility",
+        "pct_low_balance",
+        "total_fees",
+        "unique_recipients",
+        "avg_hours_between",
+        "amount_slope",
+        "balance_slope",
+        "amount_recent_ratio",
+        "balance_recent_ratio",
+        "cashout_slope",
+        "night_slope",
+        "recent_cashout_rate",
+        "recent_low_balance_rate"
+      ],
+      "metrics": {
+        "auc_roc": 0.755104660495212,
+        "auc_pr": 0.15187957082262282,
+        "brier": 0.03790915347401445
+      },
+      "sha256": "3efa75800267073d99fab330214699c7755709f8e27854142090ae6adec53001"
+    }
+  },
+  "sequence_gain_auc": 0.026507843928993413,
+  "demo_risk_band_thresholds": {
+    "watch": 0.03275486063847097,
+    "elevated": 0.09255255552162735
+  },
+  "real_reference": {
+    "default_rate": 0.04122485250589642,
+    "static_auc": 0.7211,
+    "lstm_auc": 0.7418,
+    "gru_auc": 0.7517
+  },
+  "acceptance": {
+    "default_rate": [
+      0.035,
+      0.05
+    ],
+    "static_auc": [
+      0.7,
+      0.74
+    ],
+    "sequence_auc": [
+      0.735,
+      0.77
+    ],
+    "sequence_gain": [
+      0.015,
+      0.05
+    ]
+  },
+  "checks": {
+    "default_rate": true,
+    "static_auc": true,
+    "sequence_auc": true,
+    "sequence_gain": true
+  },
+  "input_schema": [
+    "amount",
+    "balance_after",
+    "balance_before",
+    "borrower_id",
+    "fee",
+    "recipient_id",
+    "timestamp",
+    "transaction_id",
+    "transaction_type"
+  ]
+}

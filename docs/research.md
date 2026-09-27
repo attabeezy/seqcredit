@@ -82,7 +82,7 @@ Target: `credit_risk_label in {1, 2}`.
 
 The current direction is to lead with sequential modeling, especially `GRU`,
 because it gives the strongest AUC-ROC on both real-data targets in Notebook B.
-The static models remain important baselines and calibration comparators, but
+The static models remain important baselines and raw-score comparators, but
 they are no longer the headline model family for the real-data workflow.
 
 Notebook B displays archived significance-test output, but those results are not
@@ -92,13 +92,12 @@ confidence intervals, or fold variation as central evidence. The preserved mean
 benchmark tables and the separate Notebook C rerun support a descriptive
 ranking claim only.
 
-For the `y_default` target specifically, there is a clean discrimination-vs-calibration
-split: recurrent models (GRU, LSTM) lead on AUC-ROC while tree models (RandomForest,
-XGBoost, LightGBM) are substantially better calibrated (lower Brier and ECE). This
-framing — *deep learning finds the defaulters, tree models price the risk* — is
-defensible for `y_default` but does not hold for `y_bad`, where GRU achieves the
-best Brier and ECE of all models. Scope any such claim explicitly to the rare-event
-default target.
+For `y_default`, recurrent models lead on AUC-ROC while tree models have
+substantially lower Brier and ECE on the raw class-weighted outputs. None of the
+models was recalibrated, so this is a relative score-quality result rather than
+evidence that the tree outputs are deployment-calibrated. The ordering differs
+for `y_bad`, where GRU has the lowest Brier and ECE; scope the comparison to the
+rare-event target.
 
 ## Real-Data Ablation
 

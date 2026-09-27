@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seqcredit-mvp"
+version = "0.1.0"
+description = "Offline synthetic demonstration of aggregate and order-aware credit-risk scoring"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "joblib>=1.5",
+    "numpy>=2.3",
+    "pandas>=2.3",
+    "reportlab>=4.0",
+    "scikit-learn>=1.8",
+    "streamlit>=1.30",
+    "streamlit-echarts>=0.7.0",
+]
+
+[project.scripts]
+seqcredit-calibrate = "seqcredit_mvp.calibrate:main"
+seqcredit-score = "seqcredit_mvp.scoring:main"
+seqcredit-streamlit = "seqcredit_mvp.streamlit_app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-p no:cacheprovider"
+
+
