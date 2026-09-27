@@ -39,6 +39,14 @@ After dependencies are installed, launch the **Streamlit dashboard** with:
 .\run_streamlit.ps1
 ```
 
+From the repository root, the same dashboard can be launched with:
+
+```powershell
+streamlit run streamlit_app.py
+```
+
+For Streamlit Community Cloud, use `streamlit_app.py` as the main file path.
+
 The calibration command writes:
 
 - `artifacts/static_model.joblib`
@@ -102,4 +110,3 @@ supplied sample or another CSV using the same documented schema.
 ## Development Roadmap
 
 See [TODO.md](TODO.md) for planned features, including explainability and driver breakdowns, scenario stress testing, executive reporting, and synthetic model extensions.
-
