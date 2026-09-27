@@ -12,6 +12,6 @@ pyspark
 joblib
 ipykernel
 # streamlit-echarts 0.7.x uses Streamlit's v2 component API.
-streamlit>=1.53,<2.0
-streamlit-echarts>=0.7.0
+streamlit==1.54.0
+streamlit-echarts==0.7.0
 reportlab>=4.0

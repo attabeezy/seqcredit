@@ -13,8 +13,8 @@ dependencies = [
     "pandas>=2.3",
     "reportlab>=4.0",
     "scikit-learn>=1.8",
-    "streamlit>=1.53,<2.0",
-    "streamlit-echarts>=0.7.0",
+    "streamlit==1.54.0",
+    "streamlit-echarts==0.7.0",
 ]
 
 [project.scripts]
