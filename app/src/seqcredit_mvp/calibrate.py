@@ -32,7 +32,7 @@ MODEL_VERSION = "synthetic-demo-v1"
 
 REAL_REFERENCE = {
     "default_rate": 6170 / 149667,
-    "static_auc": 0.7211,
+    "static_auc": 0.7244,
     "lstm_auc": 0.7418,
     "gru_auc": 0.7517,
 }
@@ -195,7 +195,7 @@ def run_calibration(
         [
             {"evidence": "synthetic_demo", "model": "Static random forest", **static_metrics},
             {"evidence": "synthetic_demo", "model": "Order-aware sequence surrogate", **sequence_metrics},
-            {"evidence": "archived_real_reference", "model": "XGBoost", "auc_roc": REAL_REFERENCE["static_auc"]},
+            {"evidence": "archived_real_reference", "model": "RandomForest", "auc_roc": REAL_REFERENCE["static_auc"]},
             {"evidence": "archived_real_reference", "model": "LSTM", "auc_roc": REAL_REFERENCE["lstm_auc"]},
             {"evidence": "archived_real_reference", "model": "GRU", "auc_roc": REAL_REFERENCE["gru_auc"]},
         ]

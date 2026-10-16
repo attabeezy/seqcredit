@@ -99,7 +99,8 @@
   },
   "real_reference": {
     "default_rate": 0.04122485250589642,
-    "static_auc": 0.7211,
+    "static_auc": 0.7244,
+    "static_model": "RandomForest",
     "lstm_auc": 0.7418,
     "gru_auc": 0.7517
   },
