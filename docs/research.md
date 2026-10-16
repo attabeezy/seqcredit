@@ -60,8 +60,8 @@ Target: `credit_risk_label == 2`.
 |---|---:|---:|---:|---:|---:|
 | GRU | 0.7517 | 0.1152 | 0.1462 | 0.2083 | 0.3673 |
 | LSTM | 0.7418 | 0.1034 | 0.1430 | 0.2094 | 0.3657 |
+| RandomForest | 0.7244 | 0.0993 | 0.1559 | 0.1484 | 0.2981 |
 | XGBoost | 0.7211 | 0.1003 | 0.1509 | 0.1622 | 0.2987 |
-| RandomForest | 0.7207 | 0.0993 | 0.1559 | 0.1484 | 0.2981 |
 | LightGBM | 0.7193 | 0.1006 | 0.1503 | 0.1627 | 0.3006 |
 | LogisticRegression | 0.7058 | 0.0904 | 0.1308 | 0.2205 | 0.3999 |
 
@@ -102,7 +102,7 @@ rare-event target.
 ## Real-Data Ablation
 
 Notebook A is the source for real-data feature-group ablation. It selects
-`RandomForest` for ablation on `y_default` using the static-model rank-sum rule.
+`RandomForest` for ablation on `y_default` because it has the lowest raw Brier loss and ECE on `y_default`.
 
 The ablation should be cited as a separate interpretability analysis, not mixed
 into Notebook B's main benchmark table.
