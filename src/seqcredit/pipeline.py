@@ -115,21 +115,22 @@ class TemporalTransactionFeatureEngineer:
         df["cumulative_fees_paid"] = (df["FEES"] + df["E-LEVY"]).cumsum()
 
         # --- Count-based rolling windows (last N transactions, n=3/5/10)
+        new_features = {}
         for n in [3, 5, 10]:
-            df[f"last_{n}_avg_amount"] = df["AMOUNT"].rolling(n, min_periods=1).mean()
-            df[f"last_{n}_std_amount"] = (
+            new_features[f"last_{n}_avg_amount"] = df["AMOUNT"].rolling(n, min_periods=1).mean()
+            new_features[f"last_{n}_std_amount"] = (
                 df["AMOUNT"].rolling(n, min_periods=1).std().fillna(0)
             )
-            df[f"last_{n}_max_amount"] = df["AMOUNT"].rolling(n, min_periods=1).max()
-            df[f"last_{n}_min_amount"] = df["AMOUNT"].rolling(n, min_periods=1).min()
-            df[f"amount_vs_last_{n}_avg"] = df["AMOUNT"] / (
-                df[f"last_{n}_avg_amount"] + 1
+            new_features[f"last_{n}_max_amount"] = df["AMOUNT"].rolling(n, min_periods=1).max()
+            new_features[f"last_{n}_min_amount"] = df["AMOUNT"].rolling(n, min_periods=1).min()
+            new_features[f"amount_vs_last_{n}_avg"] = df["AMOUNT"] / (
+                new_features[f"last_{n}_avg_amount"] + 1
             )
-            df[f"last_{n}_transfer_count"] = (
+            new_features[f"last_{n}_transfer_count"] = (
                 df["is_transfer"].rolling(n, min_periods=1).sum()
             )
-            df[f"last_{n}_debit_count"] = df["is_debit"].rolling(n, min_periods=1).sum()
-            df[f"last_{n}_cashout_count"] = (
+            new_features[f"last_{n}_debit_count"] = df["is_debit"].rolling(n, min_periods=1).sum()
+            new_features[f"last_{n}_cashout_count"] = (
                 df["is_cash_out"].rolling(n, min_periods=1).sum()
             )
 
@@ -139,26 +140,26 @@ class TemporalTransactionFeatureEngineer:
 
             df_temp = df.set_index("TRANSACTION DATE")
 
-            df[f"rolling_{window_key}_count"] = (
+            new_features[f"rolling_{window_key}_count"] = (
                 df_temp["AMOUNT"].rolling(f"{window_days}D").count().values
             )
-            df[f"rolling_{window_key}_sum"] = (
+            new_features[f"rolling_{window_key}_sum"] = (
                 df_temp["AMOUNT"].rolling(f"{window_days}D").sum().values
             )
-            df[f"rolling_{window_key}_mean"] = (
+            new_features[f"rolling_{window_key}_mean"] = (
                 df_temp["AMOUNT"].rolling(f"{window_days}D").mean().fillna(0).values
             )
-            df[f"rolling_{window_key}_std"] = (
+            new_features[f"rolling_{window_key}_std"] = (
                 df_temp["AMOUNT"].rolling(f"{window_days}D").std().fillna(0).values
             )
 
-            df[f"rolling_{window_key}_min_balance"] = (
+            new_features[f"rolling_{window_key}_min_balance"] = (
                 df_temp["BAL BEFORE"].rolling(f"{window_days}D").min().values
             )
-            df[f"rolling_{window_key}_max_balance"] = (
+            new_features[f"rolling_{window_key}_max_balance"] = (
                 df_temp["BAL BEFORE"].rolling(f"{window_days}D").max().values
             )
-            df[f"rolling_{window_key}_balance_volatility"] = (
+            new_features[f"rolling_{window_key}_balance_volatility"] = (
                 df_temp["BAL BEFORE"].rolling(f"{window_days}D").std().fillna(0).values
             )
 
@@ -168,42 +169,44 @@ class TemporalTransactionFeatureEngineer:
         for recipient in df["TO NAME"]:
             seen_recipients.add(recipient)
             recipient_counts.append(len(seen_recipients))
-        df["unique_recipients_so_far"] = recipient_counts
+        new_features["unique_recipients_so_far"] = recipient_counts
 
         txn_type_diversity = []
         for i in range(len(df)):
             start_idx = max(0, i - 9)
             window_types = df["TRANS. TYPE"].iloc[start_idx : i + 1]
             txn_type_diversity.append(window_types.nunique())
-        df["unique_txn_types_last_10"] = txn_type_diversity
+        new_features["unique_txn_types_last_10"] = txn_type_diversity
 
-        df["is_repeated_recipient"] = df.duplicated(
+        new_features["is_repeated_recipient"] = df.duplicated(
             subset=["TO NAME"], keep=False
         ).astype(int)
-        df["is_self_transfer"] = (df["TO NAME"] == df["FROM NAME"]).astype(int)
+        new_features["is_self_transfer"] = (df["TO NAME"] == df["FROM NAME"]).astype(int)
 
         # --- Risk indicators (flag unusual patterns; composite risk_score aggregates them)
-        df["unusual_hour"] = ((df["hour"] < 6) | (df["hour"] > 22)).astype(int)
-        df["rapid_transaction"] = (df["time_since_last_txn_hours"] < 0.5).astype(int)
-        df["unusual_amount_high"] = (df["amount_vs_last_10_avg"] > 3).astype(int)
-        df["unusual_amount_low"] = (df["amount_vs_last_10_avg"] < 0.3).astype(int)
-        df["rapid_balance_drop"] = (
+        new_features["unusual_hour"] = ((df["hour"] < 6) | (df["hour"] > 22)).astype(int)
+        new_features["rapid_transaction"] = (df["time_since_last_txn_hours"] < 0.5).astype(int)
+        new_features["unusual_amount_high"] = (new_features["amount_vs_last_10_avg"] > 3).astype(int)
+        new_features["unusual_amount_low"] = (new_features["amount_vs_last_10_avg"] < 0.3).astype(int)
+        new_features["rapid_balance_drop"] = (
             (df["BAL BEFORE"] > 100) & (df["BAL AFTER"] < 20)
         ).astype(int)
 
         is_withdrawal = (df["is_cash_out"] + df["is_transfer"] + df["is_debit"]) > 0
         prev_is_withdrawal = is_withdrawal.shift(1).fillna(False)
-        df["consecutive_withdrawals"] = (is_withdrawal & prev_is_withdrawal).astype(int)
+        new_features["consecutive_withdrawals"] = (is_withdrawal & prev_is_withdrawal).astype(int)
 
-        df["high_frequency_period"] = (df["time_since_last_txn_hours"] < 1).astype(int)
+        new_features["high_frequency_period"] = (df["time_since_last_txn_hours"] < 1).astype(int)
 
-        df["risk_score"] = (
-            df["unusual_hour"]
-            + df["rapid_transaction"]
-            + df["unusual_amount_high"]
-            + df["rapid_balance_drop"]
+        new_features["risk_score"] = (
+            new_features["unusual_hour"]
+            + new_features["rapid_transaction"]
+            + new_features["unusual_amount_high"]
+            + new_features["rapid_balance_drop"]
             + df["is_large_relative_to_balance"]
         )
+
+        df = pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
 
         return df
 
