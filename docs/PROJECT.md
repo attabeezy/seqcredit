@@ -14,7 +14,7 @@ code and machine-readable configuration below as the implementation authority.
 
 ## Workspace
 
-`seqcredit` on branch `default` is the sole active research workspace. Repository and distribution: `seqcredit`; Python import: `seqcredit`. Historical source excerpts and frozen v2 contract identifiers retain their original names.
+`seqcredit` on branch `main` is the sole active research workspace. Repository and distribution: `seqcredit`; Python import: `seqcredit`. Historical source excerpts and frozen v2 contract identifiers retain their original names.
 The compared legacy source is retained for reference at
 `../archive/code/legacy-model/`. Dashboard, Spark,
 publication, historical-data, and real-data components remain outside the
@@ -175,7 +175,7 @@ code and machine-readable configuration below as the implementation authority.
 
 ## Workspace
 
-`seqcredit` on branch `default` is the sole active research workspace.
+`seqcredit` on branch `main` is the sole active research workspace.
 The compared legacy clone is read-only at
 `../archive/workspace/seqcredit-model-reference/`. Dashboard, Spark,
 publication, historical-data, and real-data components remain outside the
