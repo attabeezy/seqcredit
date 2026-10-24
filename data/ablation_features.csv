@@ -1,8 +1,0 @@
-condition,n_features,auc_roc,auc_roc_std,auc_pr,auc_pr_std,f1,brier,ece,elapsed_s
-ALL_FEATURES,47,0.7244,,,,,,,
-DROP_txn_type_mix,44,0.717167,,,,,0.151800,0.303113,
-DROP_amount_stats,40,0.719217,,,,,0.151288,0.303318,
-DROP_activity_intensity,44,0.723101,,,,,0.148983,0.299101,
-DROP_behavioural_diversity,44,0.723889,,,,,0.148498,0.296644,
-DROP_loan_history,38,0.724197,,,,,0.145401,0.290541,
-DROP_temporal_patterns,43,0.724402,,,,,0.148361,0.297696,

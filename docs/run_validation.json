@@ -1,0 +1,67 @@
+{
+  "status": "passed",
+  "scope": "independent v2 artifact validation",
+  "runs": [
+    {
+      "run": "data/runs/main-20261024T141709Z-94434d69",
+      "profile": "main",
+      "scenario": "no_signal",
+      "seed": 42,
+      "target": "primary",
+      "control": "none",
+      "labels_rederived": 25625,
+      "manifest_files_verified": 17,
+      "split_and_prediction_identity": "passed",
+      "metrics_recalculated": "passed",
+      "preprocessing_rebuilt_from_inner_fit_raw_rows": "passed",
+      "resources": {
+        "total_seconds": 253.12416020000092,
+        "generation_seconds": 146.5014443,
+        "logistic_fit_seconds": 0.05355019999842625,
+        "lightgbm_fit_seconds": 2.02942880000046,
+        "gru_fit_seconds": 55.17217549999987,
+        "peak_process_working_set_gib": 0.7076339721679688,
+        "artifact_bytes_before_manifest": 390486205,
+        "measurement": "OS peak working set checked after evaluation; not a hard runtime memory limiter"
+      },
+      "test_metrics": {
+        "logistic_regression": {
+          "borrowers": 5125,
+          "positives": 212,
+          "prevalence": 0.04136585365853659,
+          "average_precision": 0.03736223434877929,
+          "roc_auc": 0.4751458394939878,
+          "brier": 0.2477661935568935,
+          "log_loss": 0.6886586386328674,
+          "precision": 0.04074555700043346,
+          "recall": 0.44339622641509435,
+          "f1": 0.07463279078999603
+        },
+        "lightgbm": {
+          "borrowers": 5125,
+          "positives": 212,
+          "prevalence": 0.04136585365853659,
+          "average_precision": 0.04349166008006883,
+          "roc_auc": 0.5086946837231987,
+          "brier": 0.07971475133047172,
+          "log_loss": 0.29779450734838225,
+          "precision": 0.04519774011299435,
+          "recall": 0.03773584905660377,
+          "f1": 0.04113110539845758
+        },
+        "gru": {
+          "borrowers": 5125,
+          "positives": 212,
+          "prevalence": 0.04136585365853659,
+          "average_precision": 0.041884813646628966,
+          "roc_auc": 0.5129373744666634,
+          "brier": 0.24310313165187836,
+          "log_loss": 0.6793304075312637,
+          "precision": 0.04550691244239631,
+          "recall": 0.37264150943396224,
+          "f1": 0.0811088295687885
+        }
+      }
+    }
+  ]
+}
