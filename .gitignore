@@ -239,6 +239,8 @@ data/test_user_transactions/
 data/legacy/
 
 # Private paper and submission artifacts
+paper/
+paper-Copy/
 /archive/
 /data/runs/
 docs/evidence-ledger.md
