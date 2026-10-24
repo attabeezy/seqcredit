@@ -5,7 +5,7 @@ protocol, validation status, and archive boundary. The smoke run, controlled
 pilots, full-size gate, and all 30 preregistered matrix runs pass independent
 validation.
 
-This `seqcredit` checkout on `default` is the sole active research workspace. Legacy
+This `seqcredit` checkout on `main` is the sole active research workspace. Legacy
 source is retained for reference under
 `archive/code/legacy-model/`; Databricks is not required.
 
