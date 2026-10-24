@@ -1,17 +1,3 @@
-pandas
-matplotlib
-numpy
-scikit-learn
-xgboost
-lightgbm
-tensorflow
-seaborn
-jupyter
-shap
-pyspark
-joblib
-ipykernel
-# streamlit-echarts 0.7.x uses Streamlit's v2 component API.
-streamlit==1.54.0
-streamlit-echarts==0.7.0
-reportlab>=4.0
+# Research dependencies are defined in pyproject.toml.
+-e .
+--group dev

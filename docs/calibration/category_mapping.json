@@ -1,0 +1,2505 @@
+{
+  "version": 1,
+  "ledger_sha256": "f849310c9cf3b629727b8aab01564ce55a63ce32569eb28b93908bb935289d66",
+  "interpretation": "Name-based semantic map; filtered raw shares are scenario references, not measured borrower probabilities",
+  "raw_count": 374295424,
+  "background_candidate_count": 356169063,
+  "categories": {
+    "airtime_data": {
+      "count": 16998683,
+      "categories": 4
+    },
+    "bank_wallet": {
+      "count": 8877855,
+      "categories": 30
+    },
+    "betting": {
+      "count": 1026392,
+      "categories": 2
+    },
+    "cash_in": {
+      "count": 31607284,
+      "categories": 4
+    },
+    "cash_out": {
+      "count": 28248354,
+      "categories": 8
+    },
+    "incoming_payment": {
+      "count": 27851767,
+      "categories": 12
+    },
+    "loan_disbursement": {
+      "count": 1917716,
+      "categories": 2
+    },
+    "loan_interest": {
+      "count": 2340726,
+      "categories": 3
+    },
+    "loan_penalty": {
+      "count": 669728,
+      "categories": 3
+    },
+    "loan_principal_repayment": {
+      "count": 2574194,
+      "categories": 3
+    },
+    "merchant_bill_payment": {
+      "count": 93833521,
+      "categories": 41
+    },
+    "organisation_infrastructure": {
+      "count": 10228071,
+      "categories": 79
+    },
+    "reversal_adjustment": {
+      "count": 356472,
+      "categories": 25
+    },
+    "service_admin": {
+      "count": 37719,
+      "categories": 6
+    },
+    "transfer": {
+      "count": 147725207,
+      "categories": 20
+    },
+    "unknown": {
+      "count": 1735,
+      "categories": 1
+    }
+  },
+  "mapping": [
+    {
+      "raw_type": "Online Payment with USSD push",
+      "count": 89048112,
+      "raw_share": 0.23790863123135592,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Online Payment with USSD push",
+      "scenario_reference_share": 0.2500164142554964
+    },
+    {
+      "raw_type": "GHIPSS P2P Payout To Customer Via API",
+      "count": 60637712,
+      "raw_share": 0.16200495146849564,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:GHIPSS P2P Payout To Customer Via API",
+      "scenario_reference_share": 0.17024980072455087
+    },
+    {
+      "raw_type": "Ghipss_P2P_transfer",
+      "count": 58521275,
+      "raw_share": 0.15635049548455074,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Ghipss_P2P_transfer",
+      "scenario_reference_share": 0.16430757491141224
+    },
+    {
+      "raw_type": "Deposit at Agent Till",
+      "count": 31546337,
+      "raw_share": 0.08428192004826647,
+      "category": "cash_in",
+      "role": "background_candidate",
+      "reason": "Agent deposit name; customer-facing assumption needs validation",
+      "ledger_id": "transaction_type:Deposit at Agent Till",
+      "scenario_reference_share": 0.08857124404429252
+    },
+    {
+      "raw_type": "Customer Withdrawal at Agent Till",
+      "count": 26883622,
+      "raw_share": 0.07182460771948951,
+      "category": "cash_out",
+      "role": "background_candidate",
+      "reason": "Cash withdrawal name; customer-facing assumption needs validation",
+      "ledger_id": "transaction_type:Customer Withdrawal at Agent Till",
+      "scenario_reference_share": 0.07547994700483011
+    },
+    {
+      "raw_type": "Organisation Payment to Customer Via API",
+      "count": 16806037,
+      "raw_share": 0.04490046076545141,
+      "category": "incoming_payment",
+      "role": "background_candidate",
+      "reason": "Name suggests incoming payment to customer",
+      "ledger_id": "transaction_type:Organisation Payment to Customer Via API",
+      "scenario_reference_share": 0.04718556086383056
+    },
+    {
+      "raw_type": "Airtime Purchase for Other Networks",
+      "count": 13567143,
+      "raw_share": 0.03624715166167781,
+      "category": "airtime_data",
+      "role": "background_candidate",
+      "reason": "Retail airtime/data name",
+      "ledger_id": "transaction_type:Airtime Purchase for Other Networks",
+      "scenario_reference_share": 0.03809186257145529
+    },
+    {
+      "raw_type": "Customer Transfer",
+      "count": 12495076,
+      "raw_share": 0.03338292482036863,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Customer Transfer",
+      "scenario_reference_share": 0.035081867848808644
+    },
+    {
+      "raw_type": "Interest Payment To customer",
+      "count": 9806457,
+      "raw_share": 0.026199777959347963,
+      "category": "incoming_payment",
+      "role": "background_candidate",
+      "reason": "Name suggests incoming payment to customer",
+      "ledger_id": "transaction_type:Interest Payment To customer",
+      "scenario_reference_share": 0.027533152142413895
+    },
+    {
+      "raw_type": "Ghipss_P2P_transfer_MVA",
+      "count": 8135625,
+      "raw_share": 0.021735838800957395,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Ghipss_P2P_transfer_MVA",
+      "scenario_reference_share": 0.022842031622493836
+    },
+    {
+      "raw_type": "GHIPSS B2W Payout To Customer Via API",
+      "count": 7274975,
+      "raw_share": 0.019436451886732122,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:GHIPSS B2W Payout To Customer Via API",
+      "scenario_reference_share": 0.02042562298567745
+    },
+    {
+      "raw_type": "Ghipss_P2P_transfer To Merchant",
+      "count": 3544493,
+      "raw_share": 0.009469773800921488,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Ghipss_P2P_transfer To Merchant",
+      "scenario_reference_share": 0.00995171498092747
+    },
+    {
+      "raw_type": "Customer Transfer _Digicare",
+      "count": 3024132,
+      "raw_share": 0.008079532385627029,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Customer Transfer _Digicare",
+      "scenario_reference_share": 0.008490720599166694
+    },
+    {
+      "raw_type": "[Open API] Customer to Business",
+      "count": 2592551,
+      "raw_share": 0.006926483290375466,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:[Open API] Customer to Business",
+      "scenario_reference_share": 0.007278989865551574
+    },
+    {
+      "raw_type": "Loan Principal Collection via API",
+      "count": 2574090,
+      "raw_share": 0.006877161287443365,
+      "category": "loan_principal_repayment",
+      "role": "loan_process_only",
+      "reason": "Simulate by explicit loan lifecycle, never raw event prevalence",
+      "ledger_id": "transaction_type:Loan Principal Collection via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Loan Interest via API",
+      "count": 2340656,
+      "raw_share": 0.0062534988405308425,
+      "category": "loan_interest",
+      "role": "loan_process_only",
+      "reason": "Simulate by explicit loan lifecycle, never raw event prevalence",
+      "ledger_id": "transaction_type:Loan Interest via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Data Purchase for Other Network",
+      "count": 2089742,
+      "raw_share": 0.0055831353150606515,
+      "category": "airtime_data",
+      "role": "background_candidate",
+      "reason": "Retail airtime/data name",
+      "ledger_id": "transaction_type:Data Purchase for Other Network",
+      "scenario_reference_share": 0.005867275451714345
+    },
+    {
+      "raw_type": "Loan Payment Via API",
+      "count": 1917365,
+      "raw_share": 0.00512259802567076,
+      "category": "loan_disbursement",
+      "role": "loan_process_only",
+      "reason": "Simulate by explicit loan lifecycle, never raw event prevalence",
+      "ledger_id": "transaction_type:Loan Payment Via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Organization Transfer from M-Pesa Account to Float Account via STK",
+      "count": 1440195,
+      "raw_share": 0.0038477494183845537,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Organization Transfer from M-Pesa Account to Float Account via STK",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Customer Withdrawal at Agent Till_MVA",
+      "count": 1362067,
+      "raw_share": 0.003639015902048538,
+      "category": "cash_out",
+      "role": "background_candidate",
+      "reason": "Cash withdrawal name; customer-facing assumption needs validation",
+      "ledger_id": "transaction_type:Customer Withdrawal at Agent Till_MVA",
+      "scenario_reference_share": 0.003824214794309634
+    },
+    {
+      "raw_type": "Business Deposit of Funds at Agent Till",
+      "count": 1346298,
+      "raw_share": 0.0035968860789492314,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Deposit of Funds at Agent Till",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Business Withdrawal of Funds",
+      "count": 1309441,
+      "raw_share": 0.0034984157327020917,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Withdrawal of Funds",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Organization Transfer from Float Account to M-Pesa Account via STK",
+      "count": 1296706,
+      "raw_share": 0.0034643918061899683,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Organization Transfer from Float Account to M-Pesa Account via STK",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Airtime Purchase for Other networks_Digicare TPA",
+      "count": 1266290,
+      "raw_share": 0.0033831297921504914,
+      "category": "airtime_data",
+      "role": "background_candidate",
+      "reason": "Retail airtime/data name",
+      "ledger_id": "transaction_type:Airtime Purchase for Other networks_Digicare TPA",
+      "scenario_reference_share": 0.0035553059811935434
+    },
+    {
+      "raw_type": "Ghipss_P2P_transfer To Merchant_MVA",
+      "count": 777908,
+      "raw_share": 0.0020783262367642516,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Ghipss_P2P_transfer To Merchant_MVA",
+      "scenario_reference_share": 0.0021840976120938386
+    },
+    {
+      "raw_type": "Direct Debit Payment via API",
+      "count": 690105,
+      "raw_share": 0.001843744154350121,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Direct Debit Payment via API",
+      "scenario_reference_share": 0.001937577043293061
+    },
+    {
+      "raw_type": "Loan Penalty via API",
+      "count": 669703,
+      "raw_share": 0.001789236408083899,
+      "category": "loan_penalty",
+      "role": "loan_process_only",
+      "reason": "Simulate by explicit loan lifecycle, never raw event prevalence",
+      "ledger_id": "transaction_type:Loan Penalty via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Customer Pay Bill - ECG",
+      "count": 603529,
+      "raw_share": 0.0016124402311688427,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Customer Pay Bill - ECG",
+      "scenario_reference_share": 0.0016945014676920437
+    },
+    {
+      "raw_type": "Organisation Payment to Customer _Betting",
+      "count": 551496,
+      "raw_share": 0.0014734243718672873,
+      "category": "betting",
+      "role": "background_candidate",
+      "reason": "Name suggests betting flow; direction requires account perspective",
+      "ledger_id": "transaction_type:Organisation Payment to Customer _Betting",
+      "scenario_reference_share": 0.0015484107332477666
+    },
+    {
+      "raw_type": "EVD Top-Up_L1",
+      "count": 536677,
+      "raw_share": 0.0014338326508635062,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:EVD Top-Up_L1",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "GHiPSS_W2B_Transfer",
+      "count": 524137,
+      "raw_share": 0.0014003297032025698,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:GHiPSS_W2B_Transfer",
+      "scenario_reference_share": 0.0014715960886249125
+    },
+    {
+      "raw_type": "Gross Add Acquisition Commission_Cust",
+      "count": 508648,
+      "raw_share": 0.001358947952299839,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Gross Add Acquisition Commission_Cust",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Betting",
+      "count": 474896,
+      "raw_share": 0.001268773192375443,
+      "category": "betting",
+      "role": "background_candidate",
+      "reason": "Name suggests betting flow; direction requires account perspective",
+      "ledger_id": "transaction_type:Betting",
+      "scenario_reference_share": 0.0013333443281119562
+    },
+    {
+      "raw_type": "Organization Transfer from Instant Commission Account to Float Account via STK",
+      "count": 464619,
+      "raw_share": 0.00124131627107469,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Organization Transfer from Instant Commission Account to Float Account via STK",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "[Open API] Business to Customer",
+      "count": 464059,
+      "raw_share": 0.001239820126681538,
+      "category": "incoming_payment",
+      "role": "background_candidate",
+      "reason": "Name suggests incoming payment to customer",
+      "ledger_id": "transaction_type:[Open API] Business to Customer",
+      "scenario_reference_share": 0.0013029177663305361
+    },
+    {
+      "raw_type": "Aggregator Commission roll-up to Commission Held Account",
+      "count": 445965,
+      "raw_share": 0.0011914786326642347,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Aggregator Commission roll-up to Commission Held Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Transfer Of Funds From Commission Held Account To Commission Payable Account",
+      "count": 445965,
+      "raw_share": 0.0011914786326642347,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Transfer Of Funds From Commission Held Account To Commission Payable Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Aggregator H/O Payment of Commission to Store Working Account",
+      "count": 445965,
+      "raw_share": 0.0011914786326642347,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Aggregator H/O Payment of Commission to Store Working Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Customer Transfer to Merchant",
+      "count": 425033,
+      "raw_share": 0.001135554892597351,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Customer Transfer to Merchant",
+      "scenario_reference_share": 0.001193346205928054
+    },
+    {
+      "raw_type": "Business Payment To Customer",
+      "count": 338711,
+      "raw_share": 0.0009049295777658239,
+      "category": "incoming_payment",
+      "role": "background_candidate",
+      "reason": "Name suggests incoming payment to customer",
+      "ledger_id": "transaction_type:Business Payment To Customer",
+      "scenario_reference_share": 0.0009509837748035966
+    },
+    {
+      "raw_type": "Interest Payment To organisation",
+      "count": 319817,
+      "raw_share": 0.0008544507346154465,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Organisation flow without explicit customer destination",
+      "ledger_id": "transaction_type:Interest Payment To organisation",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Bank to Wallet _ Stanbic",
+      "count": 315499,
+      "raw_share": 0.000842914392669679,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Bank to Wallet _ Stanbic",
+      "scenario_reference_share": 0.0008858124772055231
+    },
+    {
+      "raw_type": "GHiPSS_W2B_Transfer_MVA",
+      "count": 299011,
+      "raw_share": 0.0007988636270370219,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:GHiPSS_W2B_Transfer_MVA",
+      "scenario_reference_share": 0.0008395198546483528
+    },
+    {
+      "raw_type": "EVD Top-Up_Org",
+      "count": 284056,
+      "raw_share": 0.0007589085566806181,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:EVD Top-Up_Org",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Bulk Manual Clawback",
+      "count": 274140,
+      "raw_share": 0.0007324161141761648,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Bulk Manual Clawback",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "[Open API] Receive International Transfer to Customer",
+      "count": 195929,
+      "raw_share": 0.0005234608478675924,
+      "category": "incoming_payment",
+      "role": "background_candidate",
+      "reason": "Name suggests incoming payment to customer",
+      "ledger_id": "transaction_type:[Open API] Receive International Transfer to Customer",
+      "scenario_reference_share": 0.0005501011186926137
+    },
+    {
+      "raw_type": "Organisation Payment to Customer Via API_cal",
+      "count": 180095,
+      "raw_share": 0.00048115736515122345,
+      "category": "incoming_payment",
+      "role": "background_candidate",
+      "reason": "Name suggests incoming payment to customer",
+      "ledger_id": "transaction_type:Organisation Payment to Customer Via API_cal",
+      "scenario_reference_share": 0.0005056447027798145
+    },
+    {
+      "raw_type": "Online Payment with USSD push_RedSave",
+      "count": 173504,
+      "raw_share": 0.00046354827998110925,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Online Payment with USSD push_RedSave",
+      "scenario_reference_share": 0.00048713944590970834
+    },
+    {
+      "raw_type": "Customer Pay Bill - ECG_Digicare",
+      "count": 171962,
+      "raw_share": 0.0004594285395271089,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Customer Pay Bill - ECG_Digicare",
+      "scenario_reference_share": 0.0004828100412527968
+    },
+    {
+      "raw_type": "GHIPSS P2P Payout To Organisation Via API",
+      "count": 165754,
+      "raw_share": 0.000442842710254454,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Organisation flow without explicit customer destination",
+      "ledger_id": "transaction_type:GHIPSS P2P Payout To Organisation Via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Gross Add Acquisition Commission_Org",
+      "count": 155832,
+      "raw_share": 0.00041633423763150256,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Gross Add Acquisition Commission_Org",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Smart Commission_Org",
+      "count": 149465,
+      "raw_share": 0.0003993236102186491,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Smart Commission_Org",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Merchant POS Payment",
+      "count": 122738,
+      "raw_share": 0.00032791744736906,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Merchant POS Payment",
+      "scenario_reference_share": 0.00034460601088197264
+    },
+    {
+      "raw_type": "Agency Redistribution of Float Funds via STK",
+      "count": 122289,
+      "raw_share": 0.0003267178601681222,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Agency Redistribution of Float Funds via STK",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Smart Commission_Cust",
+      "count": 118957,
+      "raw_share": 0.00031781580102886855,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Smart Commission_Cust",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Business Withdrawal of Funds within Hierarchy",
+      "count": 118263,
+      "raw_share": 0.0003159616506559268,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Withdrawal of Funds within Hierarchy",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "EVD Top-Up_L2",
+      "count": 109591,
+      "raw_share": 0.0002927927860534036,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:EVD Top-Up_L2",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Online Payment with USSD push_budget",
+      "count": 98801,
+      "raw_share": 0.00026396528962106683,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Online Payment with USSD push_budget",
+      "scenario_reference_share": 0.00027739916310474163
+    },
+    {
+      "raw_type": "Business Deposit of Funds within Hierarchy",
+      "count": 91486,
+      "raw_share": 0.0002444219034855206,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Deposit of Funds within Hierarchy",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Pay Merchant",
+      "count": 83365,
+      "raw_share": 0.00022272513809840219,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Pay Merchant",
+      "scenario_reference_share": 0.00023406019404891435
+    },
+    {
+      "raw_type": "Data Purchase for other network_Digicare TPA",
+      "count": 75508,
+      "raw_share": 0.00020173369792519824,
+      "category": "airtime_data",
+      "role": "background_candidate",
+      "reason": "Retail airtime/data name",
+      "ledger_id": "transaction_type:Data Purchase for other network_Digicare TPA",
+      "scenario_reference_share": 0.00021200044541768638
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Bank to Wallet_CBG",
+      "count": 72017,
+      "raw_share": 0.00019240684064574618,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Bank to Wallet_CBG",
+      "scenario_reference_share": 0.0002021989203481157
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank _ Stanbic",
+      "count": 70949,
+      "raw_share": 0.00018955347955309227,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank _ Stanbic",
+      "scenario_reference_share": 0.00019920034436006026
+    },
+    {
+      "raw_type": "Customer Transfer to Merchant_MVA",
+      "count": 60226,
+      "raw_share": 0.0001609049861106504,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Customer Transfer to Merchant_MVA",
+      "scenario_reference_share": 0.00016909385529646634
+    },
+    {
+      "raw_type": "Deposit at Agent Store via Web",
+      "count": 58323,
+      "raw_share": 0.0001558207668603504,
+      "category": "cash_in",
+      "role": "background_candidate",
+      "reason": "Agent deposit name; customer-facing assumption needs validation",
+      "ledger_id": "transaction_type:Deposit at Agent Store via Web",
+      "scenario_reference_share": 0.0001637508870331054
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank _ Cal",
+      "count": 56138,
+      "raw_share": 0.00014998313204064178,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank _ Cal",
+      "scenario_reference_share": 0.0001576161599414377
+    },
+    {
+      "raw_type": "GHIPSS B2W Payout To Organisation Via API",
+      "count": 50208,
+      "raw_share": 0.00013414003159173006,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Organisation flow without explicit customer destination",
+      "ledger_id": "transaction_type:GHIPSS B2W Payout To Organisation Via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Merchant Transfer from Merchant Account to Working Account",
+      "count": 49956,
+      "raw_share": 0.00013346676661481172,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Merchant Transfer from Merchant Account to Working Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Promotion Payment via API",
+      "count": 47990,
+      "raw_share": 0.00012821423112028215,
+      "category": "incoming_payment",
+      "role": "background_candidate",
+      "reason": "Name suggests incoming payment to customer",
+      "ledger_id": "transaction_type:Promotion Payment via API",
+      "scenario_reference_share": 0.00013473938358312721
+    },
+    {
+      "raw_type": "Customer Pay Bill - Multichoice",
+      "count": 46886,
+      "raw_share": 0.00012526468931663989,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Customer Pay Bill - Multichoice",
+      "scenario_reference_share": 0.0001316397319999688
+    },
+    {
+      "raw_type": "Bulk B2B Payment via web",
+      "count": 40417,
+      "raw_share": 0.00010798154988931951,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Bulk B2B Payment via web",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Ghipss_orgP2P_transfer via API",
+      "count": 39987,
+      "raw_share": 0.00010683272473029219,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Ghipss_orgP2P_transfer via API",
+      "scenario_reference_share": 0.0001122697172606482
+    },
+    {
+      "raw_type": "Email Statement Request",
+      "count": 36903,
+      "raw_share": 9.859324382229156e-05,
+      "category": "service_admin",
+      "role": "exclude",
+      "reason": "Administrative/service event; no financial interpretation established",
+      "ledger_id": "transaction_type:Email Statement Request",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Transfer from Bank to Customer - Ecobank",
+      "count": 36167,
+      "raw_share": 9.662688261986339e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Transfer from Bank to Customer - Ecobank",
+      "scenario_reference_share": 0.00010154447355805296
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Bank to Wallet_Zenith",
+      "count": 32607,
+      "raw_share": 8.711567897768368e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Bank to Wallet_Zenith",
+      "scenario_reference_share": 9.154922026453488e-05
+    },
+    {
+      "raw_type": "Direct Debit Payment via API_RedSave",
+      "count": 31296,
+      "raw_share": 8.361309808585851e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Direct Debit Payment via API_RedSave",
+      "scenario_reference_share": 8.786838400953426e-05
+    },
+    {
+      "raw_type": "[Open API] Customer to Business_decrease mode",
+      "count": 30854,
+      "raw_share": 8.243221268983508e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:[Open API] Customer to Business_decrease mode",
+      "scenario_reference_share": 8.662740031410308e-05
+    },
+    {
+      "raw_type": "Business Withdrawal of Funds at Child Store",
+      "count": 30315,
+      "raw_share": 8.09921737114264e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Withdrawal of Funds at Child Store",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Bank to Wallet _ ADB",
+      "count": 30179,
+      "raw_share": 8.062882435880381e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Bank to Wallet _ ADB",
+      "scenario_reference_share": 8.473223290592198e-05
+    },
+    {
+      "raw_type": "[CBU] Ghipss_orgP2P_transfer_General",
+      "count": 28074,
+      "raw_share": 7.50049244524026e-05,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:[CBU] Ghipss_orgP2P_transfer_General",
+      "scenario_reference_share": 7.882211824781648e-05
+    },
+    {
+      "raw_type": "Pay Utility",
+      "count": 27928,
+      "raw_share": 7.461485823561658e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Pay Utility",
+      "scenario_reference_share": 7.841220055656546e-05
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank_CBG",
+      "count": 27401,
+      "raw_share": 7.320687949420402e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank_CBG",
+      "scenario_reference_share": 7.693256615047444e-05
+    },
+    {
+      "raw_type": "[Open API] Customer to Business_Junipay(Charge type (new): C2B Commission - openapi)",
+      "count": 27232,
+      "raw_share": 7.275536448984212e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:[Open API] Customer to Business_Junipay(Charge type (new): C2B Commission - openapi)",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Pay Merchant_Digicare_MVA",
+      "count": 26720,
+      "raw_share": 7.13874610446747e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Pay Merchant_Digicare_MVA",
+      "scenario_reference_share": 7.502055280977618e-05
+    },
+    {
+      "raw_type": "Ghipss_B2W_Request",
+      "count": 26173,
+      "raw_share": 6.992604857493529e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:Ghipss_B2W_Request",
+      "scenario_reference_share": 7.348476529529461e-05
+    },
+    {
+      "raw_type": "Ghipss_QR Payment_USSD",
+      "count": 23422,
+      "raw_share": 6.257623924357675e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Ghipss_QR Payment_USSD",
+      "scenario_reference_share": 6.576090523617432e-05
+    },
+    {
+      "raw_type": "Customer Transfer Agent",
+      "count": 21717,
+      "raw_share": 5.802101390371259e-05,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Customer Transfer Agent",
+      "scenario_reference_share": 6.0973852745879844e-05
+    },
+    {
+      "raw_type": "FSI Org Transfer from Wallet to Bank_CBG",
+      "count": 21559,
+      "raw_share": 5.759888744993046e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Wallet to Bank_CBG",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Bank to Wallet _ FBN",
+      "count": 19638,
+      "raw_share": 5.246657784413629e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Bank to Wallet _ FBN",
+      "scenario_reference_share": 5.513673712868206e-05
+    },
+    {
+      "raw_type": "Pay Merchant Reversal",
+      "count": 17344,
+      "raw_share": 4.6337729205046335e-05,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Pay Merchant Reversal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Online Payment with USSD push_commission",
+      "count": 17229,
+      "raw_share": 4.603048526716693e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Online Payment with USSD push_commission",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Withdrawal Reversal",
+      "count": 16010,
+      "raw_share": 4.277369952564528e-05,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Withdrawal Reversal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Payment to Merchant Via API",
+      "count": 15495,
+      "raw_share": 4.1397781021228834e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Payment to Merchant Via API",
+      "scenario_reference_share": 4.350462072557941e-05
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Bank to Wallet _ ABSA",
+      "count": 15038,
+      "raw_share": 4.017682032896026e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Bank to Wallet _ ABSA",
+      "scenario_reference_share": 4.2221522198855325e-05
+    },
+    {
+      "raw_type": "FSI Org Transfer from Wallet to Bank _ OmniBSIC",
+      "count": 14872,
+      "raw_share": 3.973332038384739e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Wallet to Bank _ OmniBSIC",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank _ Ecobank",
+      "count": 13905,
+      "raw_share": 3.7149799619244075e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank _ Ecobank",
+      "scenario_reference_share": 3.9040448608530605e-05
+    },
+    {
+      "raw_type": "Ghipss_orgP2P_transfer",
+      "count": 12647,
+      "raw_share": 3.3788818107485066e-05,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Ghipss_orgP2P_transfer",
+      "scenario_reference_share": 3.550841809076494e-05
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank _ FBN",
+      "count": 11036,
+      "raw_share": 2.948473129075711e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank _ FBN",
+      "scenario_reference_share": 3.098528520990606e-05
+    },
+    {
+      "raw_type": "FSI Org Transfer from Wallet to Bank _ FBN",
+      "count": 10973,
+      "raw_share": 2.9316415046527527e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Wallet to Bank _ FBN",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Bank to Wallet_FAB",
+      "count": 10527,
+      "raw_share": 2.8124842904838718e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Bank to Wallet_FAB",
+      "scenario_reference_share": 2.9556188601366535e-05
+    },
+    {
+      "raw_type": "FSI Org Transfer from Wallet to Bank_FAB",
+      "count": 9565,
+      "raw_share": 2.5554680572317123e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Wallet to Bank_FAB",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "P2P (receiving) Reversal via WEB",
+      "count": 9389,
+      "raw_share": 2.5084463763040824e-05,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:P2P (receiving) Reversal via WEB",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Transaction Reversal Without Charge Reversed",
+      "count": 9339,
+      "raw_share": 2.4950879442223692e-05,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Transaction Reversal Without Charge Reversed",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Org Transfer from Wallet to Bank _ Cal",
+      "count": 9168,
+      "raw_share": 2.4494021065029105e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Wallet to Bank _ Cal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Org Transfer from Wallet to Bank _ Fidelity",
+      "count": 9162,
+      "raw_share": 2.447799094653105e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Wallet to Bank _ Fidelity",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "[Open API] Customer to Business_Zenith",
+      "count": 8520,
+      "raw_share": 2.276276826723909e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:[Open API] Customer to Business_Zenith",
+      "scenario_reference_share": 2.3921224174374742e-05
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank _ ABSA",
+      "count": 8308,
+      "raw_share": 2.2196370746974454e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank _ ABSA",
+      "scenario_reference_share": 2.33260012254349e-05
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank_Zenith",
+      "count": 7761,
+      "raw_share": 2.0734958277235045e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank_Zenith",
+      "scenario_reference_share": 2.179021371095333e-05
+    },
+    {
+      "raw_type": "Deposit Reversal",
+      "count": 7210,
+      "raw_share": 1.926285906183026e-05,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Deposit Reversal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Customer Pay Bill - Multichoice_Digicare",
+      "count": 6644,
+      "raw_share": 1.775068455018034e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Customer Pay Bill - Multichoice_Digicare",
+      "scenario_reference_share": 1.8654062607341052e-05
+    },
+    {
+      "raw_type": "Commission Roll Up For Owned Organization",
+      "count": 6551,
+      "raw_share": 1.7502217713460476e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Commission Roll Up For Owned Organization",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "[Open API] Customer to Business PSP",
+      "count": 6407,
+      "raw_share": 1.711749486950714e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:[Open API] Customer to Business PSP",
+      "scenario_reference_share": 1.7988648272913023e-05
+    },
+    {
+      "raw_type": "P2P (receiving) Reversal via API",
+      "count": 5735,
+      "raw_share": 1.5322121597724904e-05,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:P2P (receiving) Reversal via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank _ ADB",
+      "count": 5591,
+      "raw_share": 1.4937398753771567e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank _ ADB",
+      "scenario_reference_share": 1.5697601450578542e-05
+    },
+    {
+      "raw_type": "Business Deposit of Funds via Web",
+      "count": 5563,
+      "raw_share": 1.4862591534113973e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Deposit of Funds via Web",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Bank to Wallet _ GT",
+      "count": 5240,
+      "raw_share": 1.3999636821635309e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Bank to Wallet _ GT",
+      "scenario_reference_share": 1.4712114398324371e-05
+    },
+    {
+      "raw_type": "Pay Utility _Digicare",
+      "count": 5176,
+      "raw_share": 1.3828648890989381e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Pay Utility _Digicare",
+      "scenario_reference_share": 1.4532424451474608e-05
+    },
+    {
+      "raw_type": "Customer Pay Bill with Charge",
+      "count": 4959,
+      "raw_share": 1.3248892938643033e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Customer Pay Bill with Charge",
+      "scenario_reference_share": 1.3923163225437129e-05
+    },
+    {
+      "raw_type": "FSI Org Transfer from Bank to Wallet_FAB",
+      "count": 4706,
+      "raw_share": 1.2572956275308352e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Bank to Wallet_FAB",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank_FAB",
+      "count": 4626,
+      "raw_share": 1.2359221362000942e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank_FAB",
+      "scenario_reference_share": 1.2988213970734455e-05
+    },
+    {
+      "raw_type": "Interest Payment To organisation_Cen",
+      "count": 4276,
+      "raw_share": 1.1424131116281026e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Organisation flow without explicit customer destination",
+      "ledger_id": "transaction_type:Interest Payment To organisation_Cen",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Customer Pay Bill - Cross border for Digicare",
+      "count": 4148,
+      "raw_share": 1.1082155254989171e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Customer Pay Bill - Cross border for Digicare",
+      "scenario_reference_share": 1.1646154680200284e-05
+    },
+    {
+      "raw_type": "Customer Pay Bill - Cross border",
+      "count": 4131,
+      "raw_share": 1.1036736585911347e-05,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Customer Pay Bill - Cross border",
+      "scenario_reference_share": 1.1598424538068316e-05
+    },
+    {
+      "raw_type": "Salary Payment",
+      "count": 3988,
+      "raw_share": 1.0654685428374352e-05,
+      "category": "incoming_payment",
+      "role": "background_candidate",
+      "reason": "Name suggests incoming payment to customer",
+      "ledger_id": "transaction_type:Salary Payment",
+      "scenario_reference_share": 1.1196929813075876e-05
+    },
+    {
+      "raw_type": "Agency Redistribution of Float Funds via web",
+      "count": 3962,
+      "raw_share": 1.0585221581549444e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Agency Redistribution of Float Funds via web",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Organisation Payment to Customer _IMT",
+      "count": 3945,
+      "raw_share": 1.053980291247162e-05,
+      "category": "incoming_payment",
+      "role": "background_candidate",
+      "reason": "Name suggests incoming payment to customer",
+      "ledger_id": "transaction_type:Organisation Payment to Customer _IMT",
+      "scenario_reference_share": 1.1076200630036192e-05
+    },
+    {
+      "raw_type": "Bulk O2O Payment via web",
+      "count": 3830,
+      "raw_share": 1.0232558974592219e-05,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Bulk O2O Payment via web",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "B2W Reversal via API",
+      "count": 3744,
+      "raw_share": 1.0002793942786755e-05,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:B2W Reversal via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Bank to Wallet _ OmniBSIC",
+      "count": 3743,
+      "raw_share": 1.0000122256370411e-05,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Bank to Wallet _ OmniBSIC",
+      "scenario_reference_share": 1.0509054235291626e-05
+    },
+    {
+      "raw_type": "Business Transfer from M-Pesa Account to Utility Account",
+      "count": 3586,
+      "raw_share": 9.58066748900462e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Transfer from M-Pesa Account to Utility Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Org Transfer from Wallet to Bank _ ABSA",
+      "count": 3522,
+      "raw_share": 9.409679558358694e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Wallet to Bank _ ABSA",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Ghipss_orgW2B_transfer",
+      "count": 3386,
+      "raw_share": 9.046330205736097e-06,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:Ghipss_orgW2B_transfer",
+      "scenario_reference_share": 9.50672125052029e-06
+    },
+    {
+      "raw_type": "Customer Transfer Reversal By CCH",
+      "count": 3302,
+      "raw_share": 8.821908546763318e-06,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Customer Transfer Reversal By CCH",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Insurance Claim Payment",
+      "count": 3294,
+      "raw_share": 8.800535055432578e-06,
+      "category": "incoming_payment",
+      "role": "background_candidate",
+      "reason": "Name suggests incoming payment to customer",
+      "ledger_id": "transaction_type:Insurance Claim Payment",
+      "scenario_reference_share": 9.248416951923756e-06
+    },
+    {
+      "raw_type": "FSI Org Transfer from Wallet to Bank _ ADB",
+      "count": 2799,
+      "raw_share": 7.4780502793429825e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Wallet to Bank _ ADB",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Customer Transfer Reversal",
+      "count": 2762,
+      "raw_share": 7.379197881938306e-06,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Customer Transfer Reversal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Org Transfer from Bank to Wallet_CBG",
+      "count": 2696,
+      "raw_share": 7.202866578459693e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Bank to Wallet_CBG",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Deposit at Agent via api",
+      "count": 2622,
+      "raw_share": 7.0051617836503394e-06,
+      "category": "cash_in",
+      "role": "background_candidate",
+      "reason": "Agent deposit name; customer-facing assumption needs validation",
+      "ledger_id": "transaction_type:Deposit at Agent via api",
+      "scenario_reference_share": 7.361672510001241e-06
+    },
+    {
+      "raw_type": "Customer Pay Utility - Startimes",
+      "count": 1938,
+      "raw_share": 5.17772827487199e-06,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Customer Pay Utility - Startimes",
+      "scenario_reference_share": 5.441236203044395e-06
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank _ GT",
+      "count": 1919,
+      "raw_share": 5.12696623296148e-06,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank _ GT",
+      "scenario_reference_share": 5.387890750073372e-06
+    },
+    {
+      "raw_type": "Direct Debit Payment Reversal",
+      "count": 1901,
+      "raw_share": 5.078875877467313e-06,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Direct Debit Payment Reversal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "null",
+      "count": 1735,
+      "raw_share": 4.6353759323544385e-06,
+      "category": "unknown",
+      "role": "exclude",
+      "reason": "Unknown source category",
+      "ledger_id": "transaction_type:null",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Merchant Payment Reversal",
+      "count": 1684,
+      "raw_share": 4.499119925120966e-06,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Merchant Payment Reversal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Business Withdrawal of Funds via API",
+      "count": 1649,
+      "raw_share": 4.405610900548974e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Withdrawal of Funds via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Org Transfer from Bank to Wallet _ OmniBSIC",
+      "count": 1440,
+      "raw_share": 3.847228439533367e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Bank to Wallet _ OmniBSIC",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank _ OmniBSIC",
+      "count": 1409,
+      "raw_share": 3.764406160626746e-06,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank _ OmniBSIC",
+      "scenario_reference_share": 3.95598648611432e-06
+    },
+    {
+      "raw_type": "Business Transfer From Utility Account To M-Pesa Account",
+      "count": 1405,
+      "raw_share": 3.7537194149613757e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Transfer From Utility Account To M-Pesa Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Merchant Transfer from Working Account to Merchant Account",
+      "count": 1401,
+      "raw_share": 3.7430326692960052e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Merchant Transfer from Working Account to Merchant Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Withdrawal at ATM",
+      "count": 1379,
+      "raw_share": 3.6842555681364674e-06,
+      "category": "cash_out",
+      "role": "background_candidate",
+      "reason": "Cash withdrawal name; customer-facing assumption needs validation",
+      "ledger_id": "transaction_type:Withdrawal at ATM",
+      "scenario_reference_share": 3.871756823528494e-06
+    },
+    {
+      "raw_type": "FSI Org Transfer from Wallet to Bank _ Stanbic",
+      "count": 1269,
+      "raw_share": 3.39037006233878e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Wallet to Bank _ Stanbic",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Pay Utility_Insurance Daily",
+      "count": 1259,
+      "raw_share": 3.3636531981753535e-06,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Pay Utility_Insurance Daily",
+      "scenario_reference_share": 3.5348381731851876e-06
+    },
+    {
+      "raw_type": "[Open API] Transaction Reversal",
+      "count": 1233,
+      "raw_share": 3.2941893513504457e-06,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:[Open API] Transaction Reversal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Auto Sweep Funds To Parent",
+      "count": 1196,
+      "raw_share": 3.195336953945769e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Auto Sweep Funds To Parent",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Enterprise Organisation Payment to Customer Via API",
+      "count": 1165,
+      "raw_share": 3.1125146750391476e-06,
+      "category": "incoming_payment",
+      "role": "background_candidate",
+      "reason": "Name suggests incoming payment to customer",
+      "ledger_id": "transaction_type:Enterprise Organisation Payment to Customer Via API",
+      "scenario_reference_share": 3.270918563749598e-06
+    },
+    {
+      "raw_type": "Customer Pay Bill - Absa School Payment",
+      "count": 1122,
+      "raw_share": 2.9976321591364153e-06,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Customer Pay Bill - Absa School Payment",
+      "scenario_reference_share": 3.150189380709913e-06
+    },
+    {
+      "raw_type": "Transfer from Utility Account to Interop Account",
+      "count": 1109,
+      "raw_share": 2.9629002357239613e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Transfer from Utility Account to Interop Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Organization Transfer from M-Pesa Account to Float Account via Web",
+      "count": 1040,
+      "raw_share": 2.7785538729963207e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Organization Transfer from M-Pesa Account to Float Account via Web",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Send Money Expire Reversal",
+      "count": 992,
+      "raw_share": 2.650312925011875e-06,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Send Money Expire Reversal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Agency Redistribution of Float Funds via web - Prudential",
+      "count": 961,
+      "raw_share": 2.567490646105254e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Agency Redistribution of Float Funds via web - Prudential",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Organization Transfer from Float Account to M-Pesa Account via Web",
+      "count": 895,
+      "raw_share": 2.3911593426266415e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Organization Transfer from Float Account to M-Pesa Account via Web",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Withdrawal at agent store via api",
+      "count": 858,
+      "raw_share": 2.2923069452219647e-06,
+      "category": "cash_out",
+      "role": "background_candidate",
+      "reason": "Cash withdrawal name; customer-facing assumption needs validation",
+      "ledger_id": "transaction_type:Withdrawal at agent store via api",
+      "scenario_reference_share": 2.4089683499546396e-06
+    },
+    {
+      "raw_type": "Top Org Deposit of Funds via stk",
+      "count": 780,
+      "raw_share": 2.0839154047472407e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Top Org Deposit of Funds via stk",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Email Statement Request_Organization",
+      "count": 767,
+      "raw_share": 2.0491834813347867e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Email Statement Request_Organization",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Org Transfer from Bank to Wallet _ FBN",
+      "count": 751,
+      "raw_share": 2.006436498673305e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Bank to Wallet _ FBN",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "B2W Reversal via web",
+      "count": 722,
+      "raw_share": 1.928957592599369e-06,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:B2W Reversal via web",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Subscription_bid2win",
+      "count": 675,
+      "raw_share": 1.8033883310312658e-06,
+      "category": "service_admin",
+      "role": "exclude",
+      "reason": "Administrative/service event; no financial interpretation established",
+      "ledger_id": "transaction_type:Subscription_bid2win",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "B2C Reversal",
+      "count": 632,
+      "raw_share": 1.6885058151285333e-06,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:B2C Reversal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Agency H/O Transfer of Commission to M-Pesa Account",
+      "count": 623,
+      "raw_share": 1.6644606373814498e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Agency H/O Transfer of Commission to M-Pesa Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Send Money To Unregistered User",
+      "count": 620,
+      "raw_share": 1.656445578132422e-06,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Send Money To Unregistered User",
+      "scenario_reference_share": 1.740746360107082e-06
+    },
+    {
+      "raw_type": "Business Deposit of Funds within Hierarchy via Web",
+      "count": 581,
+      "raw_share": 1.55224980789506e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Deposit of Funds within Hierarchy via Web",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Org Transfer from Bank to Wallet _ Fidelity",
+      "count": 570,
+      "raw_share": 1.522861257315291e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Bank to Wallet _ Fidelity",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Customer Pay Bill without charge",
+      "count": 509,
+      "raw_share": 1.3598883859183917e-06,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Customer Pay Bill without charge",
+      "scenario_reference_share": 1.4290966085395238e-06
+    },
+    {
+      "raw_type": "Merchant to Merchant Transfer via web",
+      "count": 463,
+      "raw_share": 1.2369908107666312e-06,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Merchant to Merchant Transfer via web",
+      "scenario_reference_share": 1.2999444592412564e-06
+    },
+    {
+      "raw_type": "Pay Utility_Insurance Weekly",
+      "count": 424,
+      "raw_share": 1.1327950405292692e-06,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Pay Utility_Insurance Weekly",
+      "scenario_reference_share": 1.1904458978796818e-06
+    },
+    {
+      "raw_type": "Ghipss_QR_Payment_App",
+      "count": 421,
+      "raw_share": 1.1247799812802414e-06,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Ghipss_QR_Payment_App",
+      "scenario_reference_share": 1.1820229316210993e-06
+    },
+    {
+      "raw_type": "FSI Org Transfer from Bank to Wallet _ Stanbic",
+      "count": 410,
+      "raw_share": 1.0953914307004725e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Bank to Wallet _ Stanbic",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Organization Transfer from Instant Commission Account to Float Account via WEB",
+      "count": 380,
+      "raw_share": 1.0152408382101941e-06,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Organization Transfer from Instant Commission Account to Float Account via WEB",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Org Transfer from Bank to Wallet _ ABSA",
+      "count": 351,
+      "raw_share": 9.377619321362582e-07,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Bank to Wallet _ ABSA",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Loan Payment Via API_FlexLoan",
+      "count": 351,
+      "raw_share": 9.377619321362582e-07,
+      "category": "loan_disbursement",
+      "role": "loan_process_only",
+      "reason": "Simulate by explicit loan lifecycle, never raw event prevalence",
+      "ledger_id": "transaction_type:Loan Payment Via API_FlexLoan",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Pay Utility_Insurance Monthly",
+      "count": 350,
+      "raw_share": 9.350902457199156e-07,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Pay Utility_Insurance Monthly",
+      "scenario_reference_share": 9.826793968346431e-07
+    },
+    {
+      "raw_type": "Business Deposit of Funds via API",
+      "count": 303,
+      "raw_share": 8.095209841518127e-07,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Deposit of Funds via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Organization Transfer from Utility Account to Interop Account",
+      "count": 297,
+      "raw_share": 7.93490865653757e-07,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Organization Transfer from Utility Account to Interop Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Top Org Deposit of Funds via web",
+      "count": 288,
+      "raw_share": 7.694456879066734e-07,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Top Org Deposit of Funds via web",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Give Cash at Agent Till",
+      "count": 281,
+      "raw_share": 7.507438829922751e-07,
+      "category": "cash_out",
+      "role": "background_candidate",
+      "reason": "Cash withdrawal name; customer-facing assumption needs validation",
+      "ledger_id": "transaction_type:Give Cash at Agent Till",
+      "scenario_reference_share": 7.88951172887242e-07
+    },
+    {
+      "raw_type": "Top Org Deposit of Funds via api",
+      "count": 249,
+      "raw_share": 6.652499176693114e-07,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Top Org Deposit of Funds via api",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Business to Business transfer via API",
+      "count": 244,
+      "raw_share": 6.518914855875983e-07,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business to Business transfer via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Bank to Wallet _ Fidelity",
+      "count": 223,
+      "raw_share": 5.957860708444034e-07,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Bank to Wallet _ Fidelity",
+      "scenario_reference_share": 6.26107158554644e-07
+    },
+    {
+      "raw_type": "Transfer from Org Interop Account to Interop Account",
+      "count": 215,
+      "raw_share": 5.744125795136624e-07,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Transfer from Org Interop Account to Interop Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank _ Fidelity",
+      "count": 210,
+      "raw_share": 5.610541474319493e-07,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank _ Fidelity",
+      "scenario_reference_share": 5.896076381007859e-07
+    },
+    {
+      "raw_type": "Transfer from Org Mpesa Account to Org Mpesa Account",
+      "count": 194,
+      "raw_share": 5.183071647704675e-07,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Transfer from Org Mpesa Account to Org Mpesa Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Transfer from Utility Account to Org Mpesa Account",
+      "count": 165,
+      "raw_share": 4.4082825869653165e-07,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Transfer from Utility Account to Org Mpesa Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Business Transfer From Principal Collection Account To M-Pesa Account",
+      "count": 149,
+      "raw_share": 3.980812760350498e-07,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Business Transfer From Principal Collection Account To M-Pesa Account",
+      "scenario_reference_share": 4.183406575096052e-07
+    },
+    {
+      "raw_type": "Business Withdrawal of Funds within Hierarchy via Web",
+      "count": 148,
+      "raw_share": 3.954095896187072e-07,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Withdrawal of Funds within Hierarchy via Web",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Withdrawal at Agent Store via Web",
+      "count": 140,
+      "raw_share": 3.7403609828796623e-07,
+      "category": "cash_out",
+      "role": "background_candidate",
+      "reason": "Cash withdrawal name; customer-facing assumption needs validation",
+      "ledger_id": "transaction_type:Withdrawal at Agent Store via Web",
+      "scenario_reference_share": 3.9307175873385726e-07
+    },
+    {
+      "raw_type": "Auto Sweep Funds To Parent - Merchant",
+      "count": 129,
+      "raw_share": 3.4464754770819747e-07,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Auto Sweep Funds To Parent - Merchant",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Vodafone Bulk SMS",
+      "count": 123,
+      "raw_share": 3.2861742921014176e-07,
+      "category": "service_admin",
+      "role": "exclude",
+      "reason": "Administrative/service event; no financial interpretation established",
+      "ledger_id": "transaction_type:Vodafone Bulk SMS",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Pay Utility Reversal",
+      "count": 121,
+      "raw_share": 3.232740563774565e-07,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Pay Utility Reversal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Business Payment to Customer via WEB",
+      "count": 97,
+      "raw_share": 2.5915358238523377e-07,
+      "category": "incoming_payment",
+      "role": "background_candidate",
+      "reason": "Name suggests incoming payment to customer",
+      "ledger_id": "transaction_type:Business Payment to Customer via WEB",
+      "scenario_reference_share": 2.723425756941725e-07
+    },
+    {
+      "raw_type": "Pay Merchant via WEB",
+      "count": 95,
+      "raw_share": 2.5381020955254853e-07,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Pay Merchant via WEB",
+      "scenario_reference_share": 2.6672726485511743e-07
+    },
+    {
+      "raw_type": "Send Money Reversal By CCH",
+      "count": 80,
+      "raw_share": 2.1373491330740928e-07,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Send Money Reversal By CCH",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Loan Principal Collection via API_FlexLoan",
+      "count": 79,
+      "raw_share": 2.1106322689106666e-07,
+      "category": "loan_principal_repayment",
+      "role": "loan_process_only",
+      "reason": "Simulate by explicit loan lifecycle, never raw event prevalence",
+      "ledger_id": "transaction_type:Loan Principal Collection via API_FlexLoan",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Withdrawal at ATM Reversal - Full",
+      "count": 55,
+      "raw_share": 1.4694275289884388e-07,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Withdrawal at ATM Reversal - Full",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Loan Interest via API_FlexLoan",
+      "count": 53,
+      "raw_share": 1.4159938006615864e-07,
+      "category": "loan_interest",
+      "role": "loan_process_only",
+      "reason": "Simulate by explicit loan lifecycle, never raw event prevalence",
+      "ledger_id": "transaction_type:Loan Interest via API_FlexLoan",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Transfer from Org Mpesa Account to Interop Account",
+      "count": 44,
+      "raw_share": 1.175542023190751e-07,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Transfer from Org Mpesa Account to Interop Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "C2B Payment",
+      "count": 42,
+      "raw_share": 1.1221082948638988e-07,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:C2B Payment",
+      "scenario_reference_share": 1.1792152762015718e-07
+    },
+    {
+      "raw_type": "Pay Utility_YBOL",
+      "count": 41,
+      "raw_share": 1.0953914307004726e-07,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Pay Utility_YBOL",
+      "scenario_reference_share": 1.1511387220062962e-07
+    },
+    {
+      "raw_type": "Send Money Reversal - Partial",
+      "count": 35,
+      "raw_share": 9.350902457199156e-08,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Send Money Reversal - Partial",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Customer Transfer via WEB",
+      "count": 33,
+      "raw_share": 8.816565173930633e-08,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Customer Transfer via WEB",
+      "scenario_reference_share": 9.265262884440921e-08
+    },
+    {
+      "raw_type": "[Open API] Customer to Business Zen org",
+      "count": 27,
+      "raw_share": 7.213553324125063e-08,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:[Open API] Customer to Business Zen org",
+      "scenario_reference_share": 7.58066963272439e-08
+    },
+    {
+      "raw_type": "OD_Principal Collection via API",
+      "count": 25,
+      "raw_share": 6.679216040856541e-08,
+      "category": "loan_principal_repayment",
+      "role": "loan_process_only",
+      "reason": "Simulate by explicit loan lifecycle, never raw event prevalence",
+      "ledger_id": "transaction_type:OD_Principal Collection via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Wallet to Bank",
+      "count": 24,
+      "raw_share": 6.412047399222279e-08,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Wallet to Bank",
+      "scenario_reference_share": 6.738373006866123e-08
+    },
+    {
+      "raw_type": "Pay Utility by Merchant",
+      "count": 24,
+      "raw_share": 6.412047399222279e-08,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Pay Utility by Merchant",
+      "scenario_reference_share": 6.738373006866123e-08
+    },
+    {
+      "raw_type": "Organization Transfer from M-Pesa Account to Interop Account",
+      "count": 22,
+      "raw_share": 5.877710115953755e-08,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Organization Transfer from M-Pesa Account to Interop Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Transfer from Org Interop Account to M-Pesa Account",
+      "count": 21,
+      "raw_share": 5.610541474319494e-08,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Transfer from Org Interop Account to M-Pesa Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Business Transfer From Interest Collection Account To M-Pesa Account",
+      "count": 20,
+      "raw_share": 5.343372832685232e-08,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Business Transfer From Interest Collection Account To M-Pesa Account",
+      "scenario_reference_share": 5.615310839055103e-08
+    },
+    {
+      "raw_type": "Send Money Reversal",
+      "count": 20,
+      "raw_share": 5.343372832685232e-08,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Send Money Reversal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "OD_Penalty via API",
+      "count": 19,
+      "raw_share": 5.076204191050971e-08,
+      "category": "loan_penalty",
+      "role": "loan_process_only",
+      "reason": "Simulate by explicit loan lifecycle, never raw event prevalence",
+      "ledger_id": "transaction_type:OD_Penalty via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Business Withdrawal of Funds via Web at Child Store",
+      "count": 19,
+      "raw_share": 5.076204191050971e-08,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Withdrawal of Funds via Web at Child Store",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Customer Transfer from Bank to Wallet",
+      "count": 18,
+      "raw_share": 4.809035549416709e-08,
+      "category": "bank_wallet",
+      "role": "background_candidate",
+      "reason": "Bank/wallet flow; name alone does not establish customer population",
+      "ledger_id": "transaction_type:FSI Customer Transfer from Bank to Wallet",
+      "scenario_reference_share": 5.053779755149593e-08
+    },
+    {
+      "raw_type": "OD_Interest via API",
+      "count": 17,
+      "raw_share": 4.5418669077824476e-08,
+      "category": "loan_interest",
+      "role": "loan_process_only",
+      "reason": "Simulate by explicit loan lifecycle, never raw event prevalence",
+      "ledger_id": "transaction_type:OD_Interest via API",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Subscription",
+      "count": 12,
+      "raw_share": 3.2060236996111394e-08,
+      "category": "service_admin",
+      "role": "exclude",
+      "reason": "Administrative/service event; no financial interpretation established",
+      "ledger_id": "transaction_type:Subscription",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "HO Float Management Reverse",
+      "count": 11,
+      "raw_share": 2.9388550579768775e-08,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:HO Float Management Reverse",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Business Withdrawal of Funds via Web",
+      "count": 11,
+      "raw_share": 2.9388550579768775e-08,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Withdrawal of Funds via Web",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Deposit via USSD Reversal",
+      "count": 9,
+      "raw_share": 2.4045177747083544e-08,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:Deposit via USSD Reversal",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Transfer from Org Charges Account to M-Pesa Account",
+      "count": 9,
+      "raw_share": 2.4045177747083544e-08,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Transfer from Org Charges Account to M-Pesa Account",
+      "scenario_reference_share": 2.5268898775747965e-08
+    },
+    {
+      "raw_type": "Business Transfer From Penal Charges Account To M-Pesa Account",
+      "count": 8,
+      "raw_share": 2.1373491330740928e-08,
+      "category": "transfer",
+      "role": "background_candidate",
+      "reason": "Transfer name; party roles/direction unavailable in aggregates",
+      "ledger_id": "transaction_type:Business Transfer From Penal Charges Account To M-Pesa Account",
+      "scenario_reference_share": 2.2461243356220414e-08
+    },
+    {
+      "raw_type": "Pay Utility - Business Broadband",
+      "count": 7,
+      "raw_share": 1.8701804914398313e-08,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Pay Utility - Business Broadband",
+      "scenario_reference_share": 1.9653587936692863e-08
+    },
+    {
+      "raw_type": "Give Cash at Agent Store via Web",
+      "count": 6,
+      "raw_share": 1.6030118498055697e-08,
+      "category": "cash_out",
+      "role": "background_candidate",
+      "reason": "Cash withdrawal name; customer-facing assumption needs validation",
+      "ledger_id": "transaction_type:Give Cash at Agent Store via Web",
+      "scenario_reference_share": 1.684593251716531e-08
+    },
+    {
+      "raw_type": "Penalty on Loan via API_FlexLoan",
+      "count": 6,
+      "raw_share": 1.6030118498055697e-08,
+      "category": "loan_penalty",
+      "role": "loan_process_only",
+      "reason": "Simulate by explicit loan lifecycle, never raw event prevalence",
+      "ledger_id": "transaction_type:Penalty on Loan via API_FlexLoan",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "One4Sure Terms and Conditions",
+      "count": 5,
+      "raw_share": 1.335843208171308e-08,
+      "category": "service_admin",
+      "role": "exclude",
+      "reason": "Administrative/service event; no financial interpretation established",
+      "ledger_id": "transaction_type:One4Sure Terms and Conditions",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "FSI Org Transfer from Bank to Wallet _ ADB",
+      "count": 5,
+      "raw_share": 1.335843208171308e-08,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:FSI Org Transfer from Bank to Wallet _ ADB",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "online payment",
+      "count": 2,
+      "raw_share": 5.343372832685232e-09,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:online payment",
+      "scenario_reference_share": 5.6153108390551035e-09
+    },
+    {
+      "raw_type": "Customer Pay Bill - ISL",
+      "count": 2,
+      "raw_share": 5.343372832685232e-09,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Customer Pay Bill - ISL",
+      "scenario_reference_share": 5.6153108390551035e-09
+    },
+    {
+      "raw_type": "Bulk C2B Payment - Bonus",
+      "count": 2,
+      "raw_share": 5.343372832685232e-09,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Bulk C2B Payment - Bonus",
+      "scenario_reference_share": 5.6153108390551035e-09
+    },
+    {
+      "raw_type": "Device Micropayment",
+      "count": 2,
+      "raw_share": 5.343372832685232e-09,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Device Micropayment",
+      "scenario_reference_share": 5.6153108390551035e-09
+    },
+    {
+      "raw_type": "Deposit at Agent Store via Web - Prudential",
+      "count": 2,
+      "raw_share": 5.343372832685232e-09,
+      "category": "cash_in",
+      "role": "background_candidate",
+      "reason": "Agent deposit name; customer-facing assumption needs validation",
+      "ledger_id": "transaction_type:Deposit at Agent Store via Web - Prudential",
+      "scenario_reference_share": 5.6153108390551035e-09
+    },
+    {
+      "raw_type": "Organization Transfer from M-Pesa Account to Agency Commission Account",
+      "count": 2,
+      "raw_share": 5.343372832685232e-09,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Organization Transfer from M-Pesa Account to Agency Commission Account",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Business Payment to Customer Withdrawal Charge Paid via WEB",
+      "count": 1,
+      "raw_share": 2.671686416342616e-09,
+      "category": "cash_out",
+      "role": "background_candidate",
+      "reason": "Cash withdrawal name; customer-facing assumption needs validation",
+      "ledger_id": "transaction_type:Business Payment to Customer Withdrawal Charge Paid via WEB",
+      "scenario_reference_share": 2.8076554195275517e-09
+    },
+    {
+      "raw_type": "Business Deposit of Funds within Hierarchy via Web - Prudential",
+      "count": 1,
+      "raw_share": 2.671686416342616e-09,
+      "category": "organisation_infrastructure",
+      "role": "exclude",
+      "reason": "Name indicates institutional/infrastructure flow",
+      "ledger_id": "transaction_type:Business Deposit of Funds within Hierarchy via Web - Prudential",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Cancel Subscription",
+      "count": 1,
+      "raw_share": 2.671686416342616e-09,
+      "category": "service_admin",
+      "role": "exclude",
+      "reason": "Administrative/service event; no financial interpretation established",
+      "ledger_id": "transaction_type:Cancel Subscription",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "B2C Reversal with Charge Reversed",
+      "count": 1,
+      "raw_share": 2.671686416342616e-09,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:B2C Reversal with Charge Reversed",
+      "scenario_reference_share": null
+    },
+    {
+      "raw_type": "Bulk Bonus Payment",
+      "count": 1,
+      "raw_share": 2.671686416342616e-09,
+      "category": "merchant_bill_payment",
+      "role": "background_candidate",
+      "reason": "Payment name; borrower applicability not established",
+      "ledger_id": "transaction_type:Bulk Bonus Payment",
+      "scenario_reference_share": 2.8076554195275517e-09
+    },
+    {
+      "raw_type": "FSI Transfer from Bank to Wallet Reversal",
+      "count": 1,
+      "raw_share": 2.671686416342616e-09,
+      "category": "reversal_adjustment",
+      "role": "exclude",
+      "reason": "Requires linked original transaction; not ordinary activity",
+      "ledger_id": "transaction_type:FSI Transfer from Bank to Wallet Reversal",
+      "scenario_reference_share": null
+    }
+  ]
+}

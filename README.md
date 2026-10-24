@@ -1,166 +1,103 @@
-# seqcredit-model
+# seqcredit research
 
-`seqcredit-model` is a credit-risk research codebase with two connected workflows:
+Local credit-risk experiments using **synthetic transactions calibrated to aggregate statistics from archived telco analyses**. Generated records are simulated observations, not anonymized customer records. The calibration ledger, v2 contract and legacy leakage audit are complete. See [`docs/project.md`](docs/project.md) for the consolidated project map,
+protocol, validation status, and archive boundary. The smoke run, controlled
+pilots, full-size gate, and all 30 preregistered matrix runs pass independent
+validation.
 
-- a local synthetic mobile-money benchmark
-- a Databricks-oriented real-data pipeline for Telecel Ghana analysis
-
-The current branch is `real-data`. The checked-in Python package contains both tracks.
-
-## What Is In This Repo
-
-- `src/seqcredit_model/synthesize.py`
-  Generates synthetic per-user transaction CSVs and `data/user_labels.csv`.
-- `src/seqcredit_model/pipeline.py`
-  Engineers transaction features and builds `data/user_features.csv`.
-- `src/seqcredit_model/credit_model.py`
-  Contains the shared data loader, evaluation utilities, and model classes.
-- `src/seqcredit_model/real_data_pipeline.py`
-  Builds leakage-aware user features and labels from a Spark DataFrame in Databricks.
-- `src/seqcredit_model/run_cv_benchmark.py`
-  Runs the checked-in 5-fold benchmark artifacts.
-- `src/seqcredit_model/run_ablation_study.py`
-  Runs RandomForest feature-group ablations.
-- `src/seqcredit_model/run_hyperparameter_tuning.py`
-  Runs bounded-budget tuning for the top static models.
-- `src/seqcredit_model/run_full_benchmark.py`
-  Clears stale benchmark outputs and re-runs the CV benchmark.
-- `src/seqcredit_model/compute_bootstrap_ci.py`
-  Computes bootstrap intervals for saved notebook-trained models.
-- `src/seqcredit_model/reset.py`
-  Removes generated models and data artifacts for a fresh run.
-- `src/seqcredit_model/build_poster.py`
-  Generates a PowerPoint research poster from checked-in results.
+This `seqcredit` checkout on `default` is the sole active research workspace. Legacy
+source is retained for reference under
+`archive/code/legacy-model/`; Databricks is not required.
 
 ## Setup
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS/Linux
+Use Python 3.13:
 
-pip install -r requirements.txt
-pip install -e .
+```powershell
+uv sync --group dev
+uv run python -m pytest
 ```
 
-Or, with [uv](https://docs.astral.sh/uv/) (uses the checked-in `uv.lock`):
+Alternatively, in a Python 3.13 environment: `python -m pip install -r requirements.txt`. Dependencies are defined in `pyproject.toml`. The active `.venv` uses Python 3.13.14.
 
-```bash
-uv sync
+## Code and next steps
+
+The research root contains:
+
+```text
+data/                  Research datasets and generated data
+docs/                  Design, calibration evidence, and project notes
+models/                Saved model artifacts
+analyze_data.ipynb     Historical synthetic-data exploration
+train_model.ipynb      Historical model training and comparison
+analyze_result.ipy     Historical model interpretation (notebook JSON)
+src/
+  seqcredit/           Python package
+  scripts/             Utilities and standalone verification scripts
+  tests/               Pytest suite
+  configs/             Experiment design configuration
+  synthetic_params.json
 ```
 
-An editable install of the package is required either way. The package is imported as `seqcredit_model`, and several commands use `python -m`.
+`archive/` is a gitignored reference collection: `code/` contains retired source,
+`notebooks/` contains historical notebooks and calibration exports, `evidence/`
+contains historical data and publication artifacts, and `provenance/` records
+original paths and hashes. Archived environments and repository metadata have
+been removed. Pytest discovers `src/tests/` and script checks;
+only `seqcredit` is included in the installed package.
 
-## What Runs Where
+The root notebooks use the older shared-data workflow. Run `train_model.ipynb`
+before `analyze_result.ipy`; `analyze_data.ipynb` independently explores existing
+data. The `.ipy` filename retains notebook JSON as requested. Use the scripts
+below for the frozen v2 experiments.
 
-### Local synthetic workflow
+## End-to-end smoke test
 
-Use this path for the synthetic benchmark and local notebooks:
-
-```bash
-python -m seqcredit_model.synthesize
-python -m seqcredit_model.pipeline
-jupyter notebook notebooks/model.ipynb
+```powershell
+.\src\scripts\test-smoke.ps1
 ```
 
-Additional local scripts:
+Runs 30 focused checks and a 1,000-borrower diagnostic with logistic regression,
+LightGBM and GRU. Each run saves complete artifacts in a new gitignored `data/runs/` directory.
 
-```bash
-python -m seqcredit_model.run_cv_benchmark
-python -m seqcredit_model.run_ablation_study
-python -m seqcredit_model.run_hyperparameter_tuning
-python -m seqcredit_model.run_full_benchmark
-python -m seqcredit_model.reset --data --models --yes
+- `src/seqcredit/synthesize.py`: existing generator.
+- `src/synthetic_params.json`: legacy parameters awaiting provenance review.
+- `src/seqcredit/pipeline.py`: transaction and borrower features.
+- `src/seqcredit/credit_model.py`: loaders, models and evaluation.
+- `src/tests/`: active local research checks.
+- [Project map and research summary](docs/project.md).
+
+The dashboard, Spark integration, publication tooling, historical tables, and Databricks exports are preserved locally in gitignored `archive/`. Exports remain available for calibration extraction; a fresh clone will not contain this local archive.
+
+Existing synthetic notebooks, data, models and caches are historical artifacts. Legacy entrypoints remain unapproved for v2. The smoke run, controlled pilots, full-size gate, and preregistered matrix have passed the documented validation checks.
+
+Run the 5,000-borrower pilot with `.\src\scripts\run-pilot.ps1`.
+
+The v2 runner now accepts the frozen main profile and diagnostic controls directly:
+
+```powershell
+.\src\scripts\test-smoke.ps1 -Profile main -Scenario aggregate_signal -Seed 42
+.\src\scripts\test-smoke.ps1 -Profile pilot -Control label_permutation
+.\.venv\Scripts\python.exe src\scripts\bootstrap_predictions.py --run data\runs\<run>
 ```
 
-### Databricks real-data workflow
+Main-profile settings are frozen by the v2 contract; the resource-check pilot
+was completed before the full-size gate and matrix.
 
-`src/seqcredit_model/real_data_pipeline.py` is designed for a Spark/Databricks runtime. Its public entrypoint is:
+The frozen matrix planner creates 18 headline runs (three scenarios, three
+seeds, two targets) plus 12 separately labeled retrained controls:
 
-```python
-from seqcredit_model.real_data_pipeline import build_pipeline
+```powershell
+.\.venv\Scripts\python.exe src\scripts\run_matrix.py
 ```
 
-Typical usage in a notebook:
+## Citation
 
-```python
-df = spark.sql("SELECT * FROM melodatabricks616.default.yara_dump_table")
-build_pipeline(df, output_dir=None, min_followup_days=60)
+```bibtex
+@misc{seqcredit,
+  author       = {Attabra, Benjamin Ekow},
+  title        = {seqcredit},
+  year         = {2025},
+  howpublished = {\url{https://github.com/attabeezy/seqcredit}}
+}
 ```
-
-This path writes runtime `user_features.csv`, `user_labels.csv`, and raw sequence artifacts compatible with `CreditRiskDataLoader`.
-
-## Models In Code
-
-Exported model classes:
-
-- `LogisticRegressionModel`
-- `XGBoostModel`
-- `RandomForestModel`
-- `LightGBMModel`
-- `LSTMModel`
-- `GRUModel`
-- `HybridLSTMModel`
-- `HybridGRUModel`
-
-Additional classes currently present in `credit_model.py`:
-
-- `TransformerModel`
-- `HybridTransformerModel`
-
-For current research results, benchmark direction, and ablation findings, see `docs/research.md`.
-
-## Runtime Paths
-
-`src/seqcredit_model/config.py` resolves repo-local paths by default and also supports runtime overrides with environment variables:
-
-- `SEQCREDIT_DATA_DIR`
-- `SEQCREDIT_LSTM_CACHE_FILE`
-- `SEQCREDIT_RAW_SEQ_FILE`
-- `SEQCREDIT_USER_FEATURES_FILE`
-- `SEQCREDIT_USER_LABELS_FILE`
-
-This is used primarily to support Databricks or temporary runtime outputs without rewriting repo constants.
-
-## Research Results
-
-Current benchmark tables, real-data ablation findings, and research direction are maintained in `docs/research.md`. Keep this README focused on setup, workflows, and repository orientation rather than duplicating result metrics.
-
-## Data Outputs
-
-Synthetic pipeline outputs:
-
-- `data/user_transactions/`
-- `data/user_labels.csv`
-- `data/user_features.csv`
-- `data/lstm_sequences.npz`
-
-Checked-in result artifacts:
-
-- `data/cv_results_y_default.csv`
-- `data/cv_results_y_bad.csv`
-- `data/significance_tests.csv`
-- `data/ablation_features.csv`
-- `data/tuning_results.csv`
-- `data/cv_manifest.json`
-
-Notebook/model artifacts used by `compute_bootstrap_ci.py`:
-
-- `data/lstm_test_arrays.npz`
-- `models/*.pkl`
-- `models/*.keras`
-- `models/*.json`
-
-## Notes
-
-- Python requirement is `>=3.10` from `pyproject.toml`.
-- `docs/PROJECT.md` is the canonical project reference.
-- `docs/DATACARD.md` documents the synthetic datasets.
-
-## Testing
-
-```bash
-uv run pytest
-```
-
-`tests/` covers `config.py`, `reset.py`, package exports, `synthesize.py`, `pipeline.py`, `credit_model.py` (data loader, static and sequence models, `ModelEvaluator`), `real_data_pipeline.py`, and lightweight smoke tests for the CLI scripts. Tests build small synthetic fixtures on the fly and never touch checked-in `data/`. `real_data_pipeline.py` tests run against a local Spark session (`tests/conftest.py` requires a JDK compatible with Spark's launcher, not just any JRE on `PATH`).

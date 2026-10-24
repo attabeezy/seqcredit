@@ -1,0 +1,312 @@
+{
+  "version": 2,
+  "status": "contract_frozen_implementation_pending",
+  "seed": 42,
+  "population": "simulated customer borrowers with one designated index loan and complete observation/follow-up",
+  "observation_days": 90,
+  "outcome_days": 60,
+  "window_provenance": "scenario assumptions; not recovered collection dates or contractual tenure",
+  "index_time": "day 0; history strictly earlier; outcomes strictly later through day 60",
+  "split": {
+    "unit": "borrower",
+    "train": 0.6,
+    "validation": 0.2,
+    "test": 0.2,
+    "stratified": true,
+    "stratify_on": "three-class realized event-derived label",
+    "counts_main": {
+      "train": 15375,
+      "validation": 5125,
+      "test": 5125
+    },
+    "early_stopping_inner_fraction": 0.15,
+    "early_stopping_inner_stratified": true,
+    "validation_role": "model/hyperparameter/threshold/calibration selection only; not early stopping",
+    "test_role": "one final evaluation per preregistered scenario/seed; never select settings from test",
+    "refit_policy": "no train+validation refit in v2; freeze chosen train-only fitted pipeline"
+  },
+  "outcome": {
+    "primary": "no simulated principal or interest repayment in the future window",
+    "secondary": "future penalty or no future repayment",
+    "reference_counts": {
+      "repaid_without_penalty": 51105,
+      "repaid_with_penalty": 92392,
+      "no_repayment": 6170
+    },
+    "reference_denominator": 149667,
+    "reference_use": "historical proxy scenario only; original follow-up was variable, unlike proposed fixed horizon",
+    "sensitivity_no_repayment_prevalence": [
+      0.02,
+      0.04122485250589642,
+      0.08
+    ],
+    "sensitivity_provenance": "2% and 8% are scenario assumptions; center is archived cohort proxy",
+    "generation": "P(no_repayment|z)=sigmoid(intercept+beta*z); conditional on repayment, penalty probability=92392/(51105+92392); labels derive from realized lifecycle events",
+    "signal_sensitivity_beta": [
+      0.5,
+      1.0,
+      1.5
+    ]
+  },
+  "background_events": {
+    "expected_per_borrower": 100,
+    "provenance": "computational scenario assumption, not recovered activity frequency",
+    "mapping": "docs/calibration/category_mapping.json",
+    "sampling": "filtered raw candidate shares as explicit scenario reference only",
+    "exclude_index_loan_and_future_events_from_features": true,
+    "loan_events": "separate lifecycle; do not draw using raw loan-type frequency",
+    "amount_distribution": {
+      "family": "clipped_lognormal",
+      "median_units": 50,
+      "log_sigma": 1.0,
+      "minimum_units": 0.01,
+      "maximum_units": 5000,
+      "round_decimals": 2,
+      "sensitivity_log_sigma": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "unit": "simulation currency units",
+      "provenance": "scenario assumption; not fitted to global amount mean"
+    },
+    "balance_distribution": "omitted; no balances, fees, tax or affordability claims",
+    "direction_and_counterparties": {
+      "incoming_probability": {
+        "cash_in": 1.0,
+        "incoming_payment": 1.0,
+        "cash_out": 0.0,
+        "airtime_data": 0.0,
+        "merchant_bill_payment": 0.0,
+        "transfer": 0.5,
+        "bank_wallet": 0.5,
+        "betting": 0.5
+      },
+      "counterparty_pool_size": 32,
+      "counterparty_sampling": "uniform local synthetic pool per borrower; no cross-borrower network",
+      "provenance": "scenario assumptions, not inferred account directions"
+    },
+    "count_distribution": "2 + Poisson(98); expected count 100",
+    "timestamp_distribution": "iid Uniform[-90,0), sorted by (time,event_id); reject ties at index",
+    "history_loan_events": "none in v2; exactly one designated index loan",
+    "shared_history": "same latest K eligible events for static and sequence models; K from profile"
+  },
+  "scenarios": [
+    {
+      "id": "no_signal",
+      "risk_beta": 0,
+      "history_link": "history independent of latent risk and outcome streams"
+    },
+    {
+      "id": "aggregate_signal",
+      "risk_beta": 1.0,
+      "history_link": "multiply base history amounts by exp(0.35*z), then clip; z~N(0,1) is simulator-private common cause"
+    },
+    {
+      "id": "order_signal",
+      "risk_beta": 1.0,
+      "history_link": "permute complete (amount,category,direction,counterparty) payloads across fixed times within shared latest-K history; z>=0 ascending amount, z<0 descending; preserve multiset and defined static aggregates exactly"
+    }
+  ],
+  "profiles": {
+    "smoke": {
+      "borrowers": 1000,
+      "max_sequence_length": 32,
+      "purpose": "pipeline correctness only"
+    },
+    "pilot": {
+      "borrowers": 5000,
+      "max_sequence_length": 64,
+      "purpose": "measure runtime/memory and validate design"
+    },
+    "main": {
+      "borrowers": 25625,
+      "max_sequence_length": 64,
+      "purpose": "conditional on successful pilot"
+    }
+  },
+  "execution": {
+    "models": [
+      "logistic_regression",
+      "lightgbm",
+      "small_gru"
+    ],
+    "model_selection_status": "existing implementations; small GRU configuration still needs wiring",
+    "parallel_model_runs": 1,
+    "cpu_threads": 2,
+    "initial_peak_process_memory_budget_gib": 4,
+    "initial_run_artifact_budget_gib": 2,
+    "sequence_dtype": "float32",
+    "sequence_features_budget": 24,
+    "gru_units": 32,
+    "batch_size": 64,
+    "epoch_cap": 20,
+    "early_stopping": {
+      "monitor": "inner-validation unweighted log_loss",
+      "mode": "min",
+      "patience": 3,
+      "min_delta": 0.0001,
+      "restore_best_weights": true,
+      "epoch_cap": 20,
+      "smoke_epoch_cap": 2
+    },
+    "cv": "optional later: 3 folds on 60% train partition only, each with fresh 15% inner early-stop split; validation/test untouched",
+    "budget_enforcement": "planning limits; instrumentation and runtime enforcement not implemented",
+    "class_weight_policy": "balanced from inner-training labels only; report unweighted probability metrics"
+  },
+  "contract_id": "seqcredit-default-v2",
+  "randomness": {
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "primary_seed": 42,
+    "streams": "separate named streams for background, latent risk, outcomes, event timing, splits and model initialization; history invariant to outcome RNG changes",
+    "calibration": "generator intercept determined on independent 100000-draw standard-normal reference with seed 1042; bisection to expected reference prevalence; never use realized evaluation outcomes or model performance; record intercept and convergence"
+  },
+  "loan_lifecycle": {
+    "index_day": 0,
+    "amount": {
+      "family": "clipped_lognormal",
+      "median_units": 250,
+      "log_sigma": 0.5,
+      "minimum_units": 25,
+      "maximum_units": 1000,
+      "provenance": "scenario assumption"
+    },
+    "no_repayment": "no repayment event through day 60; penalty absent in v2",
+    "repaid_without_penalty": "one full principal repayment at Uniform(1,30) days; no penalty",
+    "repaid_with_penalty": "penalty at Uniform(31,45) days; repayment at Uniform(penalty_day,60] strictly after penalty",
+    "penalty_amount_fraction": 0.01,
+    "interest_events": "none in v2",
+    "label_policy": "derive from future events linked to designated loan; sampled latent/outcome state is not a feature or final label",
+    "provenance": "all lifecycle amounts/timings are assumptions; archived conditional timing percentiles are reference-only, not fitted targets"
+  },
+  "features": {
+    "categories": [
+      "airtime_data",
+      "bank_wallet",
+      "betting",
+      "cash_in",
+      "cash_out",
+      "incoming_payment",
+      "merchant_bill_payment",
+      "transfer"
+    ],
+    "static": [
+      "event_count",
+      "total_amount",
+      "mean_amount",
+      "std_amount",
+      "min_amount",
+      "max_amount",
+      "mean_gap_hours",
+      "unique_counterparties",
+      "incoming_share",
+      "net_flow",
+      "share_airtime_data",
+      "share_bank_wallet",
+      "share_betting",
+      "share_cash_in",
+      "share_cash_out",
+      "share_incoming_payment",
+      "share_merchant_bill_payment",
+      "share_transfer"
+    ],
+    "sequence": [
+      "log1p_amount",
+      "is_incoming",
+      "gap_hours",
+      "relative_day",
+      "type_airtime_data",
+      "type_bank_wallet",
+      "type_betting",
+      "type_cash_in",
+      "type_cash_out",
+      "type_incoming_payment",
+      "type_merchant_bill_payment",
+      "type_transfer"
+    ],
+    "forbidden": [
+      "borrower_id",
+      "loan_id",
+      "event_id",
+      "label",
+      "risk_latent",
+      "archetype",
+      "future_events",
+      "index_loan_amount"
+    ],
+    "shared_history_rule": "last K background events with -90 <= day < 0; gap first=0; ddof=0; static mean gap over actual successive gaps only (0 if singleton)",
+    "sequence_truncation": "truncate before fitting scaler, float32, left-pad after transform; mask from explicit lengths; never infer missingness from zero-valued real events",
+    "counterparty_features": "unique count only; raw identities never encoded"
+  },
+  "preprocessing": {
+    "static": "StandardScaler per allowlisted numeric column, fit inner-training borrowers only; fixed one-hot schema; reject missing/nonfinite unexpected input",
+    "sequence": "StandardScaler only log1p_amount,gap_hours,relative_day on retained real timesteps of inner-training borrowers; binary and one-hot unchanged; pad zeros after transform; persist lengths and scalers",
+    "class_weights": "fit inner-training labels only; same policy for all models; no whole-development class ratios",
+    "selection": "inner-training scaler excludes early-stop/validation/test users; each CV fold has independent inner-fit preprocessing",
+    "heldout_perturbation_test": "changing validation/test values or outcomes must not change fitted preprocessing or training tensors"
+  },
+  "cache": {
+    "default": "disabled for smoke; immutable raw arrays permitted for later runs",
+    "key_fields": [
+      "contract_hash",
+      "generator_source_hash",
+      "feature_source_hash",
+      "mapping_hash",
+      "raw_data_hash",
+      "label_hash",
+      "ordered_ids_hash",
+      "split_hash",
+      "feature_schema_hash",
+      "profile",
+      "seed",
+      "scenario",
+      "max_sequence_length",
+      "preprocessor_fit_ids_hash",
+      "preprocessor_hash"
+    ],
+    "mismatch": "fail closed; never fall back to legacy caches; new run directory required",
+    "format": "numeric arrays + Unicode IDs; np.load allow_pickle=False; SHA256 arrays and JSON metadata; full shape/ID/label alignment check",
+    "scope": "transformed arrays partition/fold-specific; no cross-fold reuse"
+  },
+  "evaluation": {
+    "primary": "unweighted average_precision (PR-AUC naming avoided)",
+    "secondary": [
+      "ROC-AUC",
+      "Brier score",
+      "log_loss",
+      "precision",
+      "recall",
+      "F1"
+    ],
+    "threshold": "0.5 fixed for initial report; any later threshold selection uses validation only and is recorded",
+    "calibration": "none initially; later calibration uses validation only and is an explicitly separate analysis",
+    "uncertainty": "paired borrower bootstrap on locked test predictions, 1000 replicates, seed 42; resample same IDs across models, skip single-class draws and report count; no significance claim from smoke",
+    "controls": [
+      "no-signal scenario",
+      "training-label permutation",
+      "sequence-order shuffle within borrower (train and evaluate as separate experiment)"
+    ],
+    "validation_rules": "all partitions need both primary classes; fail rather than silently alter seed/split; smoke performance is not an accuracy gate",
+    "claim": "controlled simulation comparison, not estimate of telco deployment performance"
+  },
+  "artifacts": [
+    "effective_config.json",
+    "source_and_input_hashes.json",
+    "split_ids.csv",
+    "event_data",
+    "event_derived_labels.csv",
+    "feature_schema.json",
+    "preprocessors.joblib",
+    "models",
+    "predictions.csv",
+    "metrics.json",
+    "training_history.json",
+    "audit_checks.json",
+    "timing_memory.json",
+    "manifest.json"
+  ]
+}

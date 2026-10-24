@@ -1,0 +1,157 @@
+{
+  "status": "passed",
+  "scope": "independent v2 artifact validation",
+  "runs": [
+    {
+      "run": "data/runs/pilot-20261024T133715Z-c084235e",
+      "profile": "pilot",
+      "scenario": "no_signal",
+      "seed": 42,
+      "target": "primary",
+      "control": "none",
+      "labels_rederived": 5000,
+      "manifest_files_verified": 16,
+      "split_and_prediction_identity": "passed",
+      "metrics_recalculated": "passed",
+      "preprocessing_rebuilt_from_inner_fit_raw_rows": "passed",
+      "resources": {
+        "total_seconds": 57.76530459999958,
+        "generation_seconds": 20.05399899999975,
+        "logistic_fit_seconds": 0.01887399999941408,
+        "gru_fit_seconds": 17.59929419999935,
+        "peak_process_working_set_gib": 0.48236083984375,
+        "artifact_bytes_before_manifest": 75792262,
+        "measurement": "OS peak working set checked after evaluation; not a hard runtime memory limiter"
+      },
+      "test_metrics": {
+        "logistic_regression": {
+          "borrowers": 1000,
+          "positives": 46,
+          "prevalence": 0.046,
+          "average_precision": 0.05210620159981645,
+          "roc_auc": 0.5013900282563122,
+          "brier": 0.2414042811811589,
+          "log_loss": 0.6751995841826335,
+          "precision": 0.053613053613053616,
+          "recall": 0.5,
+          "f1": 0.0968421052631579
+        },
+        "gru": {
+          "borrowers": 1000,
+          "positives": 46,
+          "prevalence": 0.046,
+          "average_precision": 0.0447115616987762,
+          "roc_auc": 0.4860313553914867,
+          "brier": 0.23430553078651428,
+          "log_loss": 0.6616596437831224,
+          "precision": 0.03305785123966942,
+          "recall": 0.17391304347826086,
+          "f1": 0.05555555555555555
+        }
+      }
+    },
+    {
+      "run": "data/runs/pilot-20261024T134012Z-b1ce0197",
+      "profile": "pilot",
+      "scenario": "aggregate_signal",
+      "seed": 42,
+      "target": "primary",
+      "control": "none",
+      "labels_rederived": 5000,
+      "manifest_files_verified": 16,
+      "split_and_prediction_identity": "passed",
+      "metrics_recalculated": "passed",
+      "preprocessing_rebuilt_from_inner_fit_raw_rows": "passed",
+      "resources": {
+        "total_seconds": 75.42484169999989,
+        "generation_seconds": 25.18049289999908,
+        "logistic_fit_seconds": 0.025659299999460927,
+        "gru_fit_seconds": 17.875635899999907,
+        "peak_process_working_set_gib": 0.4813194274902344,
+        "artifact_bytes_before_manifest": 75799488,
+        "measurement": "OS peak working set checked after evaluation; not a hard runtime memory limiter"
+      },
+      "test_metrics": {
+        "logistic_regression": {
+          "borrowers": 1000,
+          "positives": 45,
+          "prevalence": 0.045,
+          "average_precision": 0.14300971606567447,
+          "roc_auc": 0.7120186154741128,
+          "brier": 0.19460457357740896,
+          "log_loss": 0.5802911738978386,
+          "precision": 0.09688581314878893,
+          "recall": 0.6222222222222222,
+          "f1": 0.16766467065868262
+        },
+        "gru": {
+          "borrowers": 1000,
+          "positives": 45,
+          "prevalence": 0.045,
+          "average_precision": 0.10923487565856141,
+          "roc_auc": 0.7011751018033741,
+          "brier": 0.21580208837985992,
+          "log_loss": 0.6217217552090897,
+          "precision": 0.07954545454545454,
+          "recall": 0.6222222222222222,
+          "f1": 0.14105793450881612
+        }
+      }
+    },
+    {
+      "run": "data/runs/pilot-20261024T134306Z-e4caf526",
+      "profile": "pilot",
+      "scenario": "order_signal",
+      "seed": 42,
+      "target": "primary",
+      "control": "none",
+      "labels_rederived": 5000,
+      "manifest_files_verified": 16,
+      "split_and_prediction_identity": "passed",
+      "metrics_recalculated": "passed",
+      "preprocessing_rebuilt_from_inner_fit_raw_rows": "passed",
+      "resources": {
+        "total_seconds": 69.54524069999934,
+        "generation_seconds": 31.41516009999941,
+        "logistic_fit_seconds": 0.02279649999945832,
+        "gru_fit_seconds": 17.825313500001357,
+        "peak_process_working_set_gib": 0.48290252685546875,
+        "artifact_bytes_before_manifest": 75710768,
+        "measurement": "OS peak working set checked after evaluation; not a hard runtime memory limiter"
+      },
+      "test_metrics": {
+        "logistic_regression": {
+          "borrowers": 1000,
+          "positives": 45,
+          "prevalence": 0.045,
+          "average_precision": 0.03650301277865609,
+          "roc_auc": 0.4090750436300175,
+          "brier": 0.24639018490348452,
+          "log_loss": 0.6856449416081593,
+          "precision": 0.037383177570093455,
+          "recall": 0.35555555555555557,
+          "f1": 0.06765327695560254
+        },
+        "gru": {
+          "borrowers": 1000,
+          "positives": 45,
+          "prevalence": 0.045,
+          "average_precision": 0.0808586651791951,
+          "roc_auc": 0.7016404886561954,
+          "brier": 0.2160290628671646,
+          "log_loss": 0.6167364618882933,
+          "precision": 0.07581967213114754,
+          "recall": 0.8222222222222222,
+          "f1": 0.13883677298311445
+        }
+      }
+    }
+  ],
+  "order_invariance": {
+    "static_aggregates": "unchanged",
+    "timestamps": "unchanged",
+    "payload_multisets": "unchanged",
+    "borrowers_with_changed_order": 5000,
+    "note": "Different outcome mechanisms can yield different stratified splits across scenarios; no paired test-score inference"
+  }
+}

@@ -1,7 +1,0 @@
-model,target,fold,auc_roc,auc_pr,f1,precision,recall,accuracy,brier,ece
-GRU,y_bad,mean,0.7148,0.8150,0.7232,,,,0.2124,0.1261
-LSTM,y_bad,mean,0.7132,0.8134,0.7181,,,,0.2160,0.1380
-XGBoost,y_bad,mean,0.7068,0.8141,0.7022,,,,0.2168,0.1318
-LightGBM,y_bad,mean,0.7063,0.8134,0.7014,,,,0.2169,0.1318
-RandomForest,y_bad,mean,0.6980,0.8090,0.6947,,,,0.2182,0.1314
-LogisticRegression,y_bad,mean,0.6876,0.7995,0.6824,,,,0.2245,0.1434
