@@ -1,0 +1,55 @@
+{
+  "status": "execution_started",
+  "created_at": "2026-10-24T23:32:39.693432+00:00",
+  "target": "primary_no_repayment",
+  "seed": 42,
+  "dataset_sha256": "6ec8bfc5a9e5a78f284624c4ed355aff163f42490cf2a49bf2142bdb5b30a068",
+  "accepted_snapshot_sha256": "cf9b6f0f661006bc54feae86448c8220e960b040b23b9d5cdccf53465d0cc188",
+  "headline_run": "20261024T234056Z-52a5354f",
+  "models": [
+    "logistic_regression",
+    "lightgbm",
+    "gru"
+  ],
+  "controls": [
+    "label_permutation",
+    "order_shuffle"
+  ],
+  "control_scope": "Full accepted dataset, identical splits, features, model settings and early-stopping policy; separate refits; no test-driven changes.",
+  "metrics_for_comparison": [
+    "roc_auc",
+    "average_precision"
+  ],
+  "uncertainty": {
+    "method": "paired borrower percentile bootstrap on locked test predictions",
+    "replicates": 1000,
+    "seed": 42,
+    "confidence": 0.95,
+    "pairing": "same test borrower IDs and resampled indices across every model and control",
+    "single_class_draws": "skip and report"
+  },
+  "comparisons": [
+    "headline GRU minus logistic regression",
+    "headline GRU minus LightGBM",
+    "headline LightGBM minus logistic regression",
+    "headline minus order-shuffle for each model",
+    "headline minus label-permutation for each model",
+    "label-permutation minus constant inner-training-prevalence reference for each model"
+  ],
+  "interpretation": "Point-score lead alone does not establish a clear difference. Temporal-order evidence requires the paired full-minus-order-shuffle GRU interval; static order-shuffle predictions should remain unchanged. Bootstrap uncertainty is conditional on this seed and fitted models, not training-run variability.",
+  "training_source_sha256": "8b5ffcd68ca5c43c782a27e0de1ebc99cc6bc19ae6f3720161c39567ee6f18fa",
+  "policy": "No generator, accepted dataset, parameter, or model-setting changes based on test results.",
+  "primary_metric": "average_precision",
+  "secondary_metric": "roc_auc",
+  "probability_quality": [
+    "brier",
+    "log_loss",
+    "constant inner-training-prevalence baseline"
+  ],
+  "confidence_note": "Intervals are nominal paired 95% percentile intervals, conditional on the fitted models and this simulation seed; no multiplicity-adjusted or across-training-seed claims.",
+  "backend": "google_colab_t4",
+  "execution_transport": "WSL Ubuntu + google-colab-cli 0.6.0",
+  "cpu_reference_run": "20261024T224729Z-0f3990f5",
+  "backend_policy": "User requested Colab before GPU results. Rerun headline and both controls on one GPU backend; retain CPU runs separately and never select best backend by scores.",
+  "backend_environment": "colab_environment.json"
+}
