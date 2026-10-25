@@ -1,0 +1,17 @@
+{
+  "frozen_at": "2026-10-24T21:54:18.651055+00:00",
+  "inputs": {
+    "contract": {
+      "path": "src/configs/experiment_design.json",
+      "sha256": "6e4b27c0c641d5154e627f7be195b940521ec81bf6b9f4af6c3d9ce11ed0b637"
+    },
+    "ledger": {
+      "path": "docs/calibration/ledger.json",
+      "sha256": "f849310c9cf3b629727b8aab01564ce55a63ce32569eb28b93908bb935289d66"
+    },
+    "mapping": {
+      "path": "docs/calibration/category_mapping.json",
+      "sha256": "81fb752a208d283e3bf702a1f99aeb85be013e8d72be16585bf16dbef31e197b"
+    }
+  }
+}

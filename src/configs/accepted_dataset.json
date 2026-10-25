@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "status": "accepted_frozen",
+  "accepted_at": "2026-10-24T22:42:05.147492+00:00",
+  "accepted_by": "user",
+  "acceptance": "User accepted the sample against the parameters and requested freezing both before full training.",
+  "seed": 42,
+  "inputs": {
+    "contract": {
+      "path": "src/configs/experiment_design.json",
+      "sha256": "6e4b27c0c641d5154e627f7be195b940521ec81bf6b9f4af6c3d9ce11ed0b637"
+    },
+    "ledger": {
+      "path": "docs/calibration/ledger.json",
+      "sha256": "f849310c9cf3b629727b8aab01564ce55a63ce32569eb28b93908bb935289d66"
+    },
+    "mapping": {
+      "path": "docs/calibration/category_mapping.json",
+      "sha256": "81fb752a208d283e3bf702a1f99aeb85be013e8d72be16585bf16dbef31e197b"
+    }
+  },
+  "frozen_inputs_sha256": "2a2d76835de41efd0bfcdea27f5da6b4493bd4707d326bacf66526eca406b887",
+  "generator_sources": {
+    "src/scripts/experiment_v2.py": "f511da0d7f482ad9e71768b505f666191bc99d064404828117e5ecb73e918d79",
+    "src/scripts/contract_checks.py": "678a3c29ff5afae231d691221b335351f097438d3c062a928ba6cff11d8b921c"
+  },
+  "dataset_identity": {
+    "contract_hash": "c6fa1a86a846b3ce5e2023109cf0a51e204e8c4796b6b3a955827924fd130fcc",
+    "input_hash": "1ef592d2a38025dc846c6f60e11d7f1606f01007046738fd1938880bc77dbd41",
+    "generator_hash": "11d852daf20650885f378906634a21f7121fb8c0573afc0c4027da9fae1eb431"
+  },
+  "dataset": {
+    "path": "data/yara_telecel_dump.csv.gz",
+    "sha256": "6ec8bfc5a9e5a78f284624c4ed355aff163f42490cf2a49bf2142bdb5b30a068",
+    "bytes": 92503821,
+    "borrowers": 25625,
+    "event_rows": 3921503,
+    "phase_counts": {
+      "background": 3855443,
+      "index_loan": 25625,
+      "penalty": 15856,
+      "principal_repayment": 24579
+    },
+    "history_lengths": {
+      "n": 25625,
+      "mean": 150.45631219512194,
+      "std": 105.16524902635298,
+      "quantiles": {
+        "0": 2.0,
+        "0.01": 12.0,
+        "0.1": 41.0,
+        "0.25": 73.0,
+        "0.5": 127.0,
+        "0.75": 201.0,
+        "0.9": 291.0,
+        "0.95": 358.0,
+        "0.99": 490.0,
+        "1": 929.0
+      },
+      "expected_mean": 150,
+      "expected_std": 105.35653752852738,
+      "expected_variance": 11100.0,
+      "observed_variance": 11059.729602774838,
+      "mean_standard_error": 0.658157072215529,
+      "mean_z_score": 0.6933180761636009,
+      "mean_within_99_percent_sampling_band": true,
+      "above_150": 10463,
+      "at_150": 86,
+      "below_150": 15076
+    }
+  },
+  "audit": {
+    "path": "artifacts/sample_validation.json",
+    "sha256": "0a9e1cf4168cac7eec812d241c5e33091a4aa544eab9d5067d48822536b52a4b",
+    "status": "consistent_with_configured_parameters",
+    "exact_checks_passed": 36,
+    "diagnostic_flags": []
+  },
+  "policy": "Dataset and parameter bytes are fixed for the competition. Changes require explicit new user acceptance and a new freeze; never select generator changes from test scores."
+}

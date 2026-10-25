@@ -9,28 +9,26 @@ description = "Sequential credit-risk modelling and benchmarking"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "numpy",
-    "pandas",
+    "scipy",
     "scikit-learn==1.8.0",
     "lightgbm",
-    "xgboost",
     "tensorflow",
-    "matplotlib",
-    "seaborn",
     "joblib",
-    "shap",
-    "numba>=0.65.1",
+]
+
+[project.optional-dependencies]
+reporting = [
+    "matplotlib>=3.11.2",
 ]
 
 [dependency-groups]
 dev = [
-    "jupyter",
-    "ipykernel",
     "pytest",
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["seqcredit*"]
+include = ["scripts*"]
 
 [tool.pytest.ini_options]
-testpaths = ["src/tests", "src/scripts"]
+testpaths = ["tests"]
