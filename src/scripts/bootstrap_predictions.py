@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from run_smoke import metrics, write_json
+from competition import metrics, write_json
 
 
 METRICS = ("average_precision", "roc_auc", "brier", "log_loss", "precision", "recall", "f1")
@@ -50,6 +50,16 @@ def bootstrap(run: Path, draws: int = 1000, seed: int = 42) -> dict:
         }
         for model, model_samples in samples.items()
     }
+    differences = {}
+    for baseline in ("logistic_regression", "lightgbm"):
+        differences[f"gru_minus_{baseline}"] = {}
+        for metric in ("roc_auc", "average_precision"):
+            values = np.asarray(samples["gru"][metric]) - np.asarray(samples[baseline][metric])
+            differences[f"gru_minus_{baseline}"][metric] = {
+                "lower": float(np.percentile(values, 2.5)),
+                "upper": float(np.percentile(values, 97.5)),
+                "replicates": len(values),
+            }
     return {
         "status": "passed",
         "run": run.name,
@@ -61,6 +71,7 @@ def bootstrap(run: Path, draws: int = 1000, seed: int = 42) -> dict:
         "seed": seed,
         "models": list(models),
         "intervals": intervals,
+        "paired_differences": differences,
         "sampling": "paired borrower indices shared across models within each draw",
     }
 

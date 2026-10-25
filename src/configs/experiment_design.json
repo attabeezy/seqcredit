@@ -1,6 +1,13 @@
 {
   "version": 2,
-  "status": "contract_frozen_implementation_pending",
+  "status": "single_file_dataset_and_model_competition",
+  "implementation": {
+    "generator": "implemented",
+    "canonical_dataset": "implemented: single yara_telecel_dump.csv.gz with embedded provenance columns",
+    "runner": "implemented",
+    "transformed_array_cache": "intentionally disabled",
+    "runtime_budget_enforcement": "not_implemented"
+  },
   "seed": 42,
   "population": "simulated customer borrowers with one designated index loan and complete observation/follow-up",
   "observation_days": 90,
@@ -22,7 +29,7 @@
     "early_stopping_inner_fraction": 0.15,
     "early_stopping_inner_stratified": true,
     "validation_role": "model/hyperparameter/threshold/calibration selection only; not early stopping",
-    "test_role": "one final evaluation per preregistered scenario/seed; never select settings from test",
+    "test_role": "final evaluation of fixed models; never select generator or settings from test scores",
     "refit_policy": "no train+validation refit in v2; freeze chosen train-only fitted pipeline"
   },
   "outcome": {
@@ -49,7 +56,7 @@
     ]
   },
   "background_events": {
-    "expected_per_borrower": 100,
+    "expected_per_borrower": 150,
     "provenance": "computational scenario assumption, not recovered activity frequency",
     "mapping": "docs/calibration/category_mapping.json",
     "sampling": "filtered raw candidate shares as explicit scenario reference only",
@@ -86,44 +93,16 @@
       "counterparty_sampling": "uniform local synthetic pool per borrower; no cross-borrower network",
       "provenance": "scenario assumptions, not inferred account directions"
     },
-    "count_distribution": "2 + Poisson(98); expected count 100",
+    "count_distribution": {
+      "family": "shifted_gamma_poisson",
+      "minimum_events": 2,
+      "activity_shape": 2.0,
+      "rule": "lambda_i ~ Gamma(shape, (expected_per_borrower-minimum_events)/shape); count_i = minimum_events + Poisson(lambda_i)",
+      "provenance": "Explicit simulation assumption for heterogeneous borrower activity; independent named activity RNG stream, unrelated to risk or outcomes; not estimated from notebook summaries."
+    },
     "timestamp_distribution": "iid Uniform[-90,0), sorted by (time,event_id); reject ties at index",
     "history_loan_events": "none in v2; exactly one designated index loan",
-    "shared_history": "same latest K eligible events for static and sequence models; K from profile"
-  },
-  "scenarios": [
-    {
-      "id": "no_signal",
-      "risk_beta": 0,
-      "history_link": "history independent of latent risk and outcome streams"
-    },
-    {
-      "id": "aggregate_signal",
-      "risk_beta": 1.0,
-      "history_link": "multiply base history amounts by exp(0.35*z), then clip; z~N(0,1) is simulator-private common cause"
-    },
-    {
-      "id": "order_signal",
-      "risk_beta": 1.0,
-      "history_link": "permute complete (amount,category,direction,counterparty) payloads across fixed times within shared latest-K history; z>=0 ascending amount, z<0 descending; preserve multiset and defined static aggregates exactly"
-    }
-  ],
-  "profiles": {
-    "smoke": {
-      "borrowers": 1000,
-      "max_sequence_length": 32,
-      "purpose": "pipeline correctness only"
-    },
-    "pilot": {
-      "borrowers": 5000,
-      "max_sequence_length": 64,
-      "purpose": "measure runtime/memory and validate design"
-    },
-    "main": {
-      "borrowers": 25625,
-      "max_sequence_length": 64,
-      "purpose": "conditional on successful pilot"
-    }
+    "shared_history": "all eligible pre-index background events for both static and sequence models; no event-count cap"
   },
   "execution": {
     "models": [
@@ -131,24 +110,24 @@
       "lightgbm",
       "small_gru"
     ],
-    "model_selection_status": "existing implementations; small GRU configuration still needs wiring",
+    "model_selection_status": "implemented: logistic regression, LightGBM, and small GRU",
     "parallel_model_runs": 1,
     "cpu_threads": 2,
     "initial_peak_process_memory_budget_gib": 4,
     "initial_run_artifact_budget_gib": 2,
     "sequence_dtype": "float32",
     "sequence_features_budget": 24,
-    "gru_units": 32,
+    "gru_units": 64,
+    "gru_learning_rate": 0.0005,
     "batch_size": 64,
     "epoch_cap": 20,
     "early_stopping": {
       "monitor": "inner-validation unweighted log_loss",
       "mode": "min",
-      "patience": 3,
+      "patience": 5,
       "min_delta": 0.0001,
       "restore_best_weights": true,
-      "epoch_cap": 20,
-      "smoke_epoch_cap": 2
+      "epoch_cap": 20
     },
     "cv": "optional later: 3 folds on 60% train partition only, each with fresh 15% inner early-stop split; validation/test untouched",
     "budget_enforcement": "planning limits; instrumentation and runtime enforcement not implemented",
@@ -156,14 +135,9 @@
   },
   "contract_id": "seqcredit-default-v2",
   "randomness": {
-    "seeds": [
-      42,
-      43,
-      44
-    ],
-    "primary_seed": 42,
     "streams": "separate named streams for background, latent risk, outcomes, event timing, splits and model initialization; history invariant to outcome RNG changes",
-    "calibration": "generator intercept determined on independent 100000-draw standard-normal reference with seed 1042; bisection to expected reference prevalence; never use realized evaluation outcomes or model performance; record intercept and convergence"
+    "calibration": "generator intercept determined on independent 100000-draw standard-normal reference with seed 1042; bisection to expected reference prevalence; never use realized evaluation outcomes or model performance; record intercept and convergence",
+    "seed": 42
   },
   "loan_lifecycle": {
     "index_day": 0,
@@ -238,19 +212,19 @@
       "future_events",
       "index_loan_amount"
     ],
-    "shared_history_rule": "last K background events with -90 <= day < 0; gap first=0; ddof=0; static mean gap over actual successive gaps only (0 if singleton)",
-    "sequence_truncation": "truncate before fitting scaler, float32, left-pad after transform; mask from explicit lengths; never infer missingness from zero-valued real events",
+    "shared_history_rule": "all background events with -90 <= day < 0; gap first=0; ddof=0; static mean gap over actual successive gaps only (0 if singleton)",
+    "sequence_truncation": "none; every eligible event retained; packed float32 steps with lengths and offsets; right-pad each batch only, with explicit boolean masks independent of event values",
     "counterparty_features": "unique count only; raw identities never encoded"
   },
   "preprocessing": {
     "static": "StandardScaler per allowlisted numeric column, fit inner-training borrowers only; fixed one-hot schema; reject missing/nonfinite unexpected input",
-    "sequence": "StandardScaler only log1p_amount,gap_hours,relative_day on retained real timesteps of inner-training borrowers; binary and one-hot unchanged; pad zeros after transform; persist lengths and scalers",
+    "sequence": "StandardScaler only log1p_amount,gap_hours,relative_day on all real timesteps of inner-training borrowers; binary and one-hot unchanged; pad zeros at batch time only; persist lengths, offsets and scalers",
     "class_weights": "fit inner-training labels only; same policy for all models; no whole-development class ratios",
     "selection": "inner-training scaler excludes early-stop/validation/test users; each CV fold has independent inner-fit preprocessing",
-    "heldout_perturbation_test": "changing validation/test values or outcomes must not change fitted preprocessing or training tensors"
+    "heldout_perturbation_test": "changing held-out values or outcomes must not change fitted preprocessing or the real timesteps belonging to training borrowers"
   },
   "cache": {
-    "default": "disabled for smoke; immutable raw arrays permitted for later runs",
+    "default": "No raw or transformed feature cache; derive features and labels from data/yara_telecel_dump.csv.gz",
     "key_fields": [
       "contract_hash",
       "generator_source_hash",
@@ -261,10 +235,7 @@
       "ordered_ids_hash",
       "split_hash",
       "feature_schema_hash",
-      "profile",
       "seed",
-      "scenario",
-      "max_sequence_length",
       "preprocessor_fit_ids_hash",
       "preprocessor_hash"
     ],
@@ -286,20 +257,18 @@
     "calibration": "none initially; later calibration uses validation only and is an explicitly separate analysis",
     "uncertainty": "paired borrower bootstrap on locked test predictions, 1000 replicates, seed 42; resample same IDs across models, skip single-class draws and report count; no significance claim from smoke",
     "controls": [
-      "no-signal scenario",
       "training-label permutation",
       "sequence-order shuffle within borrower (train and evaluate as separate experiment)"
     ],
-    "validation_rules": "all partitions need both primary classes; fail rather than silently alter seed/split; smoke performance is not an accuracy gate",
-    "claim": "controlled simulation comparison, not estimate of telco deployment performance"
+    "validation_rules": "All partitions need both primary classes; fail rather than alter seed/split. Performance is reported without a required winner or AUC gate.",
+    "claim": "controlled simulation comparison, not estimate of telco deployment performance",
+    "competition": "Primary nonrepayment competition across all three models. Report ROC-AUC and average precision; paired bootstrap differences describe uncertainty. No generator tuning from competition results."
   },
   "artifacts": [
     "effective_config.json",
     "source_and_input_hashes.json",
-    "split_ids.csv",
-    "event_data",
-    "event_derived_labels.csv",
     "feature_schema.json",
+    "model_inputs.npz",
     "preprocessors.joblib",
     "models",
     "predictions.csv",
@@ -307,6 +276,20 @@
     "training_history.json",
     "audit_checks.json",
     "timing_memory.json",
-    "manifest.json"
-  ]
+    "manifest.json",
+    "data_reference.json"
+  ],
+  "artifact_notes": "One data/yara_telecel_dump.csv.gz is the source of truth. Run outputs live in artifacts/. Labels, borrower splits and features are derived on load; no per-user files or dataset directory matrix.",
+  "dataset": {
+    "borrowers": 25625
+  },
+  "history_process": {
+    "risk_beta": 1.0,
+    "amount_log_scale": 0.25,
+    "borrower_level_noise": 0.25,
+    "trend_log_scale": 0.45,
+    "borrower_trend_noise": 0.35,
+    "description": "Log amounts have a noisy borrower level and noisy continuous time trend, each associated with a simulator-private risk factor. Independent transaction lognormal noise remains. No label-dependent sorting, payload permutation, or deterministic order code.",
+    "provenance": "Simulation assumptions, not estimated from archived chronology. Coefficients fixed before new competition; no guaranteed winner or AUC acceptance gate."
+  }
 }

@@ -1,0 +1,13 @@
+# These files are identified by byte hashes in the accepted-data freeze.
+# Preserve their existing bytes on every platform, including CRLF endings.
+/src/configs/experiment_design.json -text whitespace=cr-at-eol
+/src/configs/frozen_inputs.json -text whitespace=cr-at-eol
+/src/configs/accepted_dataset.json -text whitespace=cr-at-eol
+/docs/calibration/ledger.json -text whitespace=cr-at-eol
+/docs/calibration/category_mapping.json -text whitespace=cr-at-eol
+/src/scripts/experiment_v2.py -text whitespace=cr-at-eol
+/src/scripts/contract_checks.py -text whitespace=cr-at-eol
+
+# Preserve the archived comparison implementation and execution plan.
+/artifacts/evaluate_comparison.py -text whitespace=cr-at-eol
+/artifacts/comparison_plan.json -text whitespace=cr-at-eol

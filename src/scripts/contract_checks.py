@@ -4,9 +4,20 @@ import hashlib
 import json
 import math
 
+import numpy as np
+
 
 def fingerprint(value: object) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+
+
+def array_fingerprint(array: np.ndarray) -> str:
+    value = np.ascontiguousarray(array)
+    digest = hashlib.sha256()
+    digest.update(value.dtype.str.encode())
+    digest.update(json.dumps(list(value.shape)).encode())
+    digest.update(value.tobytes(order="C"))
+    return digest.hexdigest()
 
 
 def select_history(events: list[dict], borrower_id: str, limit: int) -> list[dict]:
