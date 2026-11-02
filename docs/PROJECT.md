@@ -1,87 +1,55 @@
 # Project guide
 
-## Parameter-driven research workflow
+## Core Research Workflow
+The objective is to reconstruct a synthetic sample from evidence-derived parameters, train models, and analyze their results to evaluate the "sequence advantage" in credit risk prediction.
 
-The objective is to reconstruct a synthetic sample from evidence-derived parameters, train the models and analyze their results. The working references are src/configs/experiment_design.json and the existing calibration ledger/category mapping from Analysis Notebooks A/B/C. Notebook evidence has already been extracted; revisiting or re-extracting notebooks is not a normal research step. The user validates the parameters and their suitability. Reconstruction means reproducing supported characteristics, not recovering original customer records or claiming that every parameter was measured in the notebooks.
+1. **Set Parameters from Evidence**: Define generator parameters based on preserved evidence from Analysis Notebooks A/B/C. Identify assumptions where evidence is incomplete.
+2. **Generate Sample**: Use `dataset.py` (Seed 42) to produce `data/yara_telecel_dump.csv.gz`. Validate the sample against parameters.
+3. **Train Models**: Train static and sequence models on shared borrower splits. Fit preprocessing only on inner-training borrowers.
+4. **Analyze Results**: Compare held-out performance, paired uncertainty, and relevant limitations.
 
-1. **Set the parameters from evidence.** Preserve their provenance and identify assumptions where the notebook evidence is incomplete. The user reviews and validates the parameter set.
-2. **Generate one sample.** Use dataset.py and seed 42 to produce data/yara_telecel_dump.csv.gz. Check the sample against the parameters and preserve the accepted parameters and data.
-3. **Train the models.** Train logistic regression, LightGBM and GRU on the same sample, eligible histories and borrower splits. Fit preprocessing only on inner-training borrowers and keep held-out evaluation separate.
-4. **Analyze the results.** Compare held-out performance, paired uncertainty and relevant limitations. Explain which model performs better, by how much and what that means within this simulation. Preserve results under artifacts/.
+## Project State & Frozen Contract
+On 2026-10-24, the user accepted the current parameters and sample. This acceptance is recorded in `src/configs/accepted_dataset.json`. 
 
-Keep implementation and reporting proportional to these four steps. Use existing checks and outputs to answer concrete questions. Controls support interpretation when relevant; they do not automatically create a new study or send the workflow back to the beginning. Document unresolved issues without hiding them or treating them as authorization for additional experiments. No model ranking or AUC target determines the generator parameters, and no model is required to win.
+**The Frozen Contract**:
+- **Inputs**: `experiment_design.json`, `docs/calibration/ledger.json`, and `docs/calibration/category_mapping.json` are frozen.
+- **Data**: The specific 92,503,821-byte dataset (`SHA-256: 6ec8bfc5...`) is fixed.
+- **Policy**: Main loading and training reject changed parameters or dataset bytes. Any revision requires explicit user authorization, a new audit, and a new acceptance record.
 
-Automatic checks cover file provenance, event validity, reproducibility, label derivation, split isolation, preprocessing and metric correctness. These engineering checks do not replace the user's parameter validation. On 2026-10-24 the user accepted the current parameters and sample after reviewing the sample-versus-parameter audit and requested freezing both before full training. That acceptance is recorded in src/configs/accepted_dataset.json; it does not designate any future model scores as accepted or establish deployment validity.
+## Execution Infrastructure
+- **Environment**: Python 3.13, `uv sync --group dev`.
+- **Runtime**: WSL Ubuntu + `google-colab-cli`.
+- **Entrypoints**: `python dataset.py` and `python train.py`.
+- **Validation**: `python -m pytest -q` for unit checks; `tests/smoke.py` and `tests/pilot.py` for integration.
 
-## Parameter review against notebooks A/B/C
+## Future Development Roadmap (Linear Order)
+To evolve the study into a literature-grounded comparative analysis, development will proceed in the following phases:
 
-Reviewed 2026-10-24 at the user's request. Read preserved aggregate outputs and source cells without executing notebooks or reading raw customer rows. Notebook file hashes match the calibration ledger, all 267 extracted records agree on values/populations/limitations, the three frozen input hashes verify, and category_mapping.json reconstructs exactly from the ledger. The ledger retains additional evidence references on cohort records; its full JSON is therefore not byte-identical to a fresh extractor result. No frozen inputs, generator parameters, data or model results were changed during this review.
+### Phase 1: Enriched Foundation (Feature Engineering)
+Upgrade the 30 baseline features using **Strategy A (Replacement)** to avoid multicollinearity:
+- **RFM+ Evolution**: Velocity ratios (short vs long term) and Stability indices (Spend CV, Balance Floor Decay).
+- **Social Capital**: Network-based features (Reciprocity Index, Centrality, Counterparty Diversity).
+- **Cyclical Patterns**: Fourier transforms for payday/weekly cycles and Harvest/Holiday ratios.
+- **Behavioral Discipline**: Airtime-to-Money ratios and Payment Latency.
+- **Liquidity Stress**: Zero-Balance Frequency and Time-to-Recovery (TTR).
 
-| Parameter | Current generator | Preserved notebook evidence | Assessment |
-| --- | --- | --- | --- |
-| Outcome reference counts | 51,105 without penalty; 92,392 with penalty; 6,170 without repayment; total 149,667 | A cell 10, B cell 12 and C cell 7 agree exactly | Matches the historical cohort counts |
-| Primary prevalence and conditional penalty share | 6,170/149,667 = 4.1225%; conditional penalty = 92,392/143,497 = 64.3860% | Derived from those same counts | Arithmetic matches; neither establishes a fixed-60-day probability or its dependence on history |
-| Background transaction-type probabilities | 243 raw types mapped/filtered; 356,169,063 retained raw rows; retained shares renormalized | A cell 2 and B cell 3 total 374,295,424 raw rows; mapping conserves all counts | Traceable transformation; retained 95.1572% of raw count mass. Applying these shares independently to every borrower remains an assumption |
-| Background amounts | Base lognormal median 50, log sigma 1; clipped to [0.01, 5,000], then rounded; noisy borrower level and trend modify base amounts | A cell 3/B cell 4: raw minimum 0, maximum 1,000,000,000, mean 400.82395; no variance/quantiles or conditioned distributions exported | Not fitted to the notebook summaries. Raw mixed-party statistics do not identify the borrower-level amount distribution; source currency is unverified |
-| Activity count and event timing | Shifted Gamma-Poisson, expected mean 150, minimum 2, Gamma shape 2; uniform times over [-90, 0) | No corresponding borrower activity-count or interarrival distribution exported; string timestamp extrema are not chronological bounds | Assumptions, not notebook-estimated parameters |
-| Observation and outcome windows | 90 days before index; exactly 60 days after index | B cell 11/C cell 6 specify minimum follow-up of 60 days; A cell 17 also documents that eligibility cutoff | Minimum follow-up aligns with eligibility; 90-day history and an exactly 60-day outcome window are additional design choices |
-| Repayment timing | No-penalty repayment Uniform(1,30), median 15.5 days; penalty-case repayment after penalty through day 60 | A cell 16: conditional repayment mean 20.5411, percentiles [3,9,27,30,30,30] | Not fitted. Notebook summary combines a different, filtered population, so its median 27 is not a directly comparable no-penalty target |
-| Penalty timing | Uniform(31,45), median 38 days | A cell 16: conditional penalty mean 63.7236, percentiles [31,35,55,81,115,136] | Not fitted. Fixed-window simulation cannot reproduce this untruncated conditional distribution; do not claim the uniform rule was recovered from it |
-| Loan principal and penalty amount | Principal lognormal median 250, sigma 0.5, clipped [25,1,000]; penalty fraction 1% | No loan-specific principal distribution or penalty fraction established by the preserved aggregates | Assumptions |
-| Directions and counterparties | Fixed category-dependent incoming probabilities; pool of 32 counterparties sampled uniformly per borrower | Type-name semantics support some interpretations; no matching empirical direction/network distributions exported | Semantic mapping plus assumptions, not measured borrower relationships |
-| History/outcome dependence | Private normal risk; beta 1; level coefficient 0.25/noise 0.25; trend coefficient 0.45/noise 0.35 | No exported estimate of these joint or temporal relationships | Assumptions. Current model performance cannot validate them against the notebooks |
-| Sample size and feature/sequence dimensions | 25,625 borrowers; 18 static features; all eligible events with 12 sequence features | Notebook outputs show 149,667 eligible, 149,204 feature-matched; sequence exports have 100 steps and 19 columns | Experiment/computational choices; not reproduction of the historical population or feature pipeline |
+### Phase 2: Architectural Expansion (Model Suite)
+Benchmark the enriched data against a sequence of increasingly complex architectures:
+- **Sequential Baseline**: LSTM (Deep memory) and TCN (Causal convolutions).
+- **Attention Mechanism**: Transformer Encoders for critical event identification.
+- **Data Fusion**: Tabular-Sequence Hybrids (e.g., Cross-Attention) to optimize static-temporal integration.
+- **Structural Learning**: Graph Neural Networks (GNNs) via PyTorch Geometric to learn community-based risk embeddings.
 
-Activity/count and complete-history updates were subsequently requested by the user; the implementation now reads its activity mean, minimum and dispersion from the configuration.
+### Phase 3: Rigorous Validation & Stress Testing
+- **Refined Negative Control**: Implement a zero-information baseline (random noise features).
+- **Temporal Saliency**: Use saliency mapping to explain the "sequence advantage."
+- **Activity Stratification**: Slice results by borrower activity quantiles.
+- **Tail-Risk Calibration**: Validate probability reliability for the top 5% highest-risk borrowers.
 
-The current parameter set is partly aligned with the notebook evidence: outcome marginals match, and type shares are traceable through an explicit filter/mapping. It is not a fully notebook-fitted generator. The amount, activity, lifecycle and history/outcome parameters require explicit user acceptance as assumptions or appropriate additional calibration evidence.
+### Phase 4: Responsible AI & Final Reporting
+- **Fairness & Explainability**: Integrate SHAP and Fairlearn into the core pipeline for transparent "Reason Codes."
+- **Linear Synthesis**: Populate `REPORT.md` following the deductive flow: Data $\rightarrow$ Features $\rightarrow$ Architecture $\rightarrow$ Results $\rightarrow$ Inference $\rightarrow$ Conclusion.
 
-Implementation caveat: observation/outcome windows, lifecycle timing rules, penalty_amount_fraction, split fractions and the inner-stop fraction currently have corresponding literals in experiment_v2.py (and some boundary/loader checks). Their current values agree with the declared design, but changing configuration alone does not reliably change all of these behaviours. Parameter revisions must update and verify the implementation as well.
-
-## Run
-
-Most project code runs through WSL and google-colab-cli. Keep src/colab/ setup, transfer, launch, monitoring and recovery helpers as execution infrastructure. A completed session does not make these scripts obsolete. The application commands inside the prepared runtime remain python dataset.py and python train.py.
-
-`dataset.py` and `train.py` are the two normal entrypoints. Both run without arguments. Python 3.13 and `uv sync --group dev` provide the environment. Seed 42 is the reproducible default, with separate named random streams for histories, latent risk, outcomes, timing and splits.
-
-There is one source data file: **data/yara_telecel_dump.csv.gz**. It contains all borrowers' background and loan-lifecycle events in one CSV table. Labels, splits and raw features are derived in memory on load. There are no per-user files, dataset profile folders or feature caches. Small smoke and pilot workloads live in tests/ and use temporary files rather than production data.
-
-The compressed CSV includes repeated provenance columns for the effective contract, frozen inputs and generator source. These compress efficiently and are excluded from features. The builder validates its serialized output before atomic replacement. Existing valid data is reused. Invalid or stale data fails with a clear error; remove the stale file deliberately before rebuilding. A corrupt existing file is never silently regenerated. Each run records the source file SHA-256 and embedded identity in data_reference.json.
-
-## Data assumptions
-
-All records are generated, not observed or anonymized Telecel customer records. The filename does not change this provenance. Archived aggregate evidence informs category shares and outcome reference prevalence. Counts, amounts, horizons and temporal dependence are explicit simulation assumptions.
-
-A simulator-private normal risk factor influences nonrepayment. Background log amounts have both a borrower level and a continuous time trend associated with that factor. Independent borrower-level and trend variation plus transaction noise prevent deterministic encoding of risk. Histories are generated before outcomes, with no label-dependent sorting or payload permutation. Models receive neither the latent factor nor future/index-loan events.
-
-Coefficients are fixed before the new model competition. A sequence advantage is a hypothesis, not a required result. No score target or winner is an acceptance gate; do not alter generator settings or rerun seeds to produce a desired ranking. This is a controlled simulation, not evidence of deployment performance.
-
-## Evaluation
-
-The main dataset has 25,625 borrowers. Static and sequence models share every eligible pre-index background event. Activity varies independently of risk/outcomes: lambda_i ~ Gamma(shape=2, scale=74), then count_i = 2 + Poisson(lambda_i), giving an expected mean of 150. This is an explicit simulation assumption, not a notebook-estimated distribution. There is no history-length cap. Real timesteps are packed with borrower lengths/offsets; GRU batches are right-padded only to their longest sequence and use explicit boolean masks. The fixed feature lists contain 18 static and 12 sequence inputs. Borrower-level stratified train/validation/test counts are 15,375 / 5,125 / 5,125. A stratified 15% inner split from train supplies early stopping. Scalers and class weights fit inner-train only. Validation/test borrowers do not fit preprocessing or stop training. No train+validation refit occurs.
-
-Logistic regression, LightGBM and a GRU compete on primary future nonrepayment. The console now reports validation-calibrated average precision, ROC-AUC, Brier score, log loss and ECE, ordered by average precision; it does not select or retrain a base model. Raw predictions, metrics and ranking bootstrap results retain their original schema. A point-score lead alone is not a significance claim.
-
-Normal headline runs automatically add `calibration/` with one portable JSON sigmoid per model, borrower-aligned raw/calibrated predictions, out-of-fold validation assessment, reliability-bin counts and paired calibrated-minus-raw Brier/log-loss intervals. The mapping is `expit(slope * logit(clip(raw_probability, 1e-7, 1-1e-7)) + intercept)`. It is fitted by unweighted, unpenalized logistic regression (L-BFGS, tolerance 1e-10, maximum 1,000 iterations); all randomness uses seed 42. Five-fold stratified calibration assesses validation borrowers out of fold; final coefficients use all validation borrowers and never test labels. At least five validation borrowers per class are required. Convergence failures fail the run; nonpositive slopes and their ranking changes are reported rather than forcing a desired model result. Positive slopes preserve ranking apart from clipping/numerical ties. ECE uses ten equal-width bins, with counts retained because sparse tails and pooled low-risk scores can hide local errors. Calibration is not automatically applied to order-shuffle or label-permutation controls, preserving their original raw-score interpretation.
-
-Use each base model with its calibration coefficients for probability estimates. `calibration.apply(parameters, raw_probability_array)` loads the recorded method/clipping convention and produces calibrated probabilities. The threshold stays at 0.5; calibration does not choose an operational review capacity or cost tradeoff. The loss bootstrap uses 1,000 paired borrower draws and excludes calibration-fit and training uncertainty. This is an explicitly added follow-up to the frozen base-model design, recorded outside the immutable contract. Because test results were already inspected, it is not a new confirmatory evaluation. The frozen parameter lock and acceptance record are unchanged.
-
-Run outputs live under artifacts/<timestamp-id>/ and include configuration, source hashes, the event-file reference, fitted models/preprocessors, transformed inputs, predictions, training history, resources, metrics, bootstrap intervals and independent validation. Labels and splits are reproducible from the single source CSV; no separate source tables are saved. Validators reread events, derive labels, reconstruct scalers and compare metrics and hashes.
-
-Earlier capped-history prototype scores are superseded and do not describe the current 150-average, uncapped-history design. The [research report](RESEARCH_REPORT.md) covers the fresh accepted-sample comparison and controls on Colab, including the separate CPU reference, paired uncertainty, negative-control concerns and probability-quality limitations. The reusable Colab CLI wrapper is src/colab/safe.py; the ordinary dataset.py/train.py workflow is unchanged.
-
-`python -m pytest -q` runs unit/invariant checks. `python tests/smoke.py` runs those checks plus a temporary 1,000-borrower, two-epoch integration pipeline. `python tests/pilot.py` uses 5,000 temporary borrowers and the full epoch cap, including training-label permutation and within-borrower payload-order shuffle. Shuffling keeps timestamps/gaps fixed and preserves static inputs. Control scores are diagnostic, never required performance thresholds.
-
-## Frozen evidence and limits
-
-src/configs/frozen_inputs.json freezes exactly src/configs/experiment_design.json, docs/calibration/ledger.json and docs/calibration/category_mapping.json. src/configs/accepted_dataset.json records explicit user acceptance, these parameter hashes, the input-lock hash, generator-source hashes, the passing audit's hash and the SHA-256 of the exact 92,503,821-byte dataset. The accepted sample has 25,625 borrowers, 3,921,503 event rows and 3,855,443 background events. Its SHA-256 is 6ec8bfc5a9e5a78f284624c4ed355aff163f42490cf2a49bf2142bdb5b30a068.
-
-Main dataset loading and training reject changed parameters, generator sources or dataset bytes. Refreshing the parameter lock alone does not override acceptance. Missing data may be regenerated only if the resulting bytes match the accepted checksum before publication. Temporary smoke/pilot datasets are isolated from the accepted main file. Future main run references include the acceptance-record checksum.
-
-The frozen inputs, acceptance records and generator sources have byte-preserving Git attributes. Their existing line endings are part of the recorded SHA-256 identities; do not normalize them during checkout or editing. The comparison evaluator and its historical execution plan are tracked exceptions under artifacts/; generated datasets and result files remain local artifacts. Figure generation requires the reporting extra (`uv sync --group dev --extra reporting`).
-
-Any intended parameter or dataset revision needs explicit user authorization, a new sample audit and new acceptance before replacing the freeze; model test scores must not select generator changes. Acceptance is recorded through src/scripts/input_freeze.py --accept-dataset, which refuses to overwrite an existing record implicitly. Do not refresh or replace these records during routine training. Calibration source evidence and private historical records remain in archive/; do not execute or publish private archived samples. The historical synthetic_params.json inventory and notebook extraction/mapping builders are preserved under bulk-clean/src/, outside the active workflow.
-
-There is no transformed-array cache. Memory is measured and checked after evaluation; hard runtime memory enforcement is not implemented. Historical notebooks, models, runs and multi-scenario matrix outputs are retired and must not be presented as current evidence.
-
-Retired files are in bulk-clean/ at the project root, preserving their previous relative paths. This includes notebook extraction/mapping builders and their tests, duplicate calibration CSV exports, obsolete planning metadata, completed-session logs and superseded CPU runs. Colab execution helpers and their required transfer inputs remain active. The calibration JSON inputs, accepted dataset, three current Colab experiments, results/figures, supporting analysis code and pipeline tests remain in place. bulk-clean/ is excluded from Git and normal test discovery. Private archive/ calibration evidence remains separate and preserved.
+## Archive & Retirement
+- **archive/**: Contains private historical evidence. Do not execute or publish.
+- **bulk-clean/**: Retirement folder for obsolete tools and superseded runs. Excluded from Git.
