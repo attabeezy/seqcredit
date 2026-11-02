@@ -1,6 +1,10 @@
 # Static and temporal credit-risk models on the frozen synthetic sample
 
+## Literature Review
+[LITERATURE_REVIEW_GAP: Add grounded research on credit risk in LMICs, alternative data usage, and theoretical justification for TCN, Transformers, and LSTM architectures]
+
 ## Research question and scope
+...
 
 The project follows four steps: set parameters from the evidence already extracted from Analysis Notebooks A/B/C, identify necessary assumptions, generate and check one synthetic sample, then train static and sequence models on shared borrower splits and analyze their results. This report records the training and analysis stages of that workflow.
 
@@ -13,6 +17,7 @@ Average precision (AP) is the primary metric specified by the frozen contract; R
 The current headline workflow includes validation-fitted probability calibration. Its verified follow-up reduces test Brier scores to 0.0390 (logistic regression), 0.0392 (LightGBM) and 0.0384 (GRU), with unchanged discrimination. The [calibration section](#validation-fitted-calibration-follow-up) records the full results and limitations. Earlier tables below retain the original raw comparison and control results, with probability scores explicitly labelled as uncalibrated.
 
 ## Data and fixed design
+[METHODOLOGY_DATA_GAP: Document the transition from basic aggregates to advanced feature engineering including RFM+ evolution, Network/Social Capital features, and Liquidity Stress indices]
 
 The accepted sample contains 25,625 synthetic borrowers, 3,921,503 event rows and 3,855,443 background events. Every borrower has one designated index loan. Histories cover the 90 days strictly before the index; the primary label is absence of simulated principal or interest repayment during the following 60 days. Labels are derived from the recorded future lifecycle events, not copied from a simulator-private state. Future events, the index-loan amount, identifiers and latent risk are excluded from model features.
 
@@ -25,6 +30,7 @@ The single accepted source is `data/yara_telecel_dump.csv.gz`, 92,503,821 bytes,
 Borrowers are stratified on the realized three-class label into train/validation/test sizes 15,375/5,125/5,125. An additional stratified inner split leaves 13,068 borrowers for fitting and 2,307 for early stopping. Scalers and balanced class weights are fitted only on inner-fit borrowers. The outer validation and test sets neither fit preprocessing nor stop training. The final models are not refitted on train plus validation. Test data contain 210 nonrepayments (4.0976%).
 
 ## Models, interventions and uncertainty
+[MODEL_EXPANSION_GAP: Document the expanded model suite including LSTM, TCN, and Transformer Encoders, and the justification for using them based on sequential data complexity]
 
 All three models use fixed settings and identical borrower partitions. Logistic regression uses balanced class weights, maximum 1,000 iterations and seed 42. LightGBM uses up to 500 trees, learning rate 0.03, 31 leaves, balanced weights, two CPU threads and seed 42, with early stopping on the inner-stop set. The GRU has 64 hidden units, a sigmoid output, Adam learning rate 0.0005, batch size 64, maximum 20 epochs, patience 5 and minimum validation-loss improvement 0.0001. GRU training uses balanced sample weights; early stopping monitors unweighted inner-stop log loss and restores the best weights. Its seed is 42 and TensorFlow deterministic operations are enabled.
 
@@ -161,6 +167,7 @@ ECE uses ten equal-width bins; most calibrated predictions occupy the lowest bin
 The [calibration report](../artifacts/fresh-colab-20261025/calibration/RESULTS.md) includes reliability plots, coefficients, prediction files and verification evidence. Normal `train.py` headline runs now produce calibration outputs automatically, include them in the run manifest, independently reconstruct them during validation, and show calibrated probability scores in the console. Raw comparison/control files remain available with their original schema. This adds a documented post-hoc probability step without rewriting the frozen generator contract or historical experiment artifacts.
 
 ## Research conclusion and next work
+[FINAL_SYNTHESIS_GAP: Synthesize the comparison between static models, the original GRU, and the expanded sequential suite including LSTM/TCN/Transformer, addressing the "Sequence Advantage" hypothesis]
 
 For this accepted simulated population and these fixed fits, GRU has the strongest point discrimination and loses AP/ROC-AUC when payload chronology is shuffled. Its primary-metric superiority over logistic regression is not established by the paired interval. The above-chance label-permutation results prevent a clean negative-control conclusion, and poor proper probability scores prevent treating the raw model outputs as validated risk probabilities. This is qualified evidence of temporal information in a specified simulator, not proof of a generally superior architecture or evidence of deployment performance.
 

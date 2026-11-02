@@ -13,7 +13,18 @@ This is the governing workflow. Use the existing calibration files as the eviden
 
 Keep work proportional to this objective. Address concrete problems directly. Reuse existing checks and outputs; do not add helper scripts, audit layers, reports or repeated runs without a specific need. Report unresolved limitations plainly. Additional controls or follow-up studies are supporting analyses when needed, not automatic prerequisites that restart or indefinitely extend the four-step study. Do not treat a documented limitation as user authorization to launch a new research program. Keep progress updates and final explanations concise.
 
-## Implementation guidance
+## Reporting and Narrative Guidance
+When documenting research and results, the narrative must be strictly linear and deductive. Avoid describing the process as an iterative series of "additions," "revisions," or "going back." 
+
+The report should flow as a cohesive scientific argument:
+1. **Data Collection**: The foundation of the sample.
+2. **Feature Selection**: Logical derivation of relevant features from the data.
+3. **Architecture Selection**: Selection of algorithms based on literature and problem requirements.
+4. **Experimental Execution**: The results of the training/testing process.
+5. **Inference**: What the results imply.
+6. **Conclusion**: Final synthesis.
+
+Ensure the final text reads as a planned, single-pass study rather than a chronological log of development.
 
 The user-facing workflow is dataset.py followed by train.py, both with no arguments. Default seed is 42. Do not reintroduce profile/scenario selection or per-user/dataset directory trees. There is one source dataset, data/yara_telecel_dump.csv.gz, containing all generated event rows. Run outputs belong in artifacts/. Tests use temporary datasets.
 
