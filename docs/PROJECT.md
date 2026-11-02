@@ -21,6 +21,9 @@ On 2026-10-24, the user accepted the current parameters and sample. This accepta
 - **Runtime**: WSL Ubuntu + `google-colab-cli`.
 - **Entrypoints**: `python dataset.py` and `python train.py`.
 - **Validation**: `python -m pytest -q` for unit checks; `tests/smoke.py` and `tests/pilot.py` for integration.
+- **Framework Strategy**: To maintain baseline stability while enabling research novelty, the project uses a hybrid stack:
+    - **Keras/TensorFlow**: Used for baseline models (LR, LightGBM, GRU) to preserve existing results.
+    - **PyTorch**: Used for advanced architectures (TCN, Transformers, GNNs) to leverage SOTA libraries like PyTorch Geometric.
 
 ## Future Development Roadmap (Linear Order)
 To evolve the study into a literature-grounded comparative analysis, development will proceed in the following phases:
