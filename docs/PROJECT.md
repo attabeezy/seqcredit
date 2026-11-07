@@ -28,6 +28,15 @@ On 2026-10-24, the user accepted the current parameters and sample. This accepta
 ## Future Development Roadmap (Linear Order)
 To evolve the study into a literature-grounded comparative analysis, development will proceed in the following phases:
 
+### Priority: Resolve the GRU–logistic regression comparison
+Investigate the existing comparison before attributing a sequence advantage or expanding the model suite:
+
+- **Recheck existing evidence**: Verify matched borrower IDs, predictions, preprocessing, paired AP/ROC-AUC differences and the original label-permutation implementation. Document whether any error explains the result.
+- **Characterize the negative control**: Prespecify multiple label-permutation seeds and compare the resulting score distribution with the original control. Test the influence of genuine-label early stopping with a control whose stopping rule uses no genuine labels. Retain logistic regression as a comparator without early stopping, and include the planned random-noise feature baseline.
+- **Assess training variability**: Prespecify matched model initialization/training seeds and repeat GRU and logistic regression fits on the same frozen sample, splits, histories and backend. Report individual results and variability alongside paired borrower uncertainty; distinguish training variability from uncertainty about new populations or simulator settings.
+- **Set interpretation criteria in advance**: State the primary AP contrast, planned comparisons, uncertainty summaries and stopping rule before running follow-up experiments. Report a persistent inconclusive interval or unexplained control as unresolved rather than forcing a winner. Assess sensitivity to the early-stopping policy separately from the original fixed comparison.
+- **Protect interpretation**: Keep accepted data and generator hashes fixed, retain the original outputs, and use development data for any choices. Since the held-out test results have already been inspected, label follow-up results exploratory; an independent untouched evaluation would be needed for a new confirmatory claim. Summarize what each check resolves and what remains uncertain in `REPORT.md`.
+
 ### Phase 1: Enriched Foundation (Feature Engineering)
 Upgrade the 30 baseline features using **Strategy A (Replacement)** to avoid multicollinearity:
 - **RFM+ Evolution**: Velocity ratios (short vs long term) and Stability indices (Spend CV, Balance Floor Decay).
