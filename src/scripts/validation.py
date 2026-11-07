@@ -30,10 +30,22 @@ def validate(run: Path) -> dict:
     target, control = config["target"], config["control"]
     labels = (raw["labels"] == 2 if target == "primary" else np.isin(raw["labels"], [1, 2])).astype(np.int32)
     expected_training = labels.copy()
+    exploratory = config.get("exploratory_control", {})
+    fixed_epochs = exploratory.get("fixed_gru_epochs")
+    if fixed_epochs not in (None, 1):
+        raise ValueError("Unsupported fixed GRU stopping policy")
     if control == "label_permutation":
-        expected_training[split["fit"]] = np.random.default_rng(42 + 1009).permutation(labels[split["fit"]])
+        seed = exploratory.get("permutation_seed")
+        seed = 42 + 1009 if seed is None else seed
+        expected_training[split["fit"]] = np.random.default_rng(seed).permutation(labels[split["fit"]])
     elif control not in {"none", "order_shuffle"}:
         raise ValueError("Unknown control")
+    elif exploratory.get("permutation_seed") is not None:
+        raise ValueError("Unexpected permutation seed")
+    if fixed_epochs == 1:
+        history = json.loads((run / "training_history.json").read_text())
+        if "val_loss" in history or len(history["loss"]) != 1:
+            raise ValueError("Fixed-epoch GRU unexpectedly used validation labels")
     with np.load(run / "model_inputs.npz", allow_pickle=False) as archive:
         inputs = {key: archive[key] for key in archive.files}
     np.testing.assert_array_equal(inputs["ids"], raw["ids"])

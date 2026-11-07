@@ -97,8 +97,24 @@ def execution_settings(contract: dict) -> dict:
                 patience=stopping["patience"], min_delta=stopping["min_delta"])
 
 
+def fit_sequence_model(model, training_data, stop_data_factory, settings: dict,
+                       fixed_gru_epochs: int | None):
+    """Do not even construct genuine-label stop data for the fixed-epoch control."""
+    import tensorflow as tf
+
+    if fixed_gru_epochs is not None:
+        if fixed_gru_epochs != 1:
+            raise ValueError("The exploratory fixed stopping policy requires exactly one epoch")
+        return model.fit(training_data, epochs=1, shuffle=False, verbose=2)
+    callback = tf.keras.callbacks.EarlyStopping(monitor="val_loss", mode="min",
+        patience=settings["patience"], min_delta=settings["min_delta"], restore_best_weights=True)
+    return model.fit(training_data, validation_data=stop_data_factory(), epochs=settings["epochs"],
+                     shuffle=False, callbacks=[callback], verbose=2)
+
+
 def run(destination: Path, contract: dict | None = None, data_path: Path = DATA_FILE,
-        target: str = "primary", control: str = "none") -> dict:
+        target: str = "primary", control: str = "none", *,
+        permutation_seed: int | None = None, fixed_gru_epochs: int | None = None) -> dict:
     started = time.perf_counter()
     contract = load_contract() if contract is None else contract
     seed = 42
@@ -107,6 +123,10 @@ def run(destination: Path, contract: dict | None = None, data_path: Path = DATA_
         raise ValueError("Unknown target")
     if control not in {"none", "label_permutation", "order_shuffle"}:
         raise ValueError("Unknown control")
+    if permutation_seed is not None and (control != "label_permutation" or permutation_seed < 0):
+        raise ValueError("Permutation seed requires a label-permutation control")
+    if fixed_gru_epochs is not None and fixed_gru_epochs != 1:
+        raise ValueError("The exploratory fixed stopping policy requires exactly one epoch")
     print("[1/5] Reading the event dataset", flush=True)
     load_started = time.perf_counter()
     if not data_path.exists():
@@ -116,13 +136,17 @@ def run(destination: Path, contract: dict | None = None, data_path: Path = DATA_
     y = (data["labels"] == 2 if target == "primary" else np.isin(data["labels"], [1, 2])).astype(np.int32)
     training_y = y.copy()
     if control == "label_permutation":
-        training_y[split["fit"]] = np.random.default_rng(seed + 1009).permutation(training_y[split["fit"]])
+        permutation_seed = seed + 1009 if permutation_seed is None else permutation_seed
+        training_y[split["fit"]] = np.random.default_rng(permutation_seed).permutation(training_y[split["fit"]])
     effective = {"contract": contract, "resolved_execution": settings, "seed": seed,
                  "target": target, "control": control,
                  "scope": "isolated v2 experiment run", "cache": "canonical_read_only",
                  "dataset": reference,
                  "models": ["logistic_regression", "lightgbm", "small_gru"],
                  "targets": ["no_repayment" if target == "primary" else "penalty_or_no_repayment"]}
+    if permutation_seed is not None or fixed_gru_epochs is not None:
+        effective["exploratory_control"] = {"permutation_seed": permutation_seed,
+                                            "fixed_gru_epochs": fixed_gru_epochs}
     effective["posthoc_calibration"] = (CALIBRATION_POLICY if control == "none" else
                                        {"status": "not_applied", "reason": "preserve raw negative-control interpretation"})
     effective["reported_probability_metrics"] = "calibration/metrics.json" if control == "none" else "metrics.json"
@@ -239,9 +263,7 @@ def run(destination: Path, contract: dict | None = None, data_path: Path = DATA_
         return ds.with_options(options)
 
     fit_started = time.perf_counter()
-    history = sequence_model.fit(dataset(fit, True), validation_data=dataset(stop), epochs=settings["epochs"], shuffle=False,
-        callbacks=[tf.keras.callbacks.EarlyStopping(monitor="val_loss", mode="min", patience=settings["patience"],
-                                                    min_delta=settings["min_delta"], restore_best_weights=True)], verbose=2)
+    history = fit_sequence_model(sequence_model, dataset(fit, True), lambda: dataset(stop), settings, fixed_gru_epochs)
     sequence_seconds = time.perf_counter() - fit_started
     sequence_model.save(destination / "models/gru.keras")
     reloaded_sequence = tf.keras.models.load_model(destination / "models/gru.keras")
