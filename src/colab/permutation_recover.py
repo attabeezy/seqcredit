@@ -14,8 +14,7 @@ base = ['python3', str(root / 'src/colab/safe.py'), '--auth', 'oauth2', '--confi
         '/home/ubuntu/.config/colab-cli/seqcredit-session.json', 'download',
         '-s', 'seqcredit-permutation-20261107']
 destination = art / 'repeated_permutation_20261107'
-if destination.exists():
-    raise FileExistsError('Refusing to replace an existing local batch')
+destination_exists = destination.exists()
 with tempfile.TemporaryDirectory(prefix='seqcredit-recovery-') as tmp:
     staging = Path(tmp)
     manifest_file = staging / 'manifest.json'
@@ -53,7 +52,21 @@ with tempfile.TemporaryDirectory(prefix='seqcredit-recovery-') as tmp:
             if member.name != 'permutation_run.log' and not member.name.startswith('repeated_permutation_20261107/') and member.name != 'repeated_permutation_20261107':
                 raise ValueError('Unexpected archive member: ' + member.name)
         bundle.extractall(staging, filter='data')
-    shutil.move(str(staging / 'repeated_permutation_20261107'), str(destination))
-    shutil.copy2(staging / 'permutation_run.log', destination / 'permutation_run.log')
+    staged = staging / 'repeated_permutation_20261107'
+    if not destination_exists:
+        shutil.move(str(staged), str(destination))
+        shutil.copy2(staging / 'permutation_run.log', destination / 'permutation_run.log')
+    else:
+        count = len(list(destination.glob('execution_batch*.json'))) + 1
+        for item in staged.iterdir():
+            if item.is_dir():
+                if (destination / item.name).exists():
+                    raise FileExistsError(f'Refusing to replace {item.name}')
+                shutil.move(str(item), str(destination / item.name))
+            elif item.name == 'execution.json':
+                shutil.copy2(item, destination / f'execution_batch{count}.json')
+            elif item.name == 'summary.json':
+                shutil.copy2(item, destination / 'summary.json')
+        shutil.copy2(staging / 'permutation_run.log', destination / f'permutation_run_batch{count}.log')
     (destination / 'transport_manifest.json').write_text(json.dumps(manifest, indent=2))
     print('Recovered verified batch at', destination)

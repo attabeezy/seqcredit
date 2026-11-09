@@ -9,6 +9,9 @@ base = ['python3', str(root / 'src/colab/safe.py'), '--auth', 'oauth2', '--confi
         '/home/ubuntu/.config/colab-cli/seqcredit-session.json']
 files = sorted(transport.glob('part-*.bin')) + [transport / name for name in
         ('source.tar.gz', 'source_manifest.json', 'data_manifest.json')]
+batch = transport / 'batch.json'
+if batch.exists():
+    files.append(batch)
 
 def upload(path: Path) -> None:
     subprocess.run([*base, 'upload', '-s', 'seqcredit-permutation-20261107', str(path),

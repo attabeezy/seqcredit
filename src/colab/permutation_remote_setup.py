@@ -34,7 +34,15 @@ subprocess.run(['git', '-c', 'user.name=seqcredit execution snapshot', '-c',
                 'user.email=execution@localhost', 'commit', '-m', 'Isolated execution snapshot'], cwd=root, check=True)
 logdir = root / 'artifacts'
 logdir.mkdir(exist_ok=True)
-script = '''set -eu
+only_clause = ''
+batch_file = transport / 'batch.json'
+if batch_file.exists():
+    batch = json.loads(batch_file.read_text())
+    names = batch.get('conditions')
+    if not isinstance(names, list) or not names:
+        raise ValueError('Batch file must list conditions')
+    only_clause = " --only '" + ','.join(names) + "'"
+script = f'''set -eu
 cd /content/seqcredit
 trap 'code=$?; printf "%s\\n" "$code" > /content/seqcredit/artifacts/permutation_exit_code' EXIT
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
@@ -43,7 +51,7 @@ export TF_CPP_MIN_LOG_LEVEL=2
 uv venv --python 3.13.16 .venv
 uv pip install --python .venv/bin/python numpy==2.4.6 scipy==1.18.0 scikit-learn==1.8.0 lightgbm==4.6.0 'tensorflow[and-cuda]==2.21.0' keras==3.15.0 joblib==1.5.3
 .venv/bin/python -c "import sys;sys.path.insert(0,'src/scripts');from input_freeze import verify_accepted_dataset;from dataset_io import DATA_FILE;verify_accepted_dataset(DATA_FILE)"
-.venv/bin/python src/scripts/repeated_permutation.py
+.venv/bin/python src/scripts/repeated_permutation.py{only_clause}
 '''
 (logdir / 'permutation_launch.sh').write_text(script)
 with (logdir / 'permutation_run.log').open('w') as log:

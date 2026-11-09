@@ -42,6 +42,28 @@ def condition_by_name(name: str) -> tuple[int | None, int | None]:
         raise ValueError(f"Unknown condition: {name}") from None
 
 
+def select_conditions(only: list[str] | None) -> list[tuple[str, int | None, int | None]]:
+    """Return the planned subset in plan order; None selects the full plan."""
+    plan = conditions()
+    if only is None:
+        return plan
+    if not only or not all(isinstance(name, str) for name in only):
+        raise ValueError("Batch conditions must be a non-empty list of names")
+    if len(set(only)) != len(only):
+        raise ValueError("Batch conditions must be unique")
+    names = {item[0] for item in plan}
+    unknown = [name for name in only if name not in names]
+    if unknown:
+        raise ValueError(f"Unknown condition: {unknown[0]}")
+    wanted = set(only)
+    return [item for item in plan if item[0] in wanted]
+
+
+def parse_only(value: str) -> list[str]:
+    """Parse the comma-separated --only argument."""
+    return [name.strip() for name in value.split(",") if name.strip()]
+
+
 def summarize(results: dict) -> dict:
     """Summarize every completed seed without selecting favorable fits."""
     if set(results) != {item[0] for item in conditions()}:
@@ -91,8 +113,9 @@ def run_one(name: str) -> dict:
     return results
 
 
-def execute(destination: Path) -> None:
-    """Execute all conditions and retain failures rather than skipping seeds."""
+def execute(destination: Path, only: list[str] | None = None) -> None:
+    """Execute all (or a batch of) conditions and retain failures rather than skipping seeds."""
+    selected = select_conditions(only)
     import tensorflow as tf
 
     if not tf.config.list_physical_devices("GPU"):
@@ -118,10 +141,11 @@ def execute(destination: Path) -> None:
                  "versions": versions,
                  "gpus": [device.name for device in tf.config.list_physical_devices("GPU")],
                  "gpu_model": gpu, "cublas_workspace_config": os.environ["CUBLAS_WORKSPACE_CONFIG"],
+                 "batch_only": [item[0] for item in selected] if only is not None else None,
                  "conditions": {}}
     write_json(destination / "execution.json", execution)
     results = {}
-    for name, seed, epochs in conditions():
+    for name, seed, epochs in selected:
         path = destination / name
         path.mkdir()
         try:
@@ -140,6 +164,10 @@ def execute(destination: Path) -> None:
     verify_accepted_dataset(DATA_FILE)
     if source_hashes != {p.relative_to(ROOT).as_posix(): file_hash(p) for p in sources}:
         raise ValueError("Source or frozen input changed during execution")
+    if len(selected) < len(conditions()):
+        execution["status"] = "passed"
+        write_json(destination / "execution.json", execution)
+        return
     # Logistic regression must be identical for the matched stopping policies.
     for seed in SEEDS:
         first = results[f"permutation_{seed}_original"]["test"]["logistic_regression"]
@@ -154,7 +182,9 @@ def execute(destination: Path) -> None:
 if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "--single":
         run_one(sys.argv[2])
+    elif len(sys.argv) == 3 and sys.argv[1] == "--only":
+        execute(ROOT / "artifacts" / "repeated_permutation_20261107", parse_only(sys.argv[2]))
     elif len(sys.argv) == 1:
         execute(ROOT / "artifacts" / "repeated_permutation_20261107")
     else:
-        raise SystemExit(f"Usage: {Path(__file__).name} [--single <condition>]")
+        raise SystemExit(f"Usage: {Path(__file__).name} [--single <condition>] [--only <condition,...>]")

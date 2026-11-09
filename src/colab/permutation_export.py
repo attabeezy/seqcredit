@@ -1,4 +1,4 @@
-"""Package the completed batch into hash-verified download chunks."""
+"""Package any completed batch subset into hash-verified download chunks."""
 from pathlib import Path
 import hashlib
 import json
@@ -7,7 +7,7 @@ import tarfile
 root = Path('/content/seqcredit')
 batch = root / 'artifacts/repeated_permutation_20261107'
 execution = json.loads((batch / 'execution.json').read_text())
-if execution['status'] != 'passed' or len(execution['conditions']) != 22:
+if execution['status'] != 'passed' or not (1 <= len(execution['conditions']) <= 22):
     raise ValueError('Cannot export an incomplete successful batch')
 out = Path('/content/permutation_export')
 out.mkdir(exist_ok=True)

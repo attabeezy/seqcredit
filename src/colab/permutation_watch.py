@@ -13,6 +13,13 @@ base = ['python3', str(root / 'src/colab/safe.py'), '--auth', 'oauth2', '--confi
         '/home/ubuntu/.config/colab-cli/seqcredit-session.json']
 session = 'seqcredit-permutation-20261107'
 watch_file = out / 'watch_status.json'
+expected = 22
+batch = out / 'batch.json'
+if batch.exists():
+    try:
+        expected = len(json.loads(batch.read_text())['conditions'])
+    except (KeyError, ValueError):
+        pass
 
 def update(value: dict) -> None:
     watch_file.write_text(json.dumps(value, indent=2) + '\n')
@@ -56,7 +63,7 @@ try:
         last_state = state
         update(state)
         if state['exit_code'] is not None:
-            if state['exit_code'] != 0 or state['state'] != 'passed' or state['completed'] != 22:
+            if state['exit_code'] != 0 or state['state'] != 'passed' or state['completed'] != expected:
                 raise RuntimeError('Remote batch failed or did not complete; session retained for diagnosis')
             break
         time.sleep(45)
@@ -64,7 +71,7 @@ try:
                     '--timeout', '900'], check=True, timeout=960)
     subprocess.run(['python3', str(root / 'src/colab/permutation_recover.py')], check=True)
     subprocess.run([*base, 'stop', '-s', session], check=True)
-    update({'state': 'recovered', 'completed': 22, 'session': 'stopped'})
+    update({'state': 'recovered', 'completed': expected, 'session': 'stopped'})
 except Exception:
     download_diagnostics()
     update({'state': 'watch_failed', 'traceback': traceback.format_exc(),
