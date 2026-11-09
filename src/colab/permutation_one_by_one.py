@@ -16,10 +16,13 @@ Usage (from WSL, repo root):
     python3 src/colab/permutation_one_by_one.py --help
 """
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 import time
+
+os.environ['PATH'] = '/home/ubuntu/.local/bin:' + os.environ.get('PATH', '')
 
 ROOT = Path(__file__).resolve().parents[2]
 SAFE = str(ROOT / 'src/colab/safe.py')
