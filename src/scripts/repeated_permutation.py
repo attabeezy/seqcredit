@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import platform
@@ -32,6 +33,15 @@ def conditions() -> list[tuple[str, int | None, int | None]]:
     ]
 
 
+def condition_by_name(name: str) -> tuple[int | None, int | None]:
+    """Return fixed (permutation seed, fixed GRU epochs) for one condition."""
+    lookup = {item[0]: (item[1], item[2]) for item in conditions()}
+    try:
+        return lookup[name]
+    except KeyError:
+        raise ValueError(f"Unknown condition: {name}") from None
+
+
 def summarize(results: dict) -> dict:
     """Summarize every completed seed without selecting favorable fits."""
     if set(results) != {item[0] for item in conditions()}:
@@ -55,6 +65,30 @@ def summarize(results: dict) -> dict:
     return {"status": "passed", "scope": "exploratory; ten permutations, fixed initialization and inspected test set",
             "metrics": summary,
             "headlines": {key: results[key]["test"] for key in ("headline_original", "headline_one_epoch")}}
+
+
+def run_one(name: str) -> dict:
+    """Run one condition in a fresh process so the peak-memory budget is per-fit."""
+    import tensorflow as tf
+
+    if not tf.config.list_physical_devices("GPU"):
+        raise RuntimeError("The specified matched GPU backend is unavailable")
+    gpu = subprocess.check_output(["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"], text=True).strip()
+    if "T4" not in gpu or os.environ.get("CUBLAS_WORKSPACE_CONFIG") != ":4096:8":
+        raise RuntimeError("The plan requires a T4 and CUBLAS_WORKSPACE_CONFIG=:4096:8")
+    versions = {item: version(item) for item in EXPECTED_VERSIONS}
+    if platform.python_version() != "3.13.16" or versions != EXPECTED_VERSIONS:
+        raise RuntimeError(f"The original runtime versions are required: Python {platform.python_version()}, {versions}")
+    verify_accepted_dataset(DATA_FILE)
+    seed, epochs = condition_by_name(name)
+    path = ROOT / "artifacts" / "repeated_permutation_20261107" / name
+    # Parent pre-creates the directory; tolerate that so --single works standalone too.
+    path.mkdir(parents=True, exist_ok=True)
+    print(f"Running {name}", flush=True)
+    results = run(path, control="none" if seed is None else "label_permutation",
+                  permutation_seed=seed, fixed_gru_epochs=epochs)
+    write_json(path / "validation.json", validate(path))
+    return results
 
 
 def execute(destination: Path) -> None:
@@ -92,9 +126,8 @@ def execute(destination: Path) -> None:
         path.mkdir()
         try:
             print(f"Running {name}", flush=True)
-            results[name] = run(path, control="none" if seed is None else "label_permutation",
-                                permutation_seed=seed, fixed_gru_epochs=epochs)
-            write_json(path / "validation.json", validate(path))
+            subprocess.run([sys.executable, str(Path(__file__)), "--single", name], check=True)
+            results[name] = json.loads((path / "metrics.json").read_text())
             execution["conditions"][name] = {"status": "passed", "permutation_seed": seed,
                                               "fixed_gru_epochs": epochs}
         except Exception as error:
@@ -119,4 +152,9 @@ def execute(destination: Path) -> None:
 
 
 if __name__ == "__main__":
-    execute(ROOT / "artifacts" / "repeated_permutation_20261107")
+    if len(sys.argv) == 3 and sys.argv[1] == "--single":
+        run_one(sys.argv[2])
+    elif len(sys.argv) == 1:
+        execute(ROOT / "artifacts" / "repeated_permutation_20261107")
+    else:
+        raise SystemExit(f"Usage: {Path(__file__).name} [--single <condition>]")

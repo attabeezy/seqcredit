@@ -17,6 +17,19 @@ watch_file = out / 'watch_status.json'
 def update(value: dict) -> None:
     watch_file.write_text(json.dumps(value, indent=2) + '\n')
 
+
+def download_diagnostics() -> None:
+    """Best-effort download of remote failure evidence while the VM is alive."""
+    for remote in ('/content/seqcredit/artifacts/permutation_run.log',
+                   '/content/seqcredit/artifacts/repeated_permutation_20261107/execution.json'):
+        try:
+            subprocess.run([*base, 'download', '-s', session, remote, str(out / Path(remote).name)],
+                           check=True, timeout=600)
+        except Exception:
+            pass
+
+
+last_state = None
 try:
     failures = 0
     while True:
@@ -40,6 +53,7 @@ try:
         if len(lines) != 1:
             raise RuntimeError('Could not read the remote completion signal')
         state = json.loads(lines[0])
+        last_state = state
         update(state)
         if state['exit_code'] is not None:
             if state['exit_code'] != 0 or state['state'] != 'passed' or state['completed'] != 22:
@@ -52,6 +66,9 @@ try:
     subprocess.run([*base, 'stop', '-s', session], check=True)
     update({'state': 'recovered', 'completed': 22, 'session': 'stopped'})
 except Exception:
+    download_diagnostics()
     update({'state': 'watch_failed', 'traceback': traceback.format_exc(),
-            'note': 'Session retained to preserve remote results; investigate and recover before stopping.'})
+            'last_probe': last_state,
+            'note': 'Remote diagnostics downloaded to artifacts/permutation_transport/ where available; '
+                    'session retained for diagnosis.'})
     raise
