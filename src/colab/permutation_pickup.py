@@ -32,12 +32,12 @@ def missing(manifest: dict, dest: Path) -> list[str]:
             if not (dest / name).is_file() or sha(dest / name) != digest]
 
 
-def fetch(name: str, dest: Path, manifest: dict, attempts: int = 3) -> None:
+def fetch(name: str, dest: Path, manifest: dict, condition: str, attempts: int = 3) -> None:
     path = dest / name
     path.parent.mkdir(parents=True, exist_ok=True)
     for attempt in range(1, attempts + 1):
         try:
-            subprocess.run([*BASE, f'{REMOTE}/{name}', str(path)], check=True, timeout=900)
+            subprocess.run([*BASE, f'{REMOTE}/{condition}/{name}', str(path)], check=True, timeout=900)
             if sha(path) == manifest['files'][name]:
                 print(f'Picked {name} ({path.stat().st_size} bytes)', flush=True)
                 return
@@ -64,7 +64,13 @@ def pickup(condition: str) -> Path:
         todo = missing(manifest, dest)
         if todo:
             with ThreadPoolExecutor(max_workers=4) as pool:
-                list(pool.map(lambda item: fetch(item, dest, manifest), todo))
+                list(pool.map(lambda item: fetch(item, dest, manifest, name), todo))
+        # manifest.json lists other files but not itself; fetch it for provenance.
+        # validation.json is written after the run, outside the manifest.
+        subprocess.run([*BASE, f'{REMOTE}/{name}/manifest.json', str(dest / 'manifest.json')],
+                       check=True, timeout=300)
+        subprocess.run([*BASE, f'{REMOTE}/{name}/validation.json', str(dest / 'validation.json')],
+                       check=True, timeout=300)
         leftover = missing(manifest, dest)
         if leftover:
             raise IOError(f'Unverified after pickup: {leftover}')
