@@ -60,9 +60,17 @@ with tempfile.TemporaryDirectory(prefix='seqcredit-recovery-') as tmp:
         count = len(list(destination.glob('execution_batch*.json'))) + 1
         for item in staged.iterdir():
             if item.is_dir():
-                if (destination / item.name).exists():
-                    raise FileExistsError(f'Refusing to replace {item.name}')
-                shutil.move(str(item), str(destination / item.name))
+                existing = destination / item.name
+                if existing.exists():
+                    if not (existing / '.picked').exists():
+                        raise FileExistsError(f'Refusing to replace {item.name}')
+                    staged_manifest = hashlib.file_digest((item / 'manifest.json').open('rb'), 'sha256').hexdigest()
+                    existing_manifest = hashlib.file_digest((existing / 'manifest.json').open('rb'), 'sha256').hexdigest()
+                    if staged_manifest != existing_manifest:
+                        raise ValueError(f'Picked {item.name} differs from exported batch')
+                    shutil.rmtree(item)  # identical, already recovered locally
+                else:
+                    shutil.move(str(item), str(destination / item.name))
             elif item.name == 'execution.json':
                 shutil.copy2(item, destination / f'execution_batch{count}.json')
             elif item.name == 'summary.json':

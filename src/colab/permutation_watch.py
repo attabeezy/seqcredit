@@ -36,7 +36,28 @@ def download_diagnostics() -> None:
             pass
 
 
+def batch_names() -> list[str]:
+    if batch.exists():
+        try:
+            return list(json.loads(batch.read_text())['conditions'])
+        except (ValueError, KeyError, TypeError):
+            return []
+    return []
+
+
+def pickup_condition(name: str) -> bool:
+    """Best-effort immediate pickup of one passed condition."""
+    try:
+        subprocess.run(['python3', str(root / 'src/colab/permutation_pickup.py'), name],
+                       check=True, timeout=1200)
+        return True
+    except Exception as error:
+        print(f'Pickup deferred for {name}: {error!r}', flush=True)
+        return False
+
+
 last_state = None
+last_picked = 0
 try:
     failures = 0
     while True:
@@ -62,6 +83,12 @@ try:
         state = json.loads(lines[0])
         last_state = state
         update(state)
+        names = batch_names()
+        while last_picked < min(len(names), state['completed']):
+            if pickup_condition(names[last_picked]):
+                last_picked += 1
+            else:
+                break
         if state['exit_code'] is not None:
             if state['exit_code'] != 0 or state['state'] != 'passed' or state['completed'] != expected:
                 raise RuntimeError('Remote batch failed or did not complete; session retained for diagnosis')
