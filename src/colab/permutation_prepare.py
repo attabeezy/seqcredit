@@ -7,7 +7,7 @@ import tarfile
 root = Path(__file__).resolve().parents[2]
 out = root / 'artifacts/permutation_transport'
 out.mkdir(parents=True, exist_ok=True)
-files = ['.gitattributes', '.gitignore', 'pyproject.toml', 'uv.lock', 'docs/PERMUTATION_PLAN.md',
+files = ['.gitattributes', '.gitignore', 'pyproject.toml', 'uv.lock', 'docs/EXPERIMENT.md',
          'docs/calibration/ledger.json', 'docs/calibration/category_mapping.json']
 files += [p.relative_to(root).as_posix() for p in (root / 'src/configs').glob('*.json')]
 files += [p.relative_to(root).as_posix() for p in (root / 'src/scripts').glob('*.py')]

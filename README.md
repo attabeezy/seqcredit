@@ -1,6 +1,6 @@
 # seqcredit
 
-Reconstruct a synthetic sample from notebook-derived parameters, train static and sequence models, and analyze their results to evaluate the "sequence advantage" in credit risk prediction.
+Develop a reproducible framework for creditworthiness assessment, operationalized as credit-risk prediction from alternative mobile-money transaction data in a controlled synthetic setting.
 
 ## Project Structure
 ```text
@@ -19,7 +19,7 @@ seqcredit/
 The study follows a deductive, four-step process:
 1. **Set Parameters**: Define generator settings from evidence extracted from Analysis Notebooks A/B/C.
 2. **Generate Sample**: Produce and validate a single synthetic sample (Seed 42).
-3. **Train Models**: Compare static (Logistic Regression, LightGBM) and sequence (GRU, and planned LSTM/TCN/Transformer) models.
+3. **Train Models**: Compare grounded static (Logistic Regression and LightGBM), temporal (GRU, LSTM, TCN, Transformer), and, where feasible, relational (GNN) representations on the shared sample.
 4. **Analyze Results**: Evaluate held-out performance, probability calibration, and temporal dependencies.
 
 ## Quick Start
@@ -49,4 +49,4 @@ Models are evaluated using Average Precision (primary) and ROC-AUC (secondary). 
 ## Infrastructure
 Most code runs via WSL and `google-colab-cli`. `src/colab/` manages the remote execution pipeline. 
 
-See the [Project Guide](docs/PROJECT.md) for a detailed roadmap and the [Report](docs/REPORT.md) for full results.
+See the [Experiment Plan](docs/EXPERIMENT.md) for the data-to-results framework, the [Project Guide](docs/PROJECT.md) for operational scope, and the [Report](docs/REPORT.md) for historical results from the original representation.

@@ -1,67 +1,102 @@
 # Project guide
 
-## Core Research Workflow
-The objective is to reconstruct a synthetic sample from evidence-derived parameters, train models, and analyze their results to evaluate the "sequence advantage" in credit risk prediction.
+## Rescoped study
 
-1. **Set Parameters from Evidence**: Define generator parameters based on preserved evidence from Analysis Notebooks A/B/C. Identify assumptions where evidence is incomplete.
-2. **Generate Sample**: Use `dataset.py` (Seed 42) to produce `data/yara_telecel_dump.csv.gz`. Validate the sample against parameters.
-3. **Train Models**: Train static and sequence models on shared borrower splits. Fit preprocessing only on inner-training borrowers.
-4. **Analyze Results**: Compare held-out performance, paired uncertainty, and relevant limitations.
+Seqcredit develops a reproducible framework for creditworthiness assessment, operationalized as credit-risk prediction from alternative mobile-money transaction data in a controlled synthetic setting. The framework compares theory- and literature-grounded static, temporal, and relational representations for simulated future nonrepayment prediction using one accepted synthetic sample and one fixed experimental design. It is not a programme for finding the best possible credit-risk architecture or for establishing deployment readiness.
 
-## Project State & Frozen Contract
-On 2026-10-24, the user accepted the current parameters and sample. This acceptance is recorded in `src/configs/accepted_dataset.json`. 
+The methodology takes structural inspiration from *A Comparative Analysis of Few-Shot Learning Models for Text-Based Diagnosis of Crop Pests and Diseases in Ghana*: state a practical question, document the data and preparation, compare a small set of meaningful approaches fairly, assess distinct kinds of performance, and let the conclusion follow the evidence. The reference does not prescribe our models, data design, or claims.
 
-**The Frozen Contract**:
-- **Inputs**: `experiment_design.json`, `docs/calibration/ledger.json`, and `docs/calibration/category_mapping.json` are frozen.
-- **Data**: The specific 92,503,821-byte dataset (`SHA-256: 6ec8bfc5...`) is fixed.
-- **Policy**: Main loading and training reject changed parameters or dataset bytes. Any revision requires explicit user authorization, a new audit, and a new acceptance record.
+## Research question
 
-## Execution Infrastructure
-- **Environment**: Python 3.13, `uv sync --group dev`.
-- **Runtime**: WSL Ubuntu + `google-colab-cli`.
-- **Entrypoints**: `python dataset.py` and `python train.py`.
-- **Validation**: `python -m pytest -q` for unit checks; `tests/smoke.py` and `tests/pilot.py` for integration.
-- **Framework Strategy**: To maintain baseline stability while enabling research novelty, the project uses a hybrid stack:
-    - **Keras/TensorFlow**: Used for baseline models (LR, LightGBM, GRU) to preserve existing results.
-    - **PyTorch**: Used for advanced architectures (TCN, Transformers, GNNs) to leverage SOTA libraries like PyTorch Geometric.
+Within the accepted simulated population, how can grounded static, temporal, and relational representations be evaluated fairly for predicting future nonrepayment from the same alternative mobile-money borrower histories?
 
-## Future Development Roadmap (Linear Order)
-To evolve the study into a literature-grounded comparative analysis, development will proceed in the following phases:
+The study has four steps:
 
-### Priority: Resolve the GRU–logistic regression comparison
-Investigate the existing comparison before attributing a sequence advantage or expanding the model suite:
+1. Set and document simulator parameters from the preserved evidence, explicitly distinguishing evidence from assumptions.
+2. Generate and verify one frozen synthetic sample.
+3. Construct a consolidated, literature-backed feature representation and fit the prespecified models on identical borrower partitions, with preprocessing learned only from inner-training borrowers.
+4. Compare held-out ranking and probability-quality results, then interpret them with paired uncertainty and stated limitations.
 
-- **Recheck existing evidence**: Verify matched borrower IDs, predictions, preprocessing, paired AP/ROC-AUC differences and the original label-permutation implementation. Document whether any error explains the result.
-- **Characterize the negative control**: Prespecify multiple label-permutation seeds and compare the resulting score distribution with the original control. Test the influence of genuine-label early stopping with a control whose stopping rule uses no genuine labels. Retain logistic regression as a comparator without early stopping, and include the planned random-noise feature baseline.
-- **Assess training variability**: Prespecify matched model initialization/training seeds and repeat GRU and logistic regression fits on the same frozen sample, splits, histories and backend. Report individual results and variability alongside paired borrower uncertainty; distinguish training variability from uncertainty about new populations or simulator settings.
-- **Set interpretation criteria in advance**: State the primary AP contrast, planned comparisons, uncertainty summaries and stopping rule before running follow-up experiments. Report a persistent inconclusive interval or unexplained control as unresolved rather than forcing a winner. Assess sensitivity to the early-stopping policy separately from the original fixed comparison.
-- **Protect interpretation**: Keep accepted data and generator hashes fixed, retain the original outputs, and use development data for any choices. Since the held-out test results have already been inspected, label follow-up results exploratory; an independent untouched evaluation would be needed for a new confirmatory claim. Summarize what each check resolves and what remains uncertain in `REPORT.md`.
+## Fixed comparative methodology
 
-### Phase 1: Enriched Foundation (Feature Engineering)
-Upgrade the 30 baseline features using **Strategy A (Replacement)** to avoid multicollinearity:
-- **RFM+ Evolution**: Velocity ratios (short vs long term) and Stability indices (Spend CV, Balance Floor Decay).
-- **Social Capital**: Network-based features (Reciprocity Index, Centrality, Counterparty Diversity).
-- **Cyclical Patterns**: Fourier transforms for payday/weekly cycles and Harvest/Holiday ratios.
-- **Behavioral Discipline**: Airtime-to-Money ratios and Payment Latency.
-- **Liquidity Stress**: Zero-Balance Frequency and Time-to-Recovery (TTR).
+| Element | Decision |
+| --- | --- |
+| Data | One accepted synthetic sample, seed 42 |
+| Comparators | Logistic regression, LightGBM, GRU, LSTM, TCN, Transformer encoder, and one graph neural network subject to the graph-feasibility gate below |
+| Fairness of comparison | Identical eligible histories and borrower partitions; no test-informed preprocessing or selection |
+| Primary outcome | Average precision |
+| Supporting outcomes | ROC-AUC, Brier score, log loss, ECE, and descriptive fixed-threshold metrics |
+| Model selection | Training/validation only; the existing test set has already been inspected, so expanded-model results are exploratory unless a separately accepted untouched evaluation is created |
+| Interpretation aids | Validation-fitted calibration and one temporal-order shuffle for temporal models; prior controls remain historical evidence rather than an expanding control programme |
+| Uncertainty | Paired borrower bootstrap intervals conditional on the fitted models and frozen sample |
 
-### Phase 2: Architectural Expansion (Model Suite)
-Benchmark the enriched data against a sequence of increasingly complex architectures:
-- **Sequential Baseline**: LSTM (Deep memory) and TCN (Causal convolutions).
-- **Attention Mechanism**: Transformer Encoders for critical event identification.
-- **Data Fusion**: Tabular-Sequence Hybrids (e.g., Cross-Attention) to optimize static-temporal integration.
-- **Structural Learning**: Graph Neural Networks (GNNs) via PyTorch Geometric to learn community-based risk embeddings.
+Ranking, calibration, and a decision threshold answer different questions. A stronger ranking score does not establish calibrated risks or an operational lending policy.
 
-### Phase 3: Rigorous Validation & Stress Testing
-- **Refined Negative Control**: Implement a zero-information baseline (random noise features).
-- **Temporal Saliency**: Use saliency mapping to explain the "sequence advantage."
-- **Activity Stratification**: Slice results by borrower activity quantiles.
-- **Tail-Risk Calibration**: Validate probability reliability for the top 5% highest-risk borrowers.
+## Model and feature rationale
 
-### Phase 4: Responsible AI & Final Reporting
-- **Fairness & Explainability**: Integrate SHAP and Fairlearn into the core pipeline for transparent "Reason Codes."
-- **Linear Synthesis**: Populate `REPORT.md` following the deductive flow: Data $\rightarrow$ Features $\rightarrow$ Architecture $\rightarrow$ Results $\rightarrow$ Inference $\rightarrow$ Conclusion.
+The model suite is a comparison of distinct representational assumptions, not a catalogue of fashionable architectures.
 
-## Archive & Retirement
-- **archive/**: Contains private historical evidence. Do not execute or publish.
-- **bulk-clean/**: Retirement folder for obsolete tools and superseded runs. Excluded from Git.
+The data-to-results workflow, initial sources, and evidence required before implementation are recorded in [the experiment plan](EXPERIMENT.md).
+
+| Family | Models | Question answered |
+| --- | --- | --- |
+| Static | Logistic regression; LightGBM | Do aggregates suffice, and do nonlinear interactions improve on a linear baseline? |
+| Gated sequence | GRU; LSTM | Does learned recurrent memory improve on static summaries, and does the LSTM memory cell change the result? |
+| Causal convolution | TCN | Can a finite receptive-field temporal representation capture predictive transaction patterns without recurrence? |
+| Attention | Transformer encoder | Does content-dependent attention over events add value beyond recurrence or convolution? |
+| Relational | One GNN | Does a causal transaction-counterparty graph add information unavailable in each borrower's event sequence? |
+
+The GNN is conditional, not automatic. Before implementation, a short feasibility note must define nodes, pre-index edges, temporal cutoff, borrower-to-counterparty linkage, and anti-leakage checks. It must also identify a relevant graph-learning or financial-network source. If the accepted data cannot support that representation without identifiers, post-index information, or an implausible graph construction, the GNN is excluded and the reason is reported.
+
+Advanced features replace redundant aggregates; they are not appended to create a larger, less interpretable feature list. The feature dictionary must map every retained feature to its source events, time window, direction of aggregation, and literature or domain rationale. The intended consolidated families are:
+
+- recency, frequency, monetary level, velocity, and stability;
+- transaction rhythm and cyclical regularity;
+- payment discipline and liquidity stress; and
+- relationship or counterparty diversity only where the graph-feasibility gate is met.
+
+Feature definitions, transformations, and the removal of redundant existing aggregates must be completed from literature and domain rationale before fitting final models. Test metrics cannot choose among feature families or model designs.
+
+## Proportionate validation
+
+Validation is deliberately adequate rather than exhaustive:
+
+1. Use the shared stratified train/validation/test borrower partition and fit all preprocessing, class weights, early stopping, and calibration on the non-test partitions only.
+2. Report AP as primary, ROC-AUC as secondary, and Brier score, log loss, and ECE separately for probability quality.
+3. Compare models on the same held-out borrowers with paired bootstrap intervals.
+4. Apply one prespecified temporal-order shuffle to the temporal models as a representation check. Do not automatically run label permutations, repeated random seeds, feature ablations, slice analyses, or stress-test programmes.
+5. Preserve the existing label-permutation result as a limitation of the historical GRU comparison; do not treat it as a reason to create an open-ended control pipeline.
+
+## Scope boundaries
+
+The active deliverable is a clear report of the recorded study. It must accurately describe the synthetic data, the fair comparison, the results, and their limits.
+
+The following are out of scope for this study and must not be added as routine follow-up work:
+
+- feature families without a documented rationale or a feature dictionary;
+- model families outside the prespecified comparison, including hybrids or additional graph variants;
+- SHAP, Fairlearn, deployment reason codes, or lending-policy design;
+- fresh stress-test, slice-analysis, label-permutation, or random-seed programmes;
+- new remote orchestration or audit tooling beyond what is needed to reproduce the recorded evidence.
+
+The existing label-permutation result is an unresolved limitation. It should be reported plainly. Any new diagnostic requires a separate, explicit decision and should be described as exploratory because the test set has already been inspected.
+
+## Project state and frozen contract
+
+On 2026-10-24, the user accepted the parameter set and generated sample. The acceptance record is `src/configs/accepted_dataset.json`.
+
+- **Inputs:** `experiment_design.json`, `docs/calibration/ledger.json`, and `docs/calibration/category_mapping.json` are frozen.
+- **Data:** the 92,503,821-byte accepted dataset (`SHA-256: 6ec8bfc5...`) is fixed.
+- **Policy:** normal loading and training reject changed parameters or dataset bytes. A revision requires explicit authorization, a new audit, and a new acceptance record.
+
+## Reproducibility and execution
+
+- **Environment:** Python 3.13; `uv sync --group dev`.
+- **Entrypoints:** `python dataset.py` and `python train.py`.
+- **Checks:** `python -m pytest -q`, `tests/smoke.py`, and `tests/pilot.py`.
+- **Remote execution:** existing WSL/Google Colab helpers are retained only to reproduce the recorded comparison or perform an explicitly authorized follow-up. They are infrastructure, not a new research objective.
+
+## Archive and retirement
+
+- **archive/** contains private historical evidence. Do not execute or publish it.
+- **bulk-clean/** holds retired tools and superseded runs. It is excluded from Git.

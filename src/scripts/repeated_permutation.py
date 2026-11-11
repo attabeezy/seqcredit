@@ -19,7 +19,7 @@ from validation import validate
 
 
 SEEDS = tuple(range(1051, 1061))
-PLAN = ROOT / "docs/PERMUTATION_PLAN.md"
+PLAN = ROOT / "docs/EXPERIMENT.md"
 EXPECTED_VERSIONS = {"numpy": "2.4.6", "scipy": "1.18.0", "scikit-learn": "1.8.0",
                      "lightgbm": "4.6.0", "tensorflow": "2.21.0", "keras": "3.15.0",
                      "joblib": "1.5.3"}
