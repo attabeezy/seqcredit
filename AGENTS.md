@@ -2,14 +2,14 @@
 
 ## Agreed research scope
 
-The user's objective is to develop a reproducible framework for creditworthiness assessment, operationalized as credit-risk prediction from alternative mobile-money transaction data in a controlled synthetic setting. The models are comparison methods within that task. The framework follows four steps:
+The user's objective is to develop a reproducible framework for credit risk prediction from alternative mobile-money transaction data in a controlled synthetic setting. The models are comparison methods within that task. The framework follows four steps:
 
 1. Set generation parameters from the evidence already extracted from Analysis Notebooks A/B/C. Clearly identify assumptions where the evidence is incomplete.
 2. Generate one synthetic sample from those parameters and check it against them.
 3. Build a literature-grounded, nonredundant feature dictionary; establish which static, sequential, and relational representations the accepted data can support; and train the eligible models on the same borrower splits.
 4. Analyze results: which representations perform better, by how much, and what the findings mean, including calibration, uncertainty, and relevant limitations.
 
-This is the governing workflow. Use the existing calibration files as the evidence reference; do not routinely reopen the notebooks. The sample is a synthetic reconstruction of supported mobile-money characteristics, not recovery of original customer records. Let the models compete without forcing a winner or target score. The framework can support conditional evidence within the simulator; it cannot establish real-customer creditworthiness or deployment suitability.
+This is the governing workflow. Use the existing calibration files as the evidence reference; do not routinely reopen the notebooks. The sample is a synthetic reconstruction of supported mobile-money characteristics, not recovery of original customer records. Let the models compete without forcing a winner or target score. The framework can support conditional evidence within the simulator; it cannot establish real-customer credit risk or deployment suitability.
 
 Keep work proportional to this objective. Address concrete problems directly. Reuse existing checks and outputs; do not add helper scripts, audit layers, reports or repeated runs without a specific need. Report unresolved limitations plainly. Additional controls or follow-up studies are supporting analyses when needed, not automatic prerequisites that restart or indefinitely extend the four-step study. Do not treat a documented limitation as user authorization to launch a new research program. Keep progress updates and final explanations concise.
 

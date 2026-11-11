@@ -1,8 +1,8 @@
-# Historical static and temporal results within the alternative-data creditworthiness framework
+# Historical static and temporal results within the alternative-data credit risk framework
 
 ## Research question and scope
 
-Seqcredit develops a reproducible framework for creditworthiness assessment, operationalized as credit-risk prediction from alternative mobile-money transaction data in a controlled synthetic setting. The project begins by setting parameters from the evidence already extracted from Analysis Notebooks A/B/C, identifying necessary assumptions, generating and checking one synthetic sample, then training models on shared borrower splits and analyzing their results. This report records the historical three-model stage of that workflow.
+Seqcredit develops a reproducible framework for credit risk prediction from alternative mobile-money transaction data in a controlled synthetic setting. The project begins by setting parameters from the evidence already extracted from Analysis Notebooks A/B/C, identifying necessary assumptions, generating and checking one synthetic sample, then training models on shared borrower splits and analyzing their results. This report records the historical three-model stage of that workflow.
 
 **Status of this report.** The numerical results below document the original logistic-regression, LightGBM, and GRU comparison. The framework now includes a literature-grounded feature replacement and an expanded model suite; those models have not yet been fit or evaluated. The current results therefore remain historical evidence for the original representation and must not be presented as results for the expanded framework.
 

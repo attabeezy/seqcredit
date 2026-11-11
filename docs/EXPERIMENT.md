@@ -2,7 +2,7 @@
 
 ## Purpose and study boundary
 
-Seqcredit develops a reproducible framework for creditworthiness assessment, operationalized as credit-risk prediction from alternative mobile-money transaction data in a controlled synthetic setting. It asks how grounded static, temporal, and, where feasible, relational representations compare for future nonrepayment prediction on one accepted synthetic population. It does not seek a universally best credit-risk model, validate lending deployment, or infer performance for real customers.
+Seqcredit develops a reproducible framework for credit risk prediction from alternative mobile-money transaction data in a controlled synthetic setting. It asks how grounded static, temporal, and, where feasible, relational representations compare for future nonrepayment prediction on one accepted synthetic population. It does not seek a universally best credit-risk model, validate lending deployment, or infer performance for real customers.
 
 The study takes structural inspiration from *A Comparative Analysis of Few-Shot Learning Models for Text-Based Diagnosis of Crop Pests and Diseases in Ghana*: motivate a practical question, document data preparation, compare meaningful approaches fairly, evaluate distinct kinds of performance, and let the conclusion follow the evidence. It does not adopt that paper's few-shot design, data regime, or deployment claims.
 

@@ -1,11 +1,11 @@
 # seqcredit
 
-Develop a reproducible framework for creditworthiness assessment, operationalized as credit-risk prediction from alternative mobile-money transaction data in a controlled synthetic setting.
+Develop a reproducible framework for credit risk prediction from alternative mobile-money transaction data.
 
 ## Project Structure
 ```text
 seqcredit/
-├── data/               # Frozen synthetic dataset (yara_telecel_dump.csv.gz)
+├── data/               # dataset (yara_telecel_dump.csv.gz)
 ├── docs/              # Project guide (PROJECT.md) and linear research report (REPORT.md)
 ├── src/                # Core logic (configs, colab infrastructure, and scripts)
 ├── artifacts/          # Run outputs, fitted models, metrics, and figures
@@ -34,7 +34,7 @@ Requires Python 3.13. Install dependencies with `uv sync --group dev`.
 ```
 
 ## Data & Frozen Contract
-The current dataset and parameters are frozen in `src/configs/accepted_dataset.json`. Training verifies the exact parameter, generator, and dataset hashes before loading. Any revision requires explicit user authorization and a new acceptance record.
+The current dataset and parameters are frozen in `src/configs/accepted_dataset.json`. Training verifies the exact parameter, generator, and dataset hashes before loading.
 
 ## Evaluation & Calibration
 Models are evaluated using Average Precision (primary) and ROC-AUC (secondary). A sigmoid calibration layer is applied to raw scores to ensure probability reliability (Brier score, ECE).
